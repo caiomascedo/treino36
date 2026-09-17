@@ -76,12 +76,19 @@ def normalize_whatsapp(value):
 
 
 def sync_student(db, name, whatsapp, workout, latest=None, increment=0):
+    norm_wpp = normalize_whatsapp(whatsapp)
     db.execute('''INSERT INTO students(student_name,whatsapp,workout_name,total_accesses,latest)
       VALUES(?,?,?,?,?) ON CONFLICT(student_name) DO UPDATE SET
       whatsapp=CASE WHEN excluded.whatsapp!='' THEN excluded.whatsapp ELSE students.whatsapp END,
-      workout_name=excluded.workout_name, total_accesses=students.total_accesses+excluded.total_accesses,
-      latest=COALESCE(excluded.latest,students.latest)''',
-      (name, normalize_whatsapp(whatsapp), workout, increment, latest))
+      workout_name=excluded.workout_name,
+      latest=COALESCE(excluded.latest, students.latest)''',
+      (name, norm_wpp, workout, 0, latest))
+    
+    # Recalcula os dias de treino reais (dias distintos no histórico)
+    row = db.execute('''SELECT COUNT(DISTINCT SUBSTR(opened_at, 1, 10)) as d
+                        FROM pdf_events WHERE student_name=?''', (name,)).fetchone()
+    days_count = row['d'] if row else 0
+    db.execute('UPDATE students SET total_accesses=? WHERE student_name=?', (days_count, name))
 
 
 def register_pdf(path, pdf, student=None):
@@ -123,17 +130,34 @@ def record_custom_event(path, student_name, workout_name, event_type, token='dir
     with connect(path) as db:
         db.execute('BEGIN IMMEDIATE')
         now = clock()
-        latest = datetime.fromtimestamp(now, TZ).isoformat(timespec='seconds')
-        last = db.execute("SELECT opened_at FROM pdf_events WHERE student_name=? AND event_type=? ORDER BY id DESC LIMIT 1",
-                          (student_name, event_type)).fetchone()
-        counted = not last or now - datetime.fromisoformat(last['opened_at']).timestamp() >= 60
-        sync_student(db, student_name, whatsapp, workout_name, latest, int(counted))
-        if not counted:
-            return False
-        db.execute('''INSERT INTO pdf_events(student_id,student_name,workout_id,workout_name,token,event_type,opened_at,ip,user_agent,whatsapp)
-                      VALUES(?,?,?,?,?,?,?,?,?,?)''',
-                   ('auto-' + hashlib.sha256(student_name.encode()).hexdigest()[:16], student_name,
-                    'workout', workout_name, token, event_type, latest, ip, (agent or '')[:1024], normalize_whatsapp(whatsapp)))
+        dt_now = datetime.fromtimestamp(now, TZ)
+        latest = dt_now.isoformat(timespec='seconds')
+        today_prefix = dt_now.strftime('%Y-%m-%d')
+
+        clean_workout = workout_name.strip()
+        # Verifica se já existe registro de treino deste aluno hoje
+        row = db.execute('''SELECT id, workout_name FROM pdf_events 
+                            WHERE student_name=? AND SUBSTR(opened_at, 1, 10)=?
+                            ORDER BY id DESC LIMIT 1''', (student_name, today_prefix)).fetchone()
+
+        if row:
+            # Já treinou hoje! Adiciona o exercício aos exercícios do dia sem criar nova linha
+            existing_exs = [x.strip() for x in (row['workout_name'] or '').split(' • ') if x.strip()]
+            if clean_workout and clean_workout not in existing_exs:
+                existing_exs.append(clean_workout)
+            updated_workouts = ' • '.join(existing_exs[-8:])
+            db.execute('''UPDATE pdf_events SET opened_at=?, workout_name=?, ip=?, user_agent=?,
+                          whatsapp=CASE WHEN ?!='' THEN ? ELSE whatsapp END
+                          WHERE id=?''', (latest, updated_workouts, ip, (agent or '')[:1024],
+                                          normalize_whatsapp(whatsapp), normalize_whatsapp(whatsapp), row['id']))
+            sync_student(db, student_name, whatsapp, updated_workouts, latest, increment=0)
+        else:
+            # Novo dia de treino registrado!
+            db.execute('''INSERT INTO pdf_events(student_id,student_name,workout_id,workout_name,token,event_type,opened_at,ip,user_agent,whatsapp)
+                          VALUES(?,?,?,?,?,?,?,?,?,?)''',
+                       ('auto-' + hashlib.sha256(student_name.encode()).hexdigest()[:16], student_name,
+                        'workout', clean_workout, token, event_type, latest, ip, (agent or '')[:1024], normalize_whatsapp(whatsapp)))
+            sync_student(db, student_name, whatsapp, clean_workout, latest, increment=1)
         return True
 
 
@@ -309,17 +333,62 @@ def create_app(db_path, password, network_guard=False):
     @admin
     def dashboard():
         with connect(db_path) as db:
-            students = db.execute('SELECT * FROM students ORDER BY latest DESC, student_name').fetchall()
-            events = db.execute('SELECT * FROM pdf_events ORDER BY id DESC LIMIT 500').fetchall()
+            students_raw = db.execute('SELECT * FROM students ORDER BY latest DESC, student_name').fetchall()
+            events = db.execute('SELECT * FROM pdf_events ORDER BY opened_at DESC LIMIT 300').fetchall()
+            
+            agora = datetime.now(TZ)
+            hoje_date = agora.date()
+            
+            students = []
+            for s in students_raw:
+                s_dict = dict(s)
+                # Dias distintos reais de treino
+                row_dias = db.execute('SELECT COUNT(DISTINCT SUBSTR(opened_at, 1, 10)) as d FROM pdf_events WHERE student_name=?',
+                                      (s['student_name'],)).fetchone()
+                tot_dias = row_dias['d'] if row_dias else 0
+                s_dict['total_dias'] = tot_dias
+                
+                latest_str = s['latest']
+                if latest_str:
+                    try:
+                        d_str = latest_str.split('T')[0] if 'T' in latest_str else latest_str[:10]
+                        d_obj = datetime.fromisoformat(d_str).date()
+                        diff_days = (hoje_date - d_obj).days
+                        s_dict['diff_days'] = diff_days
+                        if diff_days == 0:
+                            s_dict['status_badge'] = 'badge-start'
+                            s_dict['status_text'] = '🟢 Treinou hoje!'
+                        elif diff_days == 1:
+                            s_dict['status_badge'] = 'badge-yt'
+                            s_dict['status_text'] = '🟡 1 dia sem treinar (ontem)'
+                        else:
+                            s_dict['status_badge'] = 'badge-danger-tag'
+                            s_dict['status_text'] = f'🔴 {diff_days} dias sem treinar'
+                        
+                        hora_str = latest_str.split('T')[-1][:5] if 'T' in latest_str else ''
+                        dia_br = f"{d_obj.day:02d}/{d_obj.month:02d}/{d_obj.year}"
+                        s_dict['latest_formatado'] = f"{dia_br} às {hora_str}" if hora_str else dia_br
+                    except Exception:
+                        s_dict['status_badge'] = 'badge-pdf'
+                        s_dict['status_text'] = 'Com atividade'
+                        s_dict['latest_formatado'] = latest_str
+                else:
+                    s_dict['status_badge'] = 'badge-pdf'
+                    s_dict['status_text'] = '⚪ Nunca treinou'
+                    s_dict['latest_formatado'] = 'Ainda não treinou'
+                
+                students.append(s_dict)
+
             tot_students = len(students)
-            tot_events = len(events)
+            tot_dias_geral = db.execute('SELECT COUNT(DISTINCT student_name || SUBSTR(opened_at, 1, 10)) as d FROM pdf_events').fetchone()['d']
             latest_time = events[0]['opened_at'] if events else 'Nenhuma'
+
         return render_template_string('''<!doctype html>
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Painel do Treinador | Rastreamento</title>
+<title>Painel do Treinador | Frequência de Alunos</title>
 <style>
   :root {
     --bg: #f8fafc;
@@ -338,7 +407,7 @@ def create_app(db_path, password, network_guard=False):
     background: var(--bg);
     color: var(--text);
     padding: 16px;
-    max-width: 960px;
+    max-width: 980px;
     margin: 0 auto;
     line-height: 1.4;
   }
@@ -353,12 +422,9 @@ def create_app(db_path, password, network_guard=False):
     margin-bottom: 16px;
   }
   .header h1 {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--text);
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
   .header-actions {
     display: flex;
@@ -384,7 +450,7 @@ def create_app(db_path, password, network_guard=False):
   .btn-del {
     background: #fee2e2;
     color: var(--danger);
-    padding: 3px 8px;
+    padding: 4px 8px;
     font-size: 0.75rem;
     border-radius: 6px;
     border: none;
@@ -447,16 +513,26 @@ def create_app(db_path, password, network_guard=False):
     font-size: 0.72rem;
     font-weight: 600;
   }
-  .badge-yt { background: #fee2e2; color: #b91c1c; }
   .badge-start { background: #dcfce7; color: #15803d; }
-  .badge-pdf { background: #e0f2fe; color: #0369a1; }
+  .badge-yt { background: #fef9c3; color: #854d0e; }
+  .badge-danger-tag { background: #fee2e2; color: #b91c1c; }
+  .badge-pdf { background: #f1f5f9; color: #475569; }
   .empty { padding: 24px; text-align: center; color: var(--sub); font-size: 0.85rem; }
   .nowrap { white-space: nowrap; }
+  .ex-tag {
+    display: inline-block;
+    background: #f1f5f9;
+    color: #334155;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    margin: 1px;
+  }
 </style>
 </head>
 <body>
   <div class="header">
-    <h1>📊 Painel de Atividades</h1>
+    <h1>📊 Frequência e Treinos dos Alunos</h1>
     <div class="header-actions">
       <a href="/" class="btn btn-back">← Editor</a>
       <a href="" class="btn btn-refresh">🔄 Atualizar</a>
@@ -475,19 +551,19 @@ def create_app(db_path, password, network_guard=False):
       <div class="sub">Cadastrados</div>
     </div>
     <div class="stat-card">
-      <div class="label">Acessos</div>
-      <div class="value">{{ tot_events }}</div>
-      <div class="sub">Vídeos / Treinos</div>
+      <div class="label">Dias de Treino</div>
+      <div class="value">{{ tot_dias_geral }}</div>
+      <div class="sub">Sessões realizadas</div>
     </div>
     <div class="stat-card">
-      <div class="label">Última Atividade</div>
-      <div class="value" style="font-size:0.95rem;padding-top:4px;">{{ latest_time.split('T')[-1] if 'T' in latest_time else (latest_time or 'Nenhuma') }}</div>
+      <div class="label">Último Acesso</div>
+      <div class="value" style="font-size:0.92rem;padding-top:4px;">{{ latest_time.split('T')[-1][:5] if 'T' in latest_time else (latest_time or 'Nenhum') }}</div>
       <div class="sub">{{ latest_time.split('T')[0] if 'T' in latest_time else '' }}</div>
     </div>
   </div>
 
   <div class="section-title">
-    <span>👥 Alunos Cadastrados ({{ tot_students }})</span>
+    <span>👥 Frequência dos Alunos ({{ tot_students }})</span>
   </div>
   <div class="card-box">
     <div class="table-responsive">
@@ -496,9 +572,9 @@ def create_app(db_path, password, network_guard=False):
           <tr>
             <th>Aluno</th>
             <th>WhatsApp</th>
-            <th>Último Exercício</th>
-            <th class="nowrap">Total</th>
-            <th>Último Acesso</th>
+            <th class="nowrap">Dias Treinados</th>
+            <th>Situação / Ausência</th>
+            <th>Último Treino</th>
             <th style="text-align:right;">Ação</th>
           </tr>
         </thead>
@@ -515,9 +591,17 @@ def create_app(db_path, password, network_guard=False):
                 <span style="color:#94a3b8;font-size:0.75rem;">Sem WhatsApp</span>
               {% endif %}
             </td>
-            <td>{{ r.workout_name or '-' }}</td>
-            <td><strong style="color:var(--accent);">{{ r.total_accesses }}x</strong></td>
-            <td class="nowrap" style="color:var(--sub);font-size:0.75rem;">{{ r.latest or 'Ainda não abriu' }}</td>
+            <td>
+              <strong style="color:var(--accent);font-size:0.9rem;">
+                {{ r.total_dias }} {% if r.total_dias == 1 %}dia{% else %}dias{% endif %}
+              </strong>
+            </td>
+            <td>
+              <span class="badge {{ r.status_badge }}">{{ r.status_text }}</span>
+            </td>
+            <td class="nowrap" style="color:var(--sub);font-size:0.78rem;">
+              {{ r.latest_formatado }}
+            </td>
             <td style="text-align:right;">
               <form action="/painel/apagar-aluno/{{ r.student_name }}" method="post" onsubmit="return confirm('Excluir o aluno {{ r.student_name }} e todo seu histórico do painel?');" style="display:inline;">
                 <button type="submit" class="btn-del" title="Excluir Aluno">🗑️ Apagar</button>
@@ -535,17 +619,17 @@ def create_app(db_path, password, network_guard=False):
   </div>
 
   <div class="section-title">
-    <span>⚡ Linha do Tempo de Acessos Recentes</span>
+    <span>🗓️ Histórico de Sessões de Treino</span>
   </div>
   <div class="card-box">
     <div class="table-responsive">
       <table>
         <thead>
           <tr>
-            <th>Horário</th>
+            <th>Dia e Horário</th>
             <th>Aluno</th>
-            <th>Exercício / Treino</th>
-            <th>Ação</th>
+            <th>Exercícios Vistos no Dia</th>
+            <th>Status</th>
             <th style="text-align:right;">Ação</th>
           </tr>
         </thead>
@@ -554,28 +638,26 @@ def create_app(db_path, password, network_guard=False):
           <tr>
             <td class="nowrap" style="font-size:0.75rem;color:var(--sub);">
               <strong>{{ r.opened_at.split('T')[-1][:5] if 'T' in r.opened_at else r.opened_at }}</strong>
-              <div style="font-size:0.65rem;">{{ r.opened_at.split('T')[0] if 'T' in r.opened_at else '' }}</div>
+              <div style="font-size:0.68rem;color:#64748b;">{{ r.opened_at.split('T')[0] if 'T' in r.opened_at else '' }}</div>
             </td>
             <td><strong>{{ r.student_name }}</strong></td>
-            <td>{{ r.workout_name }}</td>
             <td>
-              {% if 'iniciado' in r.event_type %}
-                <span class="badge badge-start">🟢 Treino Iniciado</span>
-              {% elif 'Vídeo' in r.event_type %}
-                <span class="badge badge-yt">▶️ YouTube</span>
-              {% else %}
-                <span class="badge badge-pdf">📄 PDF</span>
-              {% endif %}
+              {% for ex in r.workout_name.split(' • ') %}
+                <span class="ex-tag">▶️ {{ ex }}</span>
+              {% endfor %}
+            </td>
+            <td>
+              <span class="badge badge-start">Treinou</span>
             </td>
             <td style="text-align:right;">
-              <form action="/painel/apagar-evento/{{ r.id }}" method="post" onsubmit="return confirm('Apagar este registro?');" style="display:inline;">
+              <form action="/painel/apagar-evento/{{ r.id }}" method="post" onsubmit="return confirm('Apagar este registro de treino?');" style="display:inline;">
                 <button type="submit" class="btn-del" title="Apagar Registro">🗑️</button>
               </form>
             </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="5" class="empty">Nenhuma atividade registrada ainda.</td>
+            <td colspan="5" class="empty">Nenhum treino registrado ainda.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -583,7 +665,7 @@ def create_app(db_path, password, network_guard=False):
     </div>
   </div>
 </body>
-</html>''', students=students, events=events, tot_students=tot_students, tot_events=tot_events, latest_time=latest_time)
+</html>''', students=students, events=events, tot_students=tot_students, tot_dias_geral=tot_dias_geral, latest_time=latest_time)
 
     return app
 
