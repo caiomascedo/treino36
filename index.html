@@ -371,7 +371,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 #workoutLibraryItems { max-height:180px; }
 #workoutLibraryPreview { min-height:200px; }
 .more-options-menu { width:210px; }
-.name-suggestions { position:static; margin-top:4px; max-height:130px; box-shadow:none; border-radius:8px; }
+.name-suggestions { position:absolute; top:calc(100% + 4px); left:0; right:0; width:100%; z-index:1200; max-height:180px; box-shadow:0 8px 22px rgba(0,0,0,.18); border-radius:12px; background:#fff; border:1px solid #ddd; }
 .name-suggestion { padding:6px 9px; font-size:.7rem; }
 #workoutLibraryDialog > .dialog-actions, #compareWorkoutsDialog > .dialog-actions { position:sticky; bottom:-16px; padding:8px 0; background:#fff; border-top:1px solid #e2e7eb; }
 .compare-inline-tools { display:flex; align-items:center; gap:5px; margin-bottom:10px; position:sticky; top:-16px; padding:8px 0; background:white; z-index:2; }
