@@ -25,7 +25,10 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 .aluno-atual-titulo:focus-visible { outline: 2px solid #4a90e2; outline-offset: 2px; border-radius: 4px; }
 .lista-alunos-itens { max-height: 300px; overflow-y: auto; }
 .search-bar { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; background: #f5f5f5; padding: 5px; border-radius: 12px; }
-.search-input-wrap { position: relative; grid-column: 1 / -1; min-width: 0; }
+.search-input-wrap { position: relative; grid-column: 1 / -1; min-width: 0; display: flex; align-items: center; gap: 4px; background: white; border-radius: 30px; }
+.search-input-wrap #searchName { flex: 1; min-width: 0; border-radius: 30px 0 0 30px; background: transparent; }
+#wppIconBtn { flex-shrink: 0; font-size: 1.05rem; padding: 4px 8px 4px 2px; opacity: .5; border-radius: 0 30px 30px 0; background: transparent; border: none; cursor: pointer; }
+#wppIconBtn:hover { opacity: 1; }
 .search-bar input { width: 100%; border: none; border-radius: 30px; padding: 6px 12px; font-size: 0.75rem; outline: none; }
 .name-suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1200; display: none; background: #fff; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.18); max-height: 210px; overflow-y: auto; }
 .name-suggestions.visible { display: block; }
@@ -99,8 +102,6 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 .aluno-data { font-size: .65rem; color: #666; margin-top: 4px; line-height: 1.4; }
 .aluno-info { min-width: 0; overflow-wrap: anywhere; width: 100%; }
 .hist-aluno-btn { background:#4a90e2!important; font-size:.62rem!important; padding:3px 7px!important; }
-#wppIconBtn { background:none; border:none; font-size:1.1rem; cursor:pointer; padding:0 2px; line-height:1; vertical-align:middle; opacity:.55; }
-#wppIconBtn:hover { opacity:1; }
 .aluno-info { flex: 1; }
 .aluno-nome { font-weight: bold; font-size: 0.85rem; }
 .aluno-preview { font-size: 0.65rem; color: #666; margin-top: 3px; }
