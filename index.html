@@ -90,17 +90,17 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 #pasteModal.expanded #pasteTextarea { flex: 1; height: auto; min-height: 0; font-size: 1rem; line-height: 1.45; resize: none; }
 .modal-card button { background: #2c3e50; color: white; border: none; border-radius: 20px; padding: 6px 12px; margin-right: 8px; cursor: pointer; }
 .modal-card select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 20px; }
-.aluno-list-item { padding: 10px; border-bottom: 1px solid #ddd; cursor: pointer; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.aluno-list-item { padding: 10px; border-bottom: 1px solid #ddd; cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .aluno-list-item:hover { background: #f0f0f0; }
 .aluno-list-item:focus-visible { outline: 2px solid #4a90e2; outline-offset: -2px; background: #f0f0f0; }
 .aluno-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .aluno-actions button { margin: 0; }
 .lista-ordem-label { display: block; font-size: .75rem; margin-bottom: 5px; color: #555; }
 .aluno-data { font-size: .65rem; color: #666; margin-top: 4px; line-height: 1.4; }
-.aluno-info { min-width: 0; overflow-wrap: anywhere; }
-#studentWhatsapp { display:block; width:100%; max-width:300px; margin-top:4px; padding:3px 8px; font-size:.68rem; border:1px solid #ccc; border-radius:14px; color:#444; outline:none; background:#fafafa; }
-#studentWhatsapp::placeholder { color:#bbb; }
+.aluno-info { min-width: 0; overflow-wrap: anywhere; width: 100%; }
 .hist-aluno-btn { background:#4a90e2!important; font-size:.62rem!important; padding:3px 7px!important; }
+#wppIconBtn { background:none; border:none; font-size:1.1rem; cursor:pointer; padding:0 2px; line-height:1; vertical-align:middle; opacity:.55; }
+#wppIconBtn:hover { opacity:1; }
 .aluno-info { flex: 1; }
 .aluno-nome { font-weight: bold; font-size: 0.85rem; }
 .aluno-preview { font-size: 0.65rem; color: #666; margin-top: 3px; }
@@ -442,8 +442,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   <div class="search-bar">
     <div class="search-input-wrap">
       <input type="text" id="searchName" placeholder="Nome do aluno" autocomplete="off" aria-autocomplete="list" aria-controls="nameSuggestions">
+      <button type="button" id="wppIconBtn" title="Adicionar/editar WhatsApp do aluno">📱</button>
       <div id="nameSuggestions" class="name-suggestions" role="listbox"></div>
-      <input type="tel" id="studentWhatsapp" placeholder="WhatsApp (opcional)" autocomplete="off">
     </div>
     <button id="listBtn" class="list">📋 Lista</button>
     <button id="saveBtn" class="save">💾 Salvar</button>
@@ -4098,8 +4098,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   function capturarTreinoAtual() {
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) return null;
-    var wField = document.getElementById('studentWhatsapp');
-    var dados = { nome: nome, student_id:alunoNaTela()?alunoNaTela().student_id:null, whatsapp: wField ? wField.value.trim() : '', treino: {}, titulos: {}, secaoFAtiva: secaoFAtiva };
+    var alunoAtual = alunoNaTela();
+    var dados = { nome: nome, student_id: alunoAtual ? alunoAtual.student_id : null, whatsapp: alunoAtual ? (alunoAtual.whatsapp || '') : '', treino: {}, titulos: {}, secaoFAtiva: secaoFAtiva };
     ['A','B','C','D','E','F'].forEach(function(sec) {
       var exs = [];
       if (sections[sec]) sections[sec].querySelectorAll('li').forEach(function(li) {
@@ -4556,8 +4556,6 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     garantirHistorico(aluno);
     concluirAutoSave();
     registrarAlunoSelecionado(aluno.nome);
-    var wField = document.getElementById('studentWhatsapp');
-    if (wField) wField.value = aluno.whatsapp || '';
     isUndoRedoAction = true;
     setSecaoFAtiva(!!aluno.secaoFAtiva, true);
     ['A','B','C','D','E','F'].forEach(function(sec) {
@@ -5022,6 +5020,20 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   }
   document.getElementById('saveBtn').addEventListener('click', function() { salvarAlunoAtual(); });
   document.getElementById('listBtn').addEventListener('click', mostrarListaAlunos);
+  document.getElementById('wppIconBtn').addEventListener('click', function() {
+    var nome = document.getElementById('searchName').value.trim();
+    if (!nome) { exibirMensagem('❌ Digite o nome do aluno primeiro.', '#b22222', false); return; }
+    var aluno = buscarAluno(nome);
+    var atual = aluno ? (aluno.whatsapp || '') : '';
+    var novoWpp = prompt('📱 WhatsApp de ' + nome + ':', atual);
+    if (novoWpp === null) return;
+    novoWpp = novoWpp.trim();
+    if (aluno) {
+      aluno.whatsapp = novoWpp;
+      salvarLocalStorage();
+      exibirMensagem('📱 WhatsApp salvo.', '#1e6f3f', false);
+    }
+  });
   document.getElementById('copyBtn').addEventListener('click', copiarTreinoEntreAlunos);
   document.getElementById('deleteBtn').addEventListener('click', apagarAlunoAtual);
   document.getElementById('exportBtn').addEventListener('click', exportarJSON);
