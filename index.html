@@ -86,7 +86,7 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 .paste-tools button { margin: 0; background: #8b5a2b; }
 .paste-tools button.expand-paste-btn { background: #4a90e2; }
 #pasteModal.expanded { padding: 10px; }
-#pasteModal.expanded .paste-modal-card { width: 100%; max-width: 1000px; height: calc(100vh - 20px); max-height: none; display: flex; flex-direction: column; }
+#pasteModal.expanded .paste-modal-card { width: min(96vw, 1000px); height: calc(100dvh - 20px); max-height: none; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; }
 #pasteModal.expanded #pasteTextarea { flex: 1; height: auto; min-height: 0; font-size: 1rem; line-height: 1.45; resize: none; }
 .modal-card button { background: #2c3e50; color: white; border: none; border-radius: 20px; padding: 6px 12px; margin-right: 8px; cursor: pointer; }
 .modal-card select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 20px; }
@@ -98,6 +98,9 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 .lista-ordem-label { display: block; font-size: .75rem; margin-bottom: 5px; color: #555; }
 .aluno-data { font-size: .65rem; color: #666; margin-top: 4px; line-height: 1.4; }
 .aluno-info { min-width: 0; overflow-wrap: anywhere; }
+#studentWhatsapp { display:block; width:100%; max-width:300px; margin-top:4px; padding:3px 8px; font-size:.68rem; border:1px solid #ccc; border-radius:14px; color:#444; outline:none; background:#fafafa; }
+#studentWhatsapp::placeholder { color:#bbb; }
+.hist-aluno-btn { background:#4a90e2!important; font-size:.62rem!important; padding:3px 7px!important; }
 .aluno-info { flex: 1; }
 .aluno-nome { font-weight: bold; font-size: 0.85rem; }
 .aluno-preview { font-size: 0.65rem; color: #666; margin-top: 3px; }
@@ -350,7 +353,6 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 .paste-modal-card { display:flex; flex-direction:column; overflow:hidden; max-height:85vh; max-height:85dvh; }
 .paste-modal-card > h3,.paste-help,.paste-tools,.paste-modal-card > div:last-child { flex-shrink:0; }
 .paste-modal-card textarea { min-height:80px; flex:1 1 240px; overflow:auto; overscroll-behavior:contain; touch-action:pan-y; }
-#pasteModal.expanded .paste-modal-card { height:calc(100dvh - 20px); }
 #pasteModal { overscroll-behavior:contain; }
 .paste-tools button { font-size:.7rem; padding:5px 8px; margin:0; }
 body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
@@ -382,8 +384,6 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 .compare-row-actions button { padding:4px 9px; }
 #pasteModal { top:var(--paste-top,0px); height:var(--paste-height,100dvh); bottom:auto; padding:8px; align-items:center; }
 #pasteModal .paste-modal-card { height:min(620px,100%); max-height:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
-#pasteModal.expanded { padding:8px; }
-#pasteModal.expanded .paste-modal-card { height:100%; max-height:100%; }
 #pasteModal #pasteTextarea { font-size:16px; line-height:1.45; flex:1 1 200px; min-height:90px; max-height:none; overflow:auto; -webkit-overflow-scrolling:touch; }
 #pasteModal .paste-tools { margin-bottom:6px; }
 #pasteModal .paste-help { font-size:.68rem; margin-bottom:6px; }
@@ -443,6 +443,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     <div class="search-input-wrap">
       <input type="text" id="searchName" placeholder="Nome do aluno" autocomplete="off" aria-autocomplete="list" aria-controls="nameSuggestions">
       <div id="nameSuggestions" class="name-suggestions" role="listbox"></div>
+      <input type="tel" id="studentWhatsapp" placeholder="WhatsApp (opcional)" autocomplete="off">
     </div>
     <button id="listBtn" class="list">📋 Lista</button>
     <button id="saveBtn" class="save">💾 Salvar</button>
@@ -4097,7 +4098,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   function capturarTreinoAtual() {
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) return null;
-    var dados = { nome: nome, student_id:alunoNaTela()?alunoNaTela().student_id:null, treino: {}, titulos: {}, secaoFAtiva: secaoFAtiva };
+    var wField = document.getElementById('studentWhatsapp');
+    var dados = { nome: nome, student_id:alunoNaTela()?alunoNaTela().student_id:null, whatsapp: wField ? wField.value.trim() : '', treino: {}, titulos: {}, secaoFAtiva: secaoFAtiva };
     ['A','B','C','D','E','F'].forEach(function(sec) {
       var exs = [];
       if (sections[sec]) sections[sec].querySelectorAll('li').forEach(function(li) {
@@ -4117,10 +4119,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       var mudou = JSON.stringify(aluno.treino) !== JSON.stringify(dados.treino)
         || JSON.stringify(aluno.titulos) !== JSON.stringify(dados.titulos)
         || !!aluno.secaoFAtiva !== dados.secaoFAtiva;
-      if (!mudou && !registrarLancamento) return salvarLocalStorage();
+      if (!mudou && !registrarLancamento && (dados.whatsapp || '') === (aluno.whatsapp || '')) return salvarLocalStorage();
       aluno.treino = dados.treino;
       aluno.titulos = dados.titulos;
       aluno.secaoFAtiva = dados.secaoFAtiva;
+      if (dados.whatsapp !== undefined) aluno.whatsapp = dados.whatsapp;
       aluno.atualizadoEm = agora;
     } else {
       dados.criadoEm = agora;
@@ -4553,6 +4556,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     garantirHistorico(aluno);
     concluirAutoSave();
     registrarAlunoSelecionado(aluno.nome);
+    var wField = document.getElementById('studentWhatsapp');
+    if (wField) wField.value = aluno.whatsapp || '';
     isUndoRedoAction = true;
     setSecaoFAtiva(!!aluno.secaoFAtiva, true);
     ['A','B','C','D','E','F'].forEach(function(sec) {
@@ -4791,6 +4796,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
           + '<div class="aluno-info"><div class="aluno-nome">' + escHtml(a.nome) + '</div>'
           + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + '</div></div>'
           + '<div class="aluno-actions">'
+          + '<button class="hist-aluno-btn" data-nome="' + escAttr(a.nome) + '">📜 Histórico</button>'
+          + '<button class="wpp-aluno-btn" data-nome="' + escAttr(a.nome) + '" style="background:#25d366!important;font-size:.62rem!important;padding:3px 7px!important;" title="Editar WhatsApp">📱 ' + escHtml(a.whatsapp || 'WhatsApp') + '</button>'
           + '<button class="move-student-btn" data-nome="' + escAttr(a.nome) + '">↪ Mover</button>'
           + '<button class="delete-aluno-btn" data-nome="' + escAttr(a.nome) + '">🗑️ Apagar</button>'
           + '</div></div>';
@@ -4827,6 +4834,45 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       lista.addEventListener('click', function(e) {
         var item = e.target.closest('.aluno-list-item');
         if (!item) return;
+        if (e.target.closest('.hist-aluno-btn')) {
+          var aHist = buscarAluno(item.dataset.nome);
+          if (!aHist) return;
+          garantirHistorico(aHist);
+          var hist = aHist.historicoTreinos || [];
+          if (!hist.length) { alert('Nenhum histórico salvo para ' + aHist.nome + '.'); return; }
+          var opcoes = hist.map(function(h, i) { return (i+1) + ') ' + (h.tituloTreino || h.treinoNome || 'Treino ' + (i+1)) + ' — ' + (h.arquivadoEm ? h.arquivadoEm.slice(0,10) : ''); }).join('\n');
+          var escolha = prompt('📜 Histórico de ' + aHist.nome + '\n\nDigite o número do treino para carregar:\n\n' + opcoes);
+          if (escolha === null) return;
+          var idx2 = parseInt(escolha, 10) - 1;
+          if (isNaN(idx2) || idx2 < 0 || idx2 >= hist.length) { alert('Número inválido.'); return; }
+          var entrada = hist[idx2];
+          if (!confirm('Carregar treino "' + (entrada.tituloTreino || entrada.treinoNome || 'Treino ' + (idx2+1)) + '" de ' + aHist.nome + '?\n\nO treino atual será arquivado antes.')) return;
+          carregarTreinoAluno(aHist);
+          arquivarTreino(aHist);
+          aHist.treino = JSON.parse(JSON.stringify(entrada.treino));
+          aHist.titulos = JSON.parse(JSON.stringify(entrada.titulos || {}));
+          aHist.secaoFAtiva = !!entrada.secaoFAtiva;
+          aHist.atualizadoEm = new Date().toISOString();
+          salvarLocalStorage();
+          carregarTreinoAluno(aHist);
+          exibirMensagem('📜 Treino histórico carregado para ' + aHist.nome + '.', '#4a90e2', false);
+          modal.style.visibility = 'hidden';
+          return;
+        }
+        if (e.target.closest('.wpp-aluno-btn')) {
+          var aWpp = buscarAluno(item.dataset.nome);
+          if (!aWpp) return;
+          var novoWpp = prompt('📱 WhatsApp de ' + aWpp.nome + ':', aWpp.whatsapp || '');
+          if (novoWpp === null) return;
+          aWpp.whatsapp = novoWpp.trim();
+          salvarLocalStorage();
+          if (document.getElementById('searchName').value.trim() === aWpp.nome) {
+            var wf = document.getElementById('studentWhatsapp');
+            if (wf) wf.value = aWpp.whatsapp;
+          }
+          atualizarItens();
+          return;
+        }
         if (e.target.closest('.move-student-btn')) {
           abrirMoverAluno(item.dataset.nome,atualizarItens);
           return;
