@@ -376,7 +376,8 @@ def create_app(db_path, password, network_guard=False):
                     s_dict['status_badge'] = 'badge-pdf'
                     s_dict['status_text'] = '⚪ Nunca treinou'
                     s_dict['latest_formatado'] = 'Ainda não treinou'
-                
+                students.append(s_dict)
+
             parsed_events = []
             for ev in events:
                 ev_dict = dict(ev)
