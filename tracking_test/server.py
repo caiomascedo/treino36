@@ -377,7 +377,25 @@ def create_app(db_path, password, network_guard=False):
                     s_dict['status_text'] = '⚪ Nunca treinou'
                     s_dict['latest_formatado'] = 'Ainda não treinou'
                 
-                students.append(s_dict)
+            parsed_events = []
+            for ev in events:
+                ev_dict = dict(ev)
+                raw_exs = [x.strip() for x in (ev['workout_name'] or '').split(' • ') if x.strip()]
+                ev_dict['ex_list'] = raw_exs
+                ev_dict['ex_count'] = len(raw_exs)
+                opened = ev['opened_at']
+                if 'T' in opened:
+                    d_p, h_p = opened.split('T')
+                    ev_dict['hora'] = h_p[:5]
+                    try:
+                        d_obj = datetime.fromisoformat(d_p).date()
+                        ev_dict['data_br'] = f"{d_obj.day:02d}/{d_obj.month:02d}"
+                    except Exception:
+                        ev_dict['data_br'] = d_p
+                else:
+                    ev_dict['hora'] = opened[:5]
+                    ev_dict['data_br'] = opened
+                parsed_events.append(ev_dict)
 
             tot_students = len(students)
             tot_dias_geral = db.execute('SELECT COUNT(DISTINCT student_name || SUBSTR(opened_at, 1, 10)) as d FROM pdf_events').fetchone()['d']
@@ -406,10 +424,11 @@ def create_app(db_path, password, network_guard=False):
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg);
     color: var(--text);
-    padding: 16px;
+    padding: 14px;
     max-width: 980px;
     margin: 0 auto;
     line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
   }
   .header {
     display: flex;
@@ -417,26 +436,26 @@ def create_app(db_path, password, network_guard=False):
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding-bottom: 16px;
+    padding-bottom: 14px;
     border-bottom: 1px solid var(--border);
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .header h1 {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: var(--text);
   }
   .header-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
   .btn {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 7px 12px;
-    font-size: 0.8rem;
+    padding: 6px 12px;
+    font-size: 0.78rem;
     font-weight: 600;
     border-radius: 8px;
     border: none;
@@ -463,7 +482,7 @@ def create_app(db_path, password, network_guard=False):
     gap: 4px;
     background: #dcfce7;
     color: var(--success);
-    padding: 4px 8px;
+    padding: 3px 8px;
     border-radius: 6px;
     text-decoration: none;
     font-size: 0.75rem;
@@ -471,24 +490,24 @@ def create_app(db_path, password, network_guard=False):
   }
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
   }
   .stat-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 12px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    padding: 10px 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   }
-  .stat-card .label { font-size: 0.72rem; color: var(--sub); font-weight: 600; text-transform: uppercase; }
-  .stat-card .value { font-size: 1.3rem; font-weight: 700; margin-top: 4px; }
-  .stat-card .sub { font-size: 0.7rem; color: var(--sub); margin-top: 2px; }
+  .stat-card .label { font-size: 0.68rem; color: var(--sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .stat-card .value { font-size: 1.25rem; font-weight: 700; margin-top: 2px; }
+  .stat-card .sub { font-size: 0.68rem; color: var(--sub); margin-top: 1px; }
   .section-title {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -496,15 +515,15 @@ def create_app(db_path, password, network_guard=False):
   .card-box {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 12px;
     overflow: hidden;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.03);
   }
-  .table-responsive { width: 100%; overflow-x: auto; }
+  .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem; }
-  th { background: #f8fafc; padding: 10px 12px; font-weight: 600; color: var(--sub); border-bottom: 1px solid var(--border); }
-  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { background: #f8fafc; padding: 9px 12px; font-weight: 600; color: var(--sub); border-bottom: 1px solid var(--border); font-size: 0.75rem; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   .badge {
     display: inline-block;
@@ -517,16 +536,86 @@ def create_app(db_path, password, network_guard=False):
   .badge-yt { background: #fef9c3; color: #854d0e; }
   .badge-danger-tag { background: #fee2e2; color: #b91c1c; }
   .badge-pdf { background: #f1f5f9; color: #475569; }
-  .empty { padding: 24px; text-align: center; color: var(--sub); font-size: 0.85rem; }
+  .empty { padding: 20px; text-align: center; color: var(--sub); font-size: 0.82rem; }
   .nowrap { white-space: nowrap; }
-  .ex-tag {
+
+  /* Accordion Sanfona para os Exercícios */
+  .ex-accordion {
+    position: relative;
     display: inline-block;
+  }
+  .ex-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     background: #f1f5f9;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 3px 9px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    list-style: none;
+  }
+  .ex-pill::-webkit-details-marker { display: none; }
+  .ex-pill:hover, .ex-pill:active {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+  }
+  .ex-pill .chevron {
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+    color: #64748b;
+  }
+  .ex-accordion[open] .ex-pill {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+  }
+  .ex-accordion[open] .ex-pill .chevron {
+    transform: rotate(180deg);
+  }
+  .ex-drawer {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 260px;
+    max-width: 380px;
+    animation: drawerFade .15s ease-out;
+  }
+  @keyframes drawerFade {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .ex-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.74rem;
+    line-height: 1.35;
     color: #334155;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.72rem;
-    margin: 1px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f8fafc;
+  }
+  .ex-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .yt-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+    margin-top: 5px;
+    flex-shrink: 0;
   }
 </style>
 </head>
@@ -551,13 +640,13 @@ def create_app(db_path, password, network_guard=False):
       <div class="sub">Cadastrados</div>
     </div>
     <div class="stat-card">
-      <div class="label">Dias de Treino</div>
+      <div class="label">Dias Treinados</div>
       <div class="value">{{ tot_dias_geral }}</div>
-      <div class="sub">Sessões realizadas</div>
+      <div class="sub">Sessões totais</div>
     </div>
     <div class="stat-card">
       <div class="label">Último Acesso</div>
-      <div class="value" style="font-size:0.92rem;padding-top:4px;">{{ latest_time.split('T')[-1][:5] if 'T' in latest_time else (latest_time or 'Nenhum') }}</div>
+      <div class="value" style="font-size:0.92rem;padding-top:3px;">{{ latest_time.split('T')[-1][:5] if 'T' in latest_time else (latest_time or 'Nenhum') }}</div>
       <div class="sub">{{ latest_time.split('T')[0] if 'T' in latest_time else '' }}</div>
     </div>
   </div>
@@ -592,14 +681,14 @@ def create_app(db_path, password, network_guard=False):
               {% endif %}
             </td>
             <td>
-              <strong style="color:var(--accent);font-size:0.9rem;">
+              <strong style="color:var(--accent);font-size:0.88rem;">
                 {{ r.total_dias }} {% if r.total_dias == 1 %}dia{% else %}dias{% endif %}
               </strong>
             </td>
             <td>
               <span class="badge {{ r.status_badge }}">{{ r.status_text }}</span>
             </td>
-            <td class="nowrap" style="color:var(--sub);font-size:0.78rem;">
+            <td class="nowrap" style="color:var(--sub);font-size:0.75rem;">
               {{ r.latest_formatado }}
             </td>
             <td style="text-align:right;">
@@ -626,9 +715,9 @@ def create_app(db_path, password, network_guard=False):
       <table>
         <thead>
           <tr>
-            <th>Dia e Horário</th>
+            <th>Horário</th>
             <th>Aluno</th>
-            <th>Exercícios Vistos no Dia</th>
+            <th>Exercícios do Dia</th>
             <th>Status</th>
             <th style="text-align:right;">Ação</th>
           </tr>
@@ -636,15 +725,30 @@ def create_app(db_path, password, network_guard=False):
         <tbody>
           {% for r in events %}
           <tr>
-            <td class="nowrap" style="font-size:0.75rem;color:var(--sub);">
-              <strong>{{ r.opened_at.split('T')[-1][:5] if 'T' in r.opened_at else r.opened_at }}</strong>
-              <div style="font-size:0.68rem;color:#64748b;">{{ r.opened_at.split('T')[0] if 'T' in r.opened_at else '' }}</div>
+            <td class="nowrap" style="font-size:0.78rem;color:var(--sub);">
+              <strong style="color:var(--text);font-size:0.85rem;">{{ r.hora }}</strong>
+              <div style="font-size:0.68rem;color:#64748b;">{{ r.data_br }}</div>
             </td>
             <td><strong>{{ r.student_name }}</strong></td>
             <td>
-              {% for ex in r.workout_name.split(' • ') %}
-                <span class="ex-tag">▶️ {{ ex }}</span>
-              {% endfor %}
+              {% if r.ex_count > 0 %}
+              <details class="ex-accordion">
+                <summary class="ex-pill">
+                  <span>▶️ {{ r.ex_count }} {% if r.ex_count == 1 %}exercício visto{% else %}exercícios vistos{% endif %}</span>
+                  <span class="chevron">▾</span>
+                </summary>
+                <div class="ex-drawer">
+                  {% for ex in r.ex_list %}
+                    <div class="ex-item">
+                      <span class="yt-dot"></span>
+                      <span>{{ ex }}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+              </details>
+              {% else %}
+              <span style="color:var(--sub);font-size:0.75rem;">Sem exercícios</span>
+              {% endif %}
             </td>
             <td>
               <span class="badge badge-start">Treinou</span>
@@ -665,7 +769,7 @@ def create_app(db_path, password, network_guard=False):
     </div>
   </div>
 </body>
-</html>''', students=students, events=events, tot_students=tot_students, tot_dias_geral=tot_dias_geral, latest_time=latest_time)
+</html>''', students=students, events=parsed_events, tot_students=tot_students, tot_dias_geral=tot_dias_geral, latest_time=latest_time)
 
     return app
 
