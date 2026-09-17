@@ -359,9 +359,9 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 @media print { .app-dialog,.workout-tools,.mobility-btn { display:none!important; } }
 .app-dialog [hidden] { display:none!important; }
-#saveDestination { display:flex; align-items:center; gap:5px; font-size:.65rem; color:#1e6f3f; padding:4px 6px; }
+#saveDestination { grid-column: 1 / -1; display:flex; align-items:center; gap:6px; font-size:.68rem; color:#1e6f3f; padding:4px 10px; background:#e8f5e9; border:1px solid #c8e6c9; border-radius:20px; width:fit-content; margin:2px 0; }
 #saveDestination[hidden] { display:none; }
-#saveDestination button { border:0; border-radius:4px; padding:2px 5px; cursor:pointer; background:#e5ede7; }
+#saveDestination button { border:0; border-radius:50%; width:16px; height:16px; line-height:1; padding:0; cursor:pointer; background:#c8e6c9; color:#1e6f3f; font-weight:bold; font-size:.7rem; }
 #compareEditor { padding:10px; background:#f3f7f9; border:1px solid #dbe4ea; border-radius:9px; margin-bottom:14px; }
 #compareEditor h4 { font-size:.85rem; margin:0 0 8px; }
 #compareEditText { min-height:155px; }
@@ -3852,9 +3852,19 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   let lastStateSnapshot = '';
 
   /* ===== YOUTUBE ===== */
-  function ytSearchUrl(exerciseName) {
+  function ytSearchUrl(exerciseName, alunoNome, secTitulo) {
     const clean = exerciseName.replace(/[\/\+\(\)]/g, ' ').trim();
-    return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(clean + ' academia como fazer');
+    const ytUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(clean + ' academia como fazer');
+    const aluno = alunoNome ? buscarAluno(alunoNome) : null;
+    const wpp = aluno && aluno.whatsapp ? aluno.whatsapp : '';
+    const params = new URLSearchParams({
+      aluno: alunoNome || 'Aluno',
+      treino: secTitulo || 'Treino',
+      ex: clean,
+      url: ytUrl
+    });
+    if (wpp) params.set('whatsapp', wpp);
+    return 'https://caio.tail953b6e.ts.net/r/yt?' + params.toString();
   }
   function ytIcon() {
     return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23.5 6.2s-.3-1.9-1.1-2.7c-1-.9-2.1-.9-2.6-1C17.1 2.3 12 2.3 12 2.3s-5.1 0-7.8.2c-.5.1-1.6.1-2.6 1C.8 4.3.5 6.2.5 6.2S.2 8.4.2 10.6v2.1c0 2.2.3 4.4.3 4.4s.3 1.9 1.1 2.7c1 .9 2.3.9 2.9 1C6.5 21 12 21 12 21s5.1 0 7.8-.3c.5-.1 1.6-.1 2.6-1 .8-.8 1.1-2.7 1.1-2.7s.3-2.2.3-4.4v-2.1c0-2.2-.3-4.4-.3-4.4zM9.7 15.5V8.4l7 3.6-7 3.5z"/></svg>';
@@ -3949,7 +3959,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       html += '<div class="pdf-sec ' + SEC_COLORS[sec] + '">';
       html += '<div class="pdf-sec-title ' + SEC_COLORS[sec] + '">' + escHtml(titulo) + '</div>';
       for (let ex of exs) {
-        const url = ytSearchUrl(ex.nome);
+        const url = ytSearchUrl(ex.nome, nomeAluno, titulo);
         html += '<div class="pdf-ex-row">'
           + '<div class="pdf-ex-name"><span>' + escHtml(ex.nome) + '</span> ' + escHtml(ex.detalhes) + '</div>'
           + '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" class="yt-link">' + ytIcon() + ' YouTube</a>'
@@ -5986,7 +5996,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     nameSuggestions.querySelectorAll('button').forEach(function(b){b.addEventListener('pointerdown',function(e){e.preventDefault();});b.onclick=function(){escolherSugestao(b.dataset.nome);};});
   }
   var destinoBadge=document.createElement('div');destinoBadge.id='saveDestination';destinoBadge.hidden=true;
-  document.querySelector('.search-input-wrap').appendChild(destinoBadge);
+  document.querySelector('.search-input-wrap').after(destinoBadge);
   function atualizarDestinoSalvamento(){
     var a=alunos.find(function(x){return x.student_id===destinoSugeridoId;});destinoBadge.replaceChildren();destinoBadge.hidden=!a;
     if(a){var text=document.createElement('span');text.textContent='Salvar para '+a.nome;var clear=document.createElement('button');clear.type='button';clear.textContent='✕';clear.setAttribute('aria-label','Remover vínculo de salvamento');clear.onclick=function(){destinoSugeridoId=null;atualizarDestinoSalvamento();};destinoBadge.append(text,clear);}
