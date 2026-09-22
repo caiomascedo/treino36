@@ -25,10 +25,15 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 .aluno-atual-titulo:focus-visible { outline: 2px solid #4a90e2; outline-offset: 2px; border-radius: 4px; }
 .lista-alunos-itens { max-height: 300px; overflow-y: auto; }
 .search-bar { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; background: #f5f5f5; padding: 5px; border-radius: 12px; }
-.search-input-wrap { position: relative; grid-column: 1 / -1; min-width: 0; display: flex; align-items: center; gap: 4px; background: white; border-radius: 30px; }
-.search-input-wrap #searchName { flex: 1; min-width: 0; border-radius: 30px 0 0 30px; background: transparent; }
-#wppIconBtn { flex-shrink: 0; font-size: 1.05rem; padding: 4px 8px 4px 2px; opacity: .5; border-radius: 0 30px 30px 0; background: transparent; border: none; cursor: pointer; }
-#wppIconBtn:hover { opacity: 1; }
+.search-input-wrap { position: relative; grid-column: 1 / -1; min-width: 0; display: flex; align-items: center; gap: 4px; background: white; border-radius: 30px; padding-right: 8px; }
+.search-input-wrap #searchName { flex: 1; min-width: 0; border-radius: 30px 0 0 30px; background: transparent; padding: 6px 8px 6px 12px; }
+.clear-name-btn { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #e2e8f0; color: #64748b; border: none; cursor: pointer; font-size: 0.65rem; font-weight: bold; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all .15s ease; }
+.clear-name-btn:hover, .clear-name-btn:active { background: #cbd5e1; color: #0f172a; transform: scale(1.1); }
+.clear-name-btn[hidden] { display: none !important; }
+#wppIconBtn { flex-shrink: 0; padding: 2px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: transparent; border: none; cursor: pointer; transition: transform .15s ease; }
+#wppIconBtn:hover { transform: scale(1.12); }
+#wppIconBtn:active { transform: scale(0.95); }
+#wppIconBtn svg { display: block; }
 .search-bar input { width: 100%; border: none; border-radius: 30px; padding: 6px 12px; font-size: 0.75rem; outline: none; }
 .name-suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1200; display: none; background: #fff; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.18); max-height: 210px; overflow-y: auto; }
 .name-suggestions.visible { display: block; }
@@ -443,7 +448,12 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   <div class="search-bar">
     <div class="search-input-wrap">
       <input type="text" id="searchName" placeholder="Nome do aluno" autocomplete="off" aria-autocomplete="list" aria-controls="nameSuggestions">
-      <button type="button" id="wppIconBtn" title="Adicionar/editar WhatsApp do aluno">📱</button>
+      <button type="button" id="clearNameBtn" class="clear-name-btn" title="Limpar nome" aria-label="Limpar nome" hidden>✕</button>
+      <button type="button" id="wppIconBtn" title="Adicionar/editar WhatsApp do aluno" aria-label="WhatsApp do aluno">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366">
+          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+        </svg>
+      </button>
       <div id="nameSuggestions" class="name-suggestions" role="listbox"></div>
     </div>
     <button id="listBtn" class="list">📋 Lista</button>
@@ -4503,11 +4513,14 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   /* ===== ALUNO SELECIONADO ===== */
   var ALUNO_SELECIONADO_KEY = 'treinoAlunoSelecionado';
   function atualizarNomeTreino() {
-    var nome = document.getElementById('searchName').value.trim();
+    var val = document.getElementById('searchName').value;
+    var nome = val.trim();
     var titulo = document.getElementById('alunoAtualTitulo');
     titulo.textContent = nome ? 'Treino de ' + nome : '';
     titulo.hidden = !nome;
     document.getElementById('alunoAtualCabecalho').hidden = !nome;
+    var clearBtn = document.getElementById('clearNameBtn');
+    if (clearBtn) clearBtn.hidden = !val;
   }
   function registrarAlunoSelecionado(nome) {
     nome = String(nome || '').trim();
@@ -5031,6 +5044,16 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   }
   document.getElementById('saveBtn').addEventListener('click', function() { salvarAlunoAtual(); });
   document.getElementById('listBtn').addEventListener('click', mostrarListaAlunos);
+  var clearNameBtn = document.getElementById('clearNameBtn');
+  if (clearNameBtn) {
+    clearNameBtn.addEventListener('click', function() {
+      var input = document.getElementById('searchName');
+      input.value = '';
+      registrarAlunoSelecionado('');
+      fecharSugestoes();
+      input.focus();
+    });
+  }
   document.getElementById('wppIconBtn').addEventListener('click', function() {
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) { exibirMensagem('❌ Digite o nome do aluno primeiro.', '#b22222', false); return; }
