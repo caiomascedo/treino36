@@ -35,11 +35,16 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 #wppIconBtn:active { transform: scale(0.95); }
 #wppIconBtn svg { display: block; }
 .search-bar input { width: 100%; border: none; border-radius: 30px; padding: 6px 12px; font-size: 0.75rem; outline: none; }
-.name-suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1200; display: none; background: #fff; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.18); max-height: 210px; overflow-y: auto; }
+.name-suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1200; display: none; background: #fff; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.18); max-height: 220px; overflow-y: auto; }
 .name-suggestions.visible { display: block; }
-.name-suggestion { display: block; width: 100%; padding: 9px 12px; border: 0; border-bottom: 1px solid #eee; border-radius: 0; background: #fff; color: #222; text-align: left; font-size: .76rem; cursor: pointer; }
-.name-suggestion:last-child { border-bottom: 0; }
-.name-suggestion:hover, .name-suggestion.active { background: #fff4d6; color: #7a5200; }
+.name-suggestion-item { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 4px 8px; gap: 8px; background: #fff; }
+.name-suggestion-item:last-child { border-bottom: 0; }
+.name-suggestion-item:hover, .name-suggestion-item.active { background: #f8fafc; }
+.name-suggestion-load { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: transparent; border: none; padding: 6px 4px; text-align: left; font-size: .78rem; font-weight: 600; color: #1e293b; cursor: pointer; border-radius: 6px; }
+.name-suggestion-load:hover, .name-suggestion-load:active { color: #2563eb; }
+.name-suggestion-load .sugg-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name-suggestion-save { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; background: #e8f5e9; color: #166534; border: 1px solid #c8e6c9; border-radius: 12px; padding: 4px 8px; font-size: .67rem; font-weight: bold; cursor: pointer; transition: all .15s ease; }
+.name-suggestion-save:hover, .name-suggestion-save:active { background: #dcfce7; transform: scale(1.04); }
 .search-bar > button { grid-column: span 2; min-width: 0; background: #2c3e50; color: white; border: none; border-radius: 8px; padding: 4px 3px; min-height: 24px; font-size: .62rem; line-height: 1.2; font-weight: bold; cursor: pointer; }
 .search-bar > #exportBtn, .search-bar > #importBtn { grid-column: span 5; }
 .search-bar > #pdfBtn, .search-bar > #ocrImageBtn { grid-column: span 4; }
@@ -4649,7 +4654,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   searchNameInput.addEventListener('input', mostrarSugestoes);
   searchNameInput.addEventListener('focus', mostrarSugestoes);
   searchNameInput.addEventListener('keydown', function(e) {
-    var itens = nameSuggestions.querySelectorAll('.name-suggestion');
+    var itens = nameSuggestions.querySelectorAll('.name-suggestion-item, .name-suggestion');
     if (!nameSuggestions.classList.contains('visible') || !itens.length) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -6005,18 +6010,55 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   var destinoSugeridoId=null,destinoNomeDigitado='';
   function baseNomeTreino(nome) { return normalizarNome(nome).replace(/\s*(?:[-–]\s*)?(?:(?:treino|rotina)\s*)?#?\s*\d+\s*$/i,'').replace(/\s+(?:nova|novo)$/i,'').trim(); }
   function escolherSugestao(nome) {
-    var a=buscarAluno(nome);if(!a)return;
-    garantirHistorico(a);destinoSugeridoId=a.student_id;destinoNomeDigitado=searchNameInput.value.trim();
-    fecharSugestoes();atualizarDestinoSalvamento();
+    var a = buscarAluno(nome);
+    if (!a) return;
+    searchNameInput.value = a.nome;
+    registrarAlunoSelecionado(a.nome);
+    carregarTreinoAluno(a);
+    destinoSugeridoId = null;
+    destinoNomeDigitado = '';
+    fecharSugestoes();
+    atualizarDestinoSalvamento();
+    exibirMensagem('✅ Treino de ' + a.nome + ' carregado.', '#1e6f3f', false);
+  }
+  function salvarDiretoSugestao(nome) {
+    var a = buscarAluno(nome);
+    if (!a) return;
+    searchNameInput.value = a.nome;
+    registrarAlunoSelecionado(a.nome);
+    destinoSugeridoId = a.student_id;
+    destinoNomeDigitado = a.nome;
+    fecharSugestoes();
+    atualizarDestinoSalvamento();
+    salvarAlunoAtual();
   }
   function mostrarSugestoes() {
-    var typed=searchNameInput.value.trim(),termo=baseNomeTreino(typed);
-    if(!termo){fecharSugestoes();return;}
-    var found=alunos.filter(function(a){return normalizarNome(a.nome).includes(termo);}).slice(0,8);
-    if(!found.length){fecharSugestoes();return;}
-    nameSuggestions.innerHTML=found.map(function(a){return '<button type="button" class="name-suggestion" role="option" data-nome="'+escAttr(a.nome)+'">Salvar para '+escHtml(a.nome)+'</button>';}).join('');
-    nameSuggestions.classList.add('visible');searchNameInput.setAttribute('aria-expanded','true');suggestionIndex=-1;
-    nameSuggestions.querySelectorAll('button').forEach(function(b){b.addEventListener('pointerdown',function(e){e.preventDefault();});b.onclick=function(){escolherSugestao(b.dataset.nome);};});
+    var typed = searchNameInput.value.trim(), termo = baseNomeTreino(typed);
+    if (!termo) { fecharSugestoes(); return; }
+    var found = alunos.filter(function(a) { return normalizarNome(a.nome).includes(termo); }).slice(0, 8);
+    if (!found.length) { fecharSugestoes(); return; }
+    nameSuggestions.innerHTML = found.map(function(a) {
+      return '<div class="name-suggestion-item" role="option" data-nome="' + escAttr(a.nome) + '">' +
+        '<button type="button" class="name-suggestion-load" data-nome="' + escAttr(a.nome) + '" title="Carregar treino de ' + escAttr(a.nome) + '">' +
+          '<span class="sugg-icon">👤</span>' +
+          '<span class="sugg-name">' + escHtml(a.nome) + '</span>' +
+        '</button>' +
+        '<button type="button" class="name-suggestion-save" data-nome="' + escAttr(a.nome) + '" title="Salvar treino atual para ' + escAttr(a.nome) + '">' +
+          '💾 Salvar' +
+        '</button>' +
+      '</div>';
+    }).join('');
+    nameSuggestions.classList.add('visible');
+    searchNameInput.setAttribute('aria-expanded', 'true');
+    suggestionIndex = -1;
+    nameSuggestions.querySelectorAll('.name-suggestion-load').forEach(function(b) {
+      b.addEventListener('pointerdown', function(e) { e.preventDefault(); });
+      b.onclick = function(e) { e.stopPropagation(); escolherSugestao(b.dataset.nome); };
+    });
+    nameSuggestions.querySelectorAll('.name-suggestion-save').forEach(function(b) {
+      b.addEventListener('pointerdown', function(e) { e.preventDefault(); });
+      b.onclick = function(e) { e.stopPropagation(); salvarDiretoSugestao(b.dataset.nome); };
+    });
   }
   var destinoBadge=document.createElement('div');destinoBadge.id='saveDestination';destinoBadge.hidden=true;
   document.querySelector('.search-input-wrap').after(destinoBadge);
