@@ -34,6 +34,27 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 #wppIconBtn:hover { transform: scale(1.12); }
 #wppIconBtn:active { transform: scale(0.95); }
 #wppIconBtn svg { display: block; }
+.obs-icon-btn { position: relative; flex-shrink: 0; padding: 2px 4px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: transparent; border: none; cursor: pointer; transition: transform .15s ease; font-size: 15px; line-height: 1; }
+.obs-icon-btn:hover { transform: scale(1.12); }
+.obs-icon-btn:active { transform: scale(0.95); }
+.obs-indicator-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; background: #e53935; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 3px rgba(229,57,53,0.9); }
+.obs-tools-btn { position: relative; }
+.obs-tools-dot { color: #e53935; font-size: .8rem; line-height: 1; margin-left: 2px; }
+.history-student-picker { position: relative; margin-bottom: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
+.history-student-picker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.history-student-picker-header label { margin: 0; font-size: .78rem; font-weight: 700; color: #1e3a5f; }
+.history-load-screen-btn { background: #e2e8f0; border: none; border-radius: 6px; padding: 3px 8px; font-size: .68rem; font-weight: 600; cursor: pointer; color: #1e3a5f; transition: background .12s; }
+.history-load-screen-btn:hover { background: #cbd5e1; }
+.history-search-row { position: relative; display: flex; align-items: center; width: 100%; }
+.history-search-row input { width: 100%; box-sizing: border-box; padding: 6px 28px 6px 10px !important; border-radius: 6px !important; border: 1px solid #cbd5e1 !important; font-size: .85rem !important; }
+#historyStudentDropdownBtn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: transparent; border: none; padding: 4px 6px; cursor: pointer; color: #64748b; font-size: .75rem; }
+#historyStudentDropdownBtn:hover { color: #0f172a; }
+.history-suggestions-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 180px; overflow-y: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); z-index: 1500; }
+.history-suggestion-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: .82rem; color: #1e293b; }
+.history-suggestion-item:last-child { border-bottom: none; }
+.history-suggestion-item:hover, .history-suggestion-item.active { background: #f0fdf4; color: #166534; }
+.history-suggestion-badge { font-size: .68rem; padding: 2px 7px; border-radius: 10px; background: #f1f5f9; color: #64748b; }
+.history-suggestion-badge.has-history { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
 .search-bar input { width: 100%; border: none; border-radius: 30px; padding: 6px 12px; font-size: 0.75rem; outline: none; }
 .name-suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1200; display: none; background: #fff; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.18); max-height: 220px; overflow-y: auto; }
 .name-suggestions.visible { display: block; }
@@ -459,6 +480,10 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
         </svg>
       </button>
+      <button type="button" id="obsIconBtn" class="obs-icon-btn" title="Observações do aluno / treino" aria-label="Observações do aluno">
+        <span class="obs-icon-symbol">📝</span>
+        <span id="obsIndicatorDot" class="obs-indicator-dot" hidden></span>
+      </button>
       <div id="nameSuggestions" class="name-suggestions" role="listbox"></div>
     </div>
     <button id="listBtn" class="list">📋 Lista</button>
@@ -657,7 +682,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   <h3 id="exerciseActionsTitle">Exercício</h3>
   <p id="exerciseActionsText"></p>
   <button type="button" id="duplicateExerciseBtn">⧉ Duplicar exercício</button>
-  <div class="exercise-extra-actions"><button type="button" id="copyExerciseBtn">📋 Copiar exercício</button><button type="button" id="deleteExerciseBtn">🗑️ Apagar exercício</button></div>
+  <div class="exercise-extra-actions"><button type="button" id="copyExerciseBtn">📋 Copiar exercício</button><button type="button" id="pasteExerciseBtn">📋 Colar exercício</button><button type="button" id="deleteExerciseBtn">🗑️ Apagar exercício</button></div>
   <p id="exerciseCopyStatus" role="status" hidden></p>
   <p class="move-label">Mover para a seção:</p>
   <div id="exerciseDestinations"></div>
@@ -4601,6 +4626,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     isUndoRedoAction = false;
     // Consultar um treino não é um novo lançamento; o histórico começa nele.
     initHistory();
+    if (typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs();
     return true;
   }
   function buscarAluno(nome) {
@@ -4652,6 +4678,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   }
   searchNameInput.addEventListener('input', atualizarNomeTreino);
   searchNameInput.addEventListener('input', mostrarSugestoes);
+  searchNameInput.addEventListener('input', function() { if (typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs(); });
   searchNameInput.addEventListener('focus', mostrarSugestoes);
   searchNameInput.addEventListener('keydown', function(e) {
     var itens = nameSuggestions.querySelectorAll('.name-suggestion-item, .name-suggestion');
@@ -5056,6 +5083,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       input.value = '';
       registrarAlunoSelecionado('');
       fecharSugestoes();
+      if (typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs();
       input.focus();
     });
   }
@@ -5073,6 +5101,12 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       exibirMensagem('📱 WhatsApp salvo.', '#1e6f3f', false);
     }
   });
+  var obsIconBtnEl = document.getElementById('obsIconBtn');
+  if (obsIconBtnEl) {
+    obsIconBtnEl.addEventListener('click', function() {
+      if (typeof abrirObservacoes === 'function') abrirObservacoes();
+    });
+  }
   document.getElementById('copyBtn').addEventListener('click', copiarTreinoEntreAlunos);
   document.getElementById('deleteBtn').addEventListener('click', apagarAlunoAtual);
   document.getElementById('exportBtn').addEventListener('click', exportarJSON);
@@ -5905,11 +5939,13 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     }
     fecharAcoesExercicio();
   }
+  var ultimoExercicioCopiado = '';
   document.getElementById('deleteExerciseBtn').addEventListener('click',function(){executarAcaoExercicio('delete');});
   document.getElementById('copyExerciseBtn').addEventListener('click',async function(){
     var context=menuContext;
     if(!context||!context.row.isConnected)return;
     var text=(context.config.main?context.row:context.row.querySelector('.exercise-text')).textContent.trim();
+    ultimoExercicioCopiado = text;
     var status=document.getElementById('exerciseCopyStatus');
     exerciseMenu.querySelectorAll('.exercise-copy-fallback').forEach(function(el){el.remove();});
     try {
@@ -5925,6 +5961,69 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     }
     if(menuContext===context&&exerciseMenu.open){status.textContent='Exercício copiado.';status.hidden=false;}
   });
+  var pasteExerciseBtnEl = document.getElementById('pasteExerciseBtn');
+  if (pasteExerciseBtnEl) {
+    pasteExerciseBtnEl.addEventListener('click', async function() {
+      var context = menuContext;
+      if (!context || !context.row.isConnected) return;
+      var row = context.row, config = context.config, source = row.parentElement;
+      var status = document.getElementById('exerciseCopyStatus');
+      var text = '';
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          text = await navigator.clipboard.readText();
+        }
+      } catch(e) {}
+      if (!text && ultimoExercicioCopiado) {
+        text = ultimoExercicioCopiado;
+      }
+      text = (text || '').trim();
+      if (!text) {
+        status.textContent = 'Nenhum exercício copiado para colar.';
+        status.hidden = false;
+        return;
+      }
+      if (config.main || zoomMode !== 'paste') pushState();
+      function extrairConteudo(raw) {
+        var html = typeof formatExerciseLine === 'function' ? formatExerciseLine(raw) : null;
+        if (html) {
+          var temp = document.createElement('div');
+          temp.innerHTML = html;
+          var li = temp.querySelector('li');
+          return li ? li.innerHTML : raw;
+        }
+        return escHtml(raw);
+      }
+      var content = extrairConteudo(text);
+      var isCurrentEmpty = config.main
+        ? (!row.textContent.trim() || /Seção vazia|Nenhum exercício|Sem exercícios|Sem treino cadastrado/i.test(row.textContent))
+        : (!row.querySelector('.exercise-text').textContent.trim() || /Seção vazia|Nenhum exercício/i.test(row.querySelector('.exercise-text').textContent));
+      if (isCurrentEmpty) {
+        if (config.main) {
+          row.innerHTML = content;
+        } else {
+          row.querySelector('.exercise-text').innerHTML = content;
+        }
+      } else {
+        var copy = row.cloneNode(true);
+        copy.removeAttribute('id');
+        if (config.main) {
+          copy.innerHTML = content;
+        } else {
+          copy.querySelector('.exercise-text').innerHTML = content;
+        }
+        row.after(copy);
+      }
+      config.commit([config.sec(source)], true);
+      fecharAcoesExercicio();
+      if (config.main) {
+        atualizarAlcasPrincipais();
+        exibirMensagem('📋 Exercício colado com sucesso!', '#1e6f3f', false);
+      } else {
+        zoomStatus.textContent = 'Exercício colado.';
+      }
+    });
+  }
 
   document.getElementById('duplicateExerciseBtn').addEventListener('click', function() { executarAcaoExercicio('duplicate'); });
   document.getElementById('closeExerciseActions').addEventListener('click', fecharAcoesExercicio);
@@ -6088,21 +6187,174 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   function textoTreino(dados,scope) {
     return (scope?[scope]:['A','B','C','D','E'].concat(dados.secaoFAtiva?['F']:[])).map(function(s){return ((dados.titulos||{})[s]||s+'. TREINO')+'\n'+((dados.treino||{})[s]||[]).map(function(x,i){return(i+1)+'. '+x;}).join('\n');}).join('\n\n');
   }
+  function rotuloVersao(v,index){return 'Anterior '+(index+1)+' · '+(v.original_student_name||v.name||'Treino')+' · '+(v.archived_at?new Date(v.archived_at).toLocaleDateString('pt-BR'):'Sem data');}
   var historyScope=null,historyStudent=null;
   var historyDialog=criarDialogo('workoutHistoryDialog','Histórico de treinos',
+    '<div class="history-student-picker">'+
+      '<div class="history-student-picker-header">'+
+        '<label for="historyStudentSearch">Aluno</label>'+
+        '<button type="button" id="historyLoadToScreenBtn" class="history-load-screen-btn" title="Carregar este aluno na tela principal">👤 Carregar na tela</button>'+
+      '</div>'+
+      '<div class="history-search-row">'+
+        '<input type="text" id="historyStudentSearch" placeholder="Buscar ou escolher aluno..." autocomplete="off">'+
+        '<button type="button" id="historyStudentDropdownBtn" title="Ver todos os alunos">▼</button>'+
+      '</div>'+
+      '<div id="historyStudentSuggestions" class="history-suggestions-dropdown" hidden></div>'+
+    '</div>'+
     '<p id="historyStudentName"></p><label for="historyVersion">Versão</label><select id="historyVersion"></select><pre id="historyVersionText" class="version-content"></pre>'+
     '<div class="dialog-actions"><button id="compareSelectedVersion">Comparar com atual</button><button data-close>Fechar</button></div>');
-  function abrirHistorico(scope,compare) {
-    concluirAutoSave();var a=alunoNaTela();if(!a){exibirMensagem('Selecione um aluno cadastrado para ver o histórico.','#b22222',false);return;}
-    historyStudent=a;historyScope=scope||null;var select=document.getElementById('historyVersion');select.replaceChildren();
-    document.getElementById('historyStudentName').textContent=a.nome+(scope?' · Seção '+scope:'');
-    a.historicoTreinos.slice().reverse().forEach(function(v){var o=document.createElement('option');o.value=v.workout_id;o.textContent=v.name+' — '+(v.archived_at?new Date(v.archived_at).toLocaleString('pt-BR'):'Data não registrada');select.appendChild(o);});
-    document.getElementById('compareSelectedVersion').disabled=!a.historicoTreinos.length;renderVersao();
-    if(compare&&a.historicoTreinos.length)abrirComparacao(snapshotAluno(a),a.historicoTreinos.at(-1),scope,'Atual','Anterior');else historyDialog.showModal();
+
+  function atualizarVersoesHistorico() {
+    var select = document.getElementById('historyVersion');
+    select.replaceChildren();
+    if (!historyStudent) {
+      document.getElementById('historyStudentName').textContent = 'Nenhum aluno selecionado. Escolha um aluno acima.';
+      document.getElementById('historyVersionText').textContent = 'Selecione um aluno para visualizar o histórico de treinos.';
+      document.getElementById('compareSelectedVersion').disabled = true;
+      var eb = document.getElementById('editHistoryVersion'); if (eb) eb.disabled = true;
+      return;
+    }
+    garantirHistorico(historyStudent);
+    document.getElementById('historyStudentName').textContent = historyStudent.nome + ' · Capa: ' + (historyStudent.treinoNome || 'Treino atual') + '. Os treinos abaixo são anteriores; abrir ou editar não muda a capa.' + (historyScope ? ' · Seção ' + historyScope : '');
+    historyStudent.historicoTreinos.slice().reverse().forEach(function(v, i) {
+      var o = document.createElement('option');
+      o.value = v.workout_id;
+      o.textContent = rotuloVersao(v, i);
+      select.appendChild(o);
+    });
+    var hasVersions = historyStudent.historicoTreinos.length > 0;
+    document.getElementById('compareSelectedVersion').disabled = !hasVersions;
+    var eb = document.getElementById('editHistoryVersion'); if (eb) eb.disabled = !hasVersions;
+    renderVersao();
   }
-  function renderVersao(){var v=historyStudent.historicoTreinos.find(function(x){return x.workout_id===document.getElementById('historyVersion').value;});document.getElementById('historyVersionText').textContent=v?textoTreino(v,historyScope):'Ainda não há treino anterior. As versões passam a ser preservadas a partir desta atualização.';}
+
+  function renderizarSugestoesHistorico(filtro) {
+    var sug = document.getElementById('historyStudentSuggestions');
+    if (!sug) return;
+    var q = normalizarNome(filtro || '');
+    var lista = alunos.filter(function(a) {
+      return !q || normalizarNome(a.nome).includes(q);
+    });
+    lista.sort(function(x, y) {
+      var hx = (x.historicoTreinos || []).length;
+      var hy = (y.historicoTreinos || []).length;
+      if (hx !== hy) return hy - hx;
+      return x.nome.localeCompare(y.nome, 'pt-BR');
+    });
+    sug.replaceChildren();
+    if (!lista.length) {
+      var empty = document.createElement('div');
+      empty.className = 'history-suggestion-item';
+      empty.style.color = '#94a3b8';
+      empty.textContent = 'Nenhum aluno encontrado';
+      sug.appendChild(empty);
+    } else {
+      lista.forEach(function(aluno) {
+        var count = (aluno.historicoTreinos || []).length;
+        var item = document.createElement('div');
+        item.className = 'history-suggestion-item';
+        item.innerHTML = '<span><strong>' + escHtml(aluno.nome) + '</strong></span>' +
+          '<span class="history-suggestion-badge ' + (count > 0 ? 'has-history' : '') + '">' +
+          (count === 1 ? '1 anterior' : count > 1 ? count + ' anteriores' : 'sem anteriores') +
+          '</span>';
+        item.onmousedown = function(e) {
+          e.preventDefault();
+          selecionarAlunoNoHistorico(aluno);
+        };
+        sug.appendChild(item);
+      });
+    }
+    sug.hidden = false;
+  }
+
+  function selecionarAlunoNoHistorico(aluno) {
+    if (!aluno) return;
+    historyStudent = aluno;
+    var inp = document.getElementById('historyStudentSearch');
+    if (inp) inp.value = aluno.nome;
+    var sug = document.getElementById('historyStudentSuggestions');
+    if (sug) sug.hidden = true;
+    atualizarVersoesHistorico();
+  }
+
+  function abrirHistorico(scope, compare) {
+    concluirAutoSave();
+    var a = alunoNaTela() || (document.getElementById('searchName').value ? buscarAluno(document.getElementById('searchName').value) : null);
+    if (!a && alunos.length > 0) {
+      a = alunos.find(function(x) { return x.historicoTreinos && x.historicoTreinos.length > 0; }) || alunos[0];
+    }
+    historyScope = scope || null;
+    historyStudent = a || null;
+    var inp = document.getElementById('historyStudentSearch');
+    if (inp) inp.value = a ? a.nome : '';
+    var sug = document.getElementById('historyStudentSuggestions');
+    if (sug) sug.hidden = true;
+    atualizarVersoesHistorico();
+    if (compare && a && a.historicoTreinos && a.historicoTreinos.length) {
+      abrirComparacao(snapshotAluno(a), a.historicoTreinos.at(-1), scope, 'Atual', 'Anterior');
+    } else {
+      historyDialog.showModal();
+    }
+  }
+
+  function renderVersao(){
+    if(!historyStudent){
+      document.getElementById('historyVersionText').textContent='Selecione um aluno para visualizar o treino anterior.';
+      return;
+    }
+    var v=historyStudent.historicoTreinos.find(function(x){return x.workout_id===document.getElementById('historyVersion').value;});
+    document.getElementById('historyVersionText').textContent=v?textoTreino(v,historyScope):(historyStudent.historicoTreinos.length?'Escolha uma versão acima.':'Este aluno ainda não possui treinos anteriores arquivados.');
+  }
+
   document.getElementById('historyVersion').onchange=renderVersao;
-  document.getElementById('compareSelectedVersion').onclick=function(){var v=historyStudent.historicoTreinos.find(function(x){return x.workout_id===document.getElementById('historyVersion').value;});if(v)abrirComparacao(snapshotAluno(historyStudent),v,historyScope,'Atual','Anterior');};
+  document.getElementById('compareSelectedVersion').onclick=function(){if(historyStudent){var v=historyStudent.historicoTreinos.find(function(x){return x.workout_id===document.getElementById('historyVersion').value;});if(v)abrirComparacao(snapshotAluno(historyStudent),v,historyScope,'Atual','Anterior');}};
+
+  var historySearchInput = document.getElementById('historyStudentSearch');
+  if (historySearchInput) {
+    historySearchInput.addEventListener('input', function() { renderizarSugestoesHistorico(this.value); });
+    historySearchInput.addEventListener('focus', function() { renderizarSugestoesHistorico(this.value); });
+    historySearchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var q = normalizarNome(this.value);
+        var m = alunos.find(function(a) { return normalizarNome(a.nome) === q; }) ||
+                alunos.find(function(a) { return normalizarNome(a.nome).includes(q); });
+        if (m) selecionarAlunoNoHistorico(m);
+      } else if (e.key === 'Escape') {
+        var sug = document.getElementById('historyStudentSuggestions');
+        if (sug) sug.hidden = true;
+      }
+    });
+  }
+  var historyDropdownBtn = document.getElementById('historyStudentDropdownBtn');
+  if (historyDropdownBtn) {
+    historyDropdownBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var sug = document.getElementById('historyStudentSuggestions');
+      if (sug && !sug.hidden) sug.hidden = true;
+      else {
+        renderizarSugestoesHistorico('');
+        if (historySearchInput) historySearchInput.focus();
+      }
+    });
+  }
+  var historyLoadScreenBtn = document.getElementById('historyLoadToScreenBtn');
+  if (historyLoadScreenBtn) {
+    historyLoadScreenBtn.onclick = function() {
+      if (!historyStudent) return;
+      carregarTreinoAluno(historyStudent);
+      document.getElementById('searchName').value = historyStudent.nome;
+      fecharSugestoes();
+      if (typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs();
+      exibirMensagem('✅ Aluno ' + historyStudent.nome + ' carregado na tela principal.', '#1e6f3f', false);
+    };
+  }
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.history-student-picker')) {
+      var sug = document.getElementById('historyStudentSuggestions');
+      if (sug) sug.hidden = true;
+    }
+  });
   var compareDialog=criarDialogo('compareWorkoutsDialog','Comparar treinos','<p id="compareLabels"></p><div id="compareBody"></div><div class="dialog-actions"><button data-close>Fechar</button></div>');
   function nomeExercicio(line){return normalizarNome(line).split(/\b\d+\s*(?:x|×|séries|series)\b|\b\d+\s*[x×]\s*\d/)[0].replace(/[\s:–-]+$/,'');}
   function abrirComparacao(current,previous,scope,leftLabel,rightLabel,refresh) {
@@ -6227,9 +6479,78 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   document.getElementById('pasteUndoBtn').onclick=function(){historicoTexto(-1);};document.getElementById('pasteRedoBtn').onclick=function(){historicoTexto(1);};
   document.addEventListener('keydown',function(e){if(e.target.closest('#pasteModal')&&(e.ctrlKey||e.metaKey)&&['z','y'].includes(e.key.toLowerCase())){e.preventDefault();e.stopImmediatePropagation();historicoTexto(e.key.toLowerCase()==='y'||e.shiftKey?1:-1);}else if(e.key==='Escape'&&pasteModal.style.visibility==='visible'&&!document.querySelector('dialog[open]')){e.preventDefault();fecharPasteModal();}},true);
 
-  var toolsRow=document.createElement('div');toolsRow.className='workout-tools';toolsRow.innerHTML='<button id="createWorkoutBtn">＋ Criar treino</button><button id="historyWorkoutBtn">◷ Treinos anteriores</button><button id="compareWorkoutBtn">⇄ Comparar</button>';
+  var toolsRow=document.createElement('div');toolsRow.className='workout-tools';toolsRow.innerHTML='<button id="createWorkoutBtn">＋ Criar treino</button><button id="historyWorkoutBtn">◷ Treinos anteriores</button><button id="compareWorkoutBtn">⇄ Comparar</button><button id="obsWorkoutBtn" class="obs-tools-btn" type="button">📝 Obs<span class="obs-tools-dot" hidden> •</span></button>';
   document.querySelector('.global-buttons').after(toolsRow);
   document.getElementById('createWorkoutBtn').onclick=function(){abrirGerador();};document.getElementById('historyWorkoutBtn').onclick=function(){abrirHistorico();};document.getElementById('compareWorkoutBtn').onclick=function(){abrirHistorico(null,true);};
+  document.getElementById('obsWorkoutBtn').onclick=function(){abrirObservacoes();};
+
+  /* Modal e controle de observações do treino/aluno com indicador discreto */
+  var obsDialog=criarDialogo('workoutObsDialog','📝 Observações do Treino',
+    '<p id="obsStudentHeader" style="font-weight:600;color:#1e3a5f;margin:2px 0 8px;font-size:0.85rem;"></p>'+
+    '<textarea id="obsTextarea" placeholder="Digite as observações, restrições articulares, cuidados ou orientações deste aluno..." style="width:100%;box-sizing:border-box;min-height:120px;padding:8px;border:1px solid #ccc;border-radius:6px;font-family:inherit;font-size:0.88rem;resize:vertical;"></textarea>'+
+    '<div class="dialog-actions" style="margin-top:10px;display:flex;gap:6px;justify-content:flex-end;">'+
+      '<button type="button" id="saveObsBtn" class="primary">Salvar Observação</button>'+
+      '<button type="button" id="clearObsBtn">Limpar</button>'+
+      '<button type="button" data-close>Fechar</button>'+
+    '</div>'
+  );
+  function abrirObservacoes() {
+    var nome = document.getElementById('searchName').value.trim();
+    if (!nome) {
+      exibirMensagem('❌ Digite ou selecione um aluno para ver/adicionar observações.', '#b22222', false);
+      document.getElementById('searchName').focus();
+      return;
+    }
+    var aluno = alunoNaTela() || buscarAluno(nome);
+    document.getElementById('obsStudentHeader').textContent = 'Aluno: ' + (aluno ? aluno.nome : nome);
+    document.getElementById('obsTextarea').value = (aluno && aluno.observacoes) ? aluno.observacoes : '';
+    obsDialog.showModal();
+    document.getElementById('obsTextarea').focus();
+  }
+  function salvarObservacoes() {
+    var nome = document.getElementById('searchName').value.trim();
+    if (!nome) return;
+    var aluno = alunoNaTela() || buscarAluno(nome);
+    if (!aluno) {
+      salvarAlunoAtual(false);
+      aluno = buscarAluno(nome);
+    }
+    var texto = document.getElementById('obsTextarea').value.trim();
+    if (aluno) {
+      aluno.observacoes = texto;
+      salvarLocalStorage();
+      atualizarIndicadorObs();
+      exibirMensagem(texto ? '📝 Observação prescrita salva!' : '📝 Observação atualizada.', '#1e6f3f', false);
+    }
+    obsDialog.close();
+  }
+  function limparObservacoes() {
+    document.getElementById('obsTextarea').value = '';
+    var nome = document.getElementById('searchName').value.trim();
+    var aluno = alunoNaTela() || buscarAluno(nome);
+    if (aluno && aluno.observacoes) {
+      aluno.observacoes = '';
+      salvarLocalStorage();
+      atualizarIndicadorObs();
+      exibirMensagem('Observação removida.', '#b22222', false);
+    }
+    obsDialog.close();
+  }
+  document.getElementById('saveObsBtn').onclick = salvarObservacoes;
+  document.getElementById('clearObsBtn').onclick = limparObservacoes;
+
+  function atualizarIndicadorObs() {
+    var aluno = alunoNaTela() || buscarAluno(document.getElementById('searchName').value);
+    var temObs = !!(aluno && aluno.observacoes && aluno.observacoes.trim());
+    var dot = document.getElementById('obsIndicatorDot');
+    if (dot) dot.hidden = !temObs;
+    var toolsDot = document.querySelector('.obs-tools-dot');
+    if (toolsDot) toolsDot.hidden = !temObs;
+    var obsBtn = document.getElementById('obsIconBtn');
+    if (obsBtn) {
+      obsBtn.title = temObs ? '📝 Observação prescrita: ' + (aluno.observacoes.length > 30 ? aluno.observacoes.slice(0, 30) + '…' : aluno.observacoes) : '📝 Observações do aluno / treino';
+    }
+  }
   todasSecoes.forEach(function(s){var host=document.querySelector('.sec-'+s.toLowerCase()+' .action-buttons');var b=document.createElement('button');b.type='button';b.className='mobility-btn';b.textContent='🧘 Mobilidade';b.onclick=function(){abrirMobilidades(s);};host.insertBefore(b,host.querySelector('.section-zoom-btn'));});
   var sectionTools=document.createElement('div');sectionTools.className='paste-tools';sectionTools.innerHTML='<button id="createSectionWorkout">＋ Criar treino</button><button id="historySectionWorkout">◷ Anteriores</button><button id="compareSectionWorkout">⇄ Comparar</button>';
   document.querySelector('#pasteModal .paste-tools').after(sectionTools);
@@ -6575,6 +6896,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 
   initHistory();
   observeEditableChanges();
+  if (typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs();
   
 })();
 </script>
