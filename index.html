@@ -127,6 +127,55 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 .info-field { display: flex; flex-direction: column; gap: 3px; }
 .info-field.full-width { grid-column: 1 / -1; }
 .info-field label { font-size: 0.72rem; font-weight: 600; color: #475569; margin: 0; }
+.info-tabs-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 8px;
+  padding-bottom: 2px;
+}
+.info-tabs-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+}
+.info-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.info-tab-btn.active {
+  background: #0369a1;
+  color: #fff;
+  border-color: #0369a1;
+}
+.info-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  line-height: 1;
+  background: rgba(0,0,0,0.15);
+  color: inherit;
+  border: none;
+  cursor: pointer;
+}
 .info-input-wrap {
   position: relative;
   display: flex;
@@ -135,27 +184,62 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 }
 .info-input-wrap input {
   width: 100% !important;
-  padding: 5px 28px 5px 8px !important;
+  padding: 5px 48px 5px 8px !important;
   font-size: 0.82rem !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 6px !important;
   box-sizing: border-box;
 }
-.copy-field-btn {
+.field-action-btn {
   position: absolute;
-  right: 4px;
   background: transparent !important;
   border: none !important;
   padding: 2px 4px !important;
   font-size: 0.72rem !important;
-  color: #64748b !important;
   cursor: pointer;
   border-radius: 4px;
   line-height: 1;
 }
+.clear-field-btn {
+  right: 24px;
+  color: #94a3b8 !important;
+  font-weight: bold;
+}
+.clear-field-btn:hover {
+  background: #fee2e2 !important;
+  color: #ef4444 !important;
+}
+.copy-field-btn {
+  right: 4px;
+  color: #64748b !important;
+}
 .copy-field-btn:hover {
   background: #e2e8f0 !important;
   color: #1e293b !important;
+}
+.treino-level-selector {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+.level-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.level-btn:hover { background: #e2e8f0; }
+.level-btn.active {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  color: #0369a1;
+  font-weight: bold;
 }
 .imc-card {
   background: #f8fafc;
@@ -196,6 +280,37 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 .imc-details {
   font-size: 0.74rem;
   color: #475569;
+  line-height: 1.35;
+}
+.kcal-card {
+  background: #fdf2f8;
+  border: 1px solid #fbcfe8;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 4px;
+}
+.kcal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.kcal-title { font-size: 0.76rem; font-weight: bold; color: #831843; }
+.kcal-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #ec4899;
+  color: #fff;
+  transition: all .2s ease;
+}
+.kcal-details {
+  font-size: 0.74rem;
+  color: #701a75;
   line-height: 1.35;
 }
 .obs-tabs-container {
@@ -644,7 +759,9 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 #pasteModal .paste-help { font-size:.68rem; margin-bottom:6px; }
 .comparison-current { padding-right:38px; }
 .comparison-current-line { font-size:16px; line-height:1.35; border-radius:4px; min-width:0; }
-.comparison-current-line.editing { background:#fff7d6; outline:1px solid #dfc785; }
+.comparison-current-line.editing { background:#fff7d6; outline:1px solid #dfc785; padding:2px 4px; }
+.comparison-previous-line { font-size:16px; line-height:1.35; border-radius:4px; min-width:0; }
+.comparison-previous-line.editing { background:#e0f2fe; outline:1px solid #7dd3fc; padding:2px 4px; }
 .app-dialog .compare-row-toggle { width:30px; height:18px; padding:0; border-radius:12px; background:#b9c4cc; border:0; }
 .compare-row-toggle::before { content:''; display:block; position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%; background:#fff; }
 .app-dialog .compare-row-toggle[aria-checked=true] { background:#267457; }
@@ -701,15 +818,6 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       <button type="button" id="wppIconBtn" class="search-action-btn" title="Adicionar/editar WhatsApp do aluno" aria-label="WhatsApp do aluno">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="#25D366">
           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-        </svg>
-      </button>
-      <button type="button" id="listIconBtn" class="search-action-btn" title="Lista de alunos" aria-label="Lista de alunos">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-          <path d="M9 12h6"></path>
-          <path d="M9 16h6"></path>
-          <path d="M9 8h6"></path>
         </svg>
       </button>
       <button type="button" id="obsIconBtn" class="search-action-btn" title="Observações do aluno" aria-label="Observações do aluno">
@@ -6402,10 +6510,13 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     if(!dados||!typed){exibirMensagem('Digite o nome da pessoa para salvar.','#b22222',false);searchNameInput.focus();return false;}
     alunos.forEach(garantirHistorico);
     var before=cloneData(alunos),selected=destinoNomeDigitado===typed?alunos.find(function(a){return a.student_id===destinoSugeridoId;}):null;
+    var base=baseNomeTreino(typed);
     var a=selected||alunos.find(function(x){return normalizarNome(x.nome)===normalizarNome(typed);});
-    var proposedName=workoutName||(selected&&normalizarNome(typed)!==normalizarNome(a.nome)?typed:(a&&a.treinoNome||'Treino de '+typed));
+    var alunoBase=(!a&&base&&base!==normalizarNome(typed))?alunos.find(function(x){return normalizarNome(x.nome)===base;}):null;
+    if(alunoBase){a=alunoBase;}
+    var proposedName=workoutName||(selected&&normalizarNome(typed)!==normalizarNome(a.nome)?typed:(alunoBase?typed:(a&&a.treinoNome||'Treino de '+typed)));
     if(!a){a=garantirHistorico({nome:typed,treino:cloneData(dados.treino),titulos:cloneData(dados.titulos),secaoFAtiva:!!dados.secaoFAtiva,criadoEm:new Date().toISOString()});alunos.push(a);}
-    else if(diferencaDados(a,dados)||a.treinoNome!==proposedName){arquivarTreino(a);}
+    else if(alunoBase||diferencaDados(a,dados)||a.treinoNome!==proposedName){arquivarTreino(a);}
     a.treino=cloneData(dados.treino);a.titulos=cloneData(dados.titulos);a.secaoFAtiva=!!dados.secaoFAtiva;
     a.treinoNome=proposedName;
     a.treinoProtegido=true;a.atualizadoEm=new Date().toISOString();a.treinoAtivadoEm=a.atualizadoEm;
@@ -6589,11 +6700,25 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   function nomeExercicio(line){return normalizarNome(line).split(/\b\d+\s*(?:x|×|séries|series)\b|\b\d+\s*[x×]\s*\d/)[0].replace(/[\s:–-]+$/,'');}
   function abrirComparacao(current,previous,scope,leftLabel,rightLabel,refresh) {
     if(!refresh)iniciarEditorComparacao(current,previous,scope,leftLabel,rightLabel);
-    var nomeAntigo = previous.original_student_name || previous.student_name || (historyStudent ? historyStudent.nome : '') || previous.name || 'Anterior';
-    var nomeAtual = current.student_name || (alunoNaTela() ? alunoNaTela().nome : '') || document.getElementById('searchName').value.trim() || current.name || 'Atual';
-    document.getElementById('compareLabels').textContent = rightLabel + ' (' + nomeAntigo + ') × ' + leftLabel + ' (' + nomeAtual + ')';
-    document.getElementById('comparePreviousHeading').innerHTML = '<span>' + escHtml(rightLabel) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#0284c7;margin-top:2px;">👤 ' + escHtml(nomeAntigo) + '</span>';
-    document.getElementById('compareCurrentHeading').innerHTML = '<span>' + escHtml(leftLabel + (leftLabel === 'Atual' ? ' · Capa' : '')) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#16a34a;margin-top:2px;">👤 ' + escHtml(nomeAtual) + '</span>';
+    var student = (current && current.student_id ? alunos.find(function(x){ return x.student_id === current.student_id; }) : null) ||
+                  alunoNaTela() ||
+                  (historyStudent ? historyStudent : null);
+    var vIndex = -1;
+    if (student && Array.isArray(student.historicoTreinos)) {
+      vIndex = student.historicoTreinos.findIndex(function(v){ return v.workout_id === previous.workout_id; });
+    }
+    var versaoTexto = vIndex >= 0 ? 'Anterior #' + (vIndex + 1) : rightLabel;
+    var dataAnterior = previous.archived_at ? new Date(previous.archived_at).toLocaleDateString('pt-BR') : '';
+
+    var nomeAntigo = previous.name && !previous.name.toLowerCase().startsWith('treino de ') ? previous.name : (previous.original_student_name || previous.student_name || (student ? student.nome : 'Anterior'));
+    var rotuloAntigoCompleto = nomeAntigo + ' (' + versaoTexto + (dataAnterior ? ' · ' + dataAnterior : '') + ')';
+
+    var nomeAtual = current.name && !current.name.toLowerCase().startsWith('treino de ') ? current.name : (current.student_name || (student ? student.nome : '') || (alunoNaTela() ? alunoNaTela().nome : '') || document.getElementById('searchName').value.trim() || 'Atual');
+    var rotuloAtualCompleto = nomeAtual + ' · Capa';
+
+    document.getElementById('compareLabels').textContent = versaoTexto + ' (' + nomeAntigo + ') × ' + leftLabel + ' (' + nomeAtual + ')';
+    document.getElementById('comparePreviousHeading').innerHTML = '<span>' + escHtml(rightLabel + (vIndex >= 0 ? ' (#' + (vIndex + 1) + ')' : '')) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#0284c7;margin-top:2px;">📁 ' + escHtml(rotuloAntigoCompleto) + '</span>';
+    document.getElementById('compareCurrentHeading').innerHTML = '<span>' + escHtml(leftLabel + (leftLabel === 'Atual' ? ' · Capa' : '')) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#16a34a;margin-top:2px;">👤 ' + escHtml(rotuloAtualCompleto) + '</span>';
     var host=document.getElementById('compareBody');host.replaceChildren();
     (scope?[scope]:todasSecoes).forEach(function(s){
       var now=(current.treino||{})[s]||[],old=(previous.treino||{})[s]||[],used=new Set();if(!now.length&&!old.length)return;
@@ -6729,37 +6854,54 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         '<span class="info-title">📋 Informações Relevantes & Ficha</span>'+
       '</button>'+
       '<div id="infoRelevanteContent" class="info-relevante-content" hidden>'+
+        '<div class="info-tabs-container">'+
+          '<div id="infoTabsList" class="info-tabs-list"></div>'+
+          '<button type="button" id="addInfoTabBtn" class="add-obs-tab-btn">＋ Nova guia da ficha</button>'+
+        '</div>'+
         '<div class="info-tools-bar">'+
           '<button type="button" id="copyAllInfoBtn" class="info-tool-btn primary" title="Copiar resumo completo da ficha">📋 Copiar Tudo</button>'+
           '<button type="button" id="autoFillInfoBtn" class="info-tool-btn" title="Preencher automaticamente a partir do texto das observações">⚡ Auto-preencher da anotação</button>'+
+          '<button type="button" id="clearAllInfoBtn" class="info-tool-btn" title="Limpar todos os campos desta ficha">🧹 Limpar Ficha</button>'+
         '</div>'+
         '<div class="info-grid">'+
           '<div class="info-field">'+
             '<label for="infoIdade">Idade:</label>'+
             '<div class="info-input-wrap">'+
-              '<input type="text" id="infoIdade" placeholder="Ex: 32 anos">'+
-              '<button type="button" class="copy-field-btn" data-target="infoIdade" data-label="Idade" title="Copiar Idade">📋</button>'+
+              '<input type="text" id="infoIdade" placeholder="Ex: 30 anos">'+
+              '<button type="button" class="field-action-btn clear-field-btn" data-target="infoIdade" title="Limpar Idade">✕</button>'+
+              '<button type="button" class="field-action-btn copy-field-btn" data-target="infoIdade" data-label="Idade" title="Copiar Idade">📋</button>'+
             '</div>'+
           '</div>'+
           '<div class="info-field">'+
             '<label for="infoPeso">Peso:</label>'+
             '<div class="info-input-wrap">'+
-              '<input type="text" id="infoPeso" placeholder="Ex: 110 kg">'+
-              '<button type="button" class="copy-field-btn" data-target="infoPeso" data-label="Peso" title="Copiar Peso">📋</button>'+
+              '<input type="text" id="infoPeso" placeholder="Ex: 75 kg">'+
+              '<button type="button" class="field-action-btn clear-field-btn" data-target="infoPeso" title="Limpar Peso">✕</button>'+
+              '<button type="button" class="field-action-btn copy-field-btn" data-target="infoPeso" data-label="Peso" title="Copiar Peso">📋</button>'+
             '</div>'+
           '</div>'+
           '<div class="info-field">'+
             '<label for="infoAltura">Altura:</label>'+
             '<div class="info-input-wrap">'+
-              '<input type="text" id="infoAltura" placeholder="Ex: 160 cm ou 1.60 m">'+
-              '<button type="button" class="copy-field-btn" data-target="infoAltura" data-label="Altura" title="Copiar Altura">📋</button>'+
+              '<input type="text" id="infoAltura" placeholder="Ex: 160 (vira 1.60) ou 1.75">'+
+              '<button type="button" class="field-action-btn clear-field-btn" data-target="infoAltura" title="Limpar Altura">✕</button>'+
+              '<button type="button" class="field-action-btn copy-field-btn" data-target="infoAltura" data-label="Altura" title="Copiar Altura">📋</button>'+
             '</div>'+
           '</div>'+
           '<div class="info-field">'+
             '<label for="infoDataNasc">Data de nasc.:</label>'+
             '<div class="info-input-wrap">'+
-              '<input type="text" id="infoDataNasc" placeholder="Ex: 15/05/1992">'+
-              '<button type="button" class="copy-field-btn" data-target="infoDataNasc" data-label="Data de nasc." title="Copiar Data de nasc.">📋</button>'+
+              '<input type="text" id="infoDataNasc" placeholder="Ex: 140396 ou 14031996">'+
+              '<button type="button" class="field-action-btn clear-field-btn" data-target="infoDataNasc" title="Limpar Data de nasc.">✕</button>'+
+              '<button type="button" class="field-action-btn copy-field-btn" data-target="infoDataNasc" data-label="Data de nasc." title="Copiar Data de nasc.">📋</button>'+
+            '</div>'+
+          '</div>'+
+          '<div class="info-field full-width">'+
+            '<label>Nível de Treino (para calcular Kcal diárias):</label>'+
+            '<div id="treinoLevelSelector" class="treino-level-selector">'+
+              '<button type="button" class="level-btn" data-level="leve">🌱 Leve (1-3x/sem)</button>'+
+              '<button type="button" class="level-btn active" data-level="moderado">⚡ Moderado (3-5x/sem)</button>'+
+              '<button type="button" class="level-btn" data-level="pesado">🔥 Pesado (6-7x/sem)</button>'+
             '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
@@ -6771,26 +6913,37 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
               '</div>'+
               '<div id="imcDetails" class="imc-details">Informe peso e altura para calcular IMC e peso ideal automaticamente.</div>'+
             '</div>'+
+            '<div id="kcalContainer" class="kcal-card">'+
+              '<div class="kcal-header">'+
+                '<span class="kcal-title">🔥 Gasto Calórico Estimado (Kcal):</span>'+
+                '<span id="kcalBadge" class="kcal-badge">Aguardando dados</span>'+
+                '<button type="button" id="copyKcalBtn" class="copy-imc-btn" title="Copiar Kcal" hidden>📋 Copiar Kcal</button>'+
+              '</div>'+
+              '<div id="kcalDetails" class="kcal-details">Informe idade, peso, altura e nível de treino para calcular o gasto calórico.</div>'+
+            '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
             '<label for="infoNomeCompleto">Nome completo:</label>'+
             '<div class="info-input-wrap">'+
               '<input type="text" id="infoNomeCompleto" placeholder="Nome completo do aluno">'+
-              '<button type="button" class="copy-field-btn" data-target="infoNomeCompleto" data-label="Nome completo" title="Copiar Nome completo">📋</button>'+
+              '<button type="button" class="field-action-btn clear-field-btn" data-target="infoNomeCompleto" title="Limpar Nome completo">✕</button>'+
+              '<button type="button" class="field-action-btn copy-field-btn" data-target="infoNomeCompleto" data-label="Nome completo" title="Copiar Nome completo">📋</button>'+
             '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
             '<label for="infoEmail">E-mail:</label>'+
             '<div class="info-input-wrap">'+
               '<input type="email" id="infoEmail" placeholder="email@exemplo.com">'+
-              '<button type="button" class="copy-field-btn" data-target="infoEmail" data-label="E-mail" title="Copiar E-mail">📋</button>'+
+              '<button type="button" class="field-action-btn clear-field-btn" data-target="infoEmail" title="Limpar E-mail">✕</button>'+
+              '<button type="button" class="field-action-btn copy-field-btn" data-target="infoEmail" data-label="E-mail" title="Copiar E-mail">📋</button>'+
             '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
             '<label for="infoWhats">Whats:</label>'+
             '<div class="info-input-wrap">'+
               '<input type="tel" id="infoWhats" placeholder="DDD + WhatsApp">'+
-              '<button type="button" class="copy-field-btn" data-target="infoWhats" data-label="WhatsApp" title="Copiar WhatsApp">📋</button>'+
+              '<button type="button" class="field-action-btn clear-field-btn" data-target="infoWhats" title="Limpar WhatsApp">✕</button>'+
+              '<button type="button" class="field-action-btn copy-field-btn" data-target="infoWhats" data-label="WhatsApp" title="Copiar WhatsApp">📋</button>'+
             '</div>'+
           '</div>'+
         '</div>'+
@@ -6810,6 +6963,117 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 
   var obsGuiasAtuais = [];
   var obsGuiaAtivaIndex = 0;
+  var infoGuiasAtuais = [];
+  var infoGuiaAtivaIndex = 0;
+  var infoNivelTreinoAtual = 'moderado';
+
+  function calcularIdadePorDataNasc(dataStr) {
+    if (!dataStr) return null;
+    var parts = dataStr.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{2,4})$/);
+    if (!parts) return null;
+    var dia = parseInt(parts[1], 10);
+    var mes = parseInt(parts[2], 10) - 1;
+    var ano = parseInt(parts[3], 10);
+    if (ano < 100) {
+      ano += (ano > 26 ? 1900 : 2000);
+    }
+    var nasc = new Date(ano, mes, dia);
+    if (isNaN(nasc.getTime())) return null;
+    var hoje = new Date();
+    var idade = hoje.getFullYear() - nasc.getFullYear();
+    var m = hoje.getMonth() - nasc.getMonth();
+    if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) {
+      idade--;
+    }
+    if (idade < 0 || idade > 125) return null;
+    return idade;
+  }
+
+  function formatarCampoAltura(input) {
+    var v = input.value.trim();
+    var digits = v.replace(/\D/g, '');
+    if (digits.length === 3) {
+      var n = parseInt(digits, 10);
+      if (n >= 100 && n <= 250) {
+        input.value = (n / 100).toFixed(2);
+      }
+    } else if (/^\d[.,]\d{1,2}$/.test(v)) {
+      input.value = v.replace(',', '.');
+    }
+    atualizarVisualizacaoImc();
+    atualizarVisualizacaoKcal();
+  }
+
+  function formatarCampoDataNasc(input) {
+    var v = input.value.trim();
+    var digits = v.replace(/\D/g, '');
+    if (digits.length === 6) {
+      var dia = digits.slice(0, 2);
+      var mes = digits.slice(2, 4);
+      var ano2 = parseInt(digits.slice(4, 6), 10);
+      var ano = ano2 > 26 ? (1900 + ano2) : (2000 + ano2);
+      input.value = dia + '/' + mes + '/' + ano;
+    } else if (digits.length === 8) {
+      input.value = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
+    }
+    var idadeCalc = calcularIdadePorDataNasc(input.value);
+    if (idadeCalc !== null) {
+      document.getElementById('infoIdade').value = idadeCalc + ' anos';
+    }
+    atualizarVisualizacaoImc();
+    atualizarVisualizacaoKcal();
+  }
+
+  function calcularKcal(pesoStr, altStr, idadeStr, nivel) {
+    var pMatch = String(pesoStr).replace(',', '.').match(/(\d+(?:\.\d+)?)/);
+    var aMatch = String(altStr).replace(',', '.').match(/(\d+(?:\.\d+)?)/);
+    var iMatch = String(idadeStr).match(/(\d{1,2})/);
+    if (!pMatch || !aMatch || !iMatch) return null;
+    var peso = parseFloat(pMatch[1]);
+    var alt = parseFloat(aMatch[1]);
+    if (alt > 3.0) alt = alt / 100.0;
+    var idade = parseInt(iMatch[1], 10);
+    if (!peso || !alt || !idade || peso <= 10 || alt < 0.6) return null;
+
+    var tmb = Math.round(10 * peso + 6.25 * (alt * 100) - 5 * idade + 5);
+    var fatores = { leve: 1.375, moderado: 1.55, pesado: 1.725 };
+    var fator = fatores[nivel] || 1.55;
+    var get = Math.round(tmb * fator);
+    return {
+      tmb: tmb,
+      gastoTotal: get,
+      deficit: Math.round(get - 400),
+      superavit: Math.round(get + 300),
+      nivel: nivel || 'moderado'
+    };
+  }
+
+  function atualizarVisualizacaoKcal() {
+    var pEl = document.getElementById('infoPeso');
+    var aEl = document.getElementById('infoAltura');
+    var iEl = document.getElementById('infoIdade');
+    var badge = document.getElementById('kcalBadge');
+    var details = document.getElementById('kcalDetails');
+    var copyBtn = document.getElementById('copyKcalBtn');
+    if (!badge || !details) return;
+
+    var peso = pEl ? pEl.value : '';
+    var altura = aEl ? aEl.value : '';
+    var idade = iEl ? iEl.value : '';
+    var calc = calcularKcal(peso, altura, idade, infoNivelTreinoAtual);
+
+    if (calc) {
+      badge.textContent = calc.gastoTotal + ' kcal/dia (' + (calc.nivel.toUpperCase()) + ')';
+      badge.style.display = 'inline-block';
+      details.innerHTML = 'Gasto Total: <strong>~' + calc.gastoTotal + ' kcal/dia</strong> · Basal (TMB): <strong>~' + calc.tmb + ' kcal</strong><br>' +
+        'Emagrecimento (-400 kcal): <strong>~' + calc.deficit + ' kcal</strong> · Hipertrofia (+300 kcal): <strong>~' + calc.superavit + ' kcal</strong>';
+      if (copyBtn) copyBtn.hidden = false;
+    } else {
+      badge.textContent = 'Aguardando idade, peso e altura';
+      details.textContent = 'Informe idade, peso, altura e nível de treino para calcular o gasto calórico.';
+      if (copyBtn) copyBtn.hidden = true;
+    }
+  }
 
   function extrairInfoDoTexto(texto) {
     if (!texto || typeof texto !== 'string') return {};
@@ -6828,7 +7092,13 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     }
     var mAlt = texto.match(/(?:altura\s*[:=-]?\s*(\d(?:[.,]\d{1,2})?\s*m|\d{3}\s*cm|\d[.,]\d{2}))|(?:\b(\d[.,]\d{2})\s*m\b)|(?:\b(\d{3})\s*cm\b)/i);
     if (mAlt) {
-      res.altura = (mAlt[1] || mAlt[2] || mAlt[3]).trim();
+      var va = (mAlt[1] || mAlt[2] || mAlt[3]).trim();
+      var digitsA = va.replace(/\D/g, '');
+      if (digitsA.length === 3) {
+        var nA = parseInt(digitsA, 10);
+        if (nA >= 100 && nA <= 250) va = (nA / 100).toFixed(2);
+      }
+      res.altura = va;
     }
     var mNasc = texto.match(/(?:(?:data\s*(?:de\s*)?)?nasc(?:imento)?\s*[:=-]?\s*(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}))|(?:\b(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{4})\b)/i);
     if (mNasc) {
@@ -6922,6 +7192,81 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     }
   }
 
+  function salvarGuiaInfoAtual() {
+    if (!infoGuiasAtuais[infoGuiaAtivaIndex]) return;
+    infoGuiasAtuais[infoGuiaAtivaIndex] = {
+      id: infoGuiasAtuais[infoGuiaAtivaIndex].id || String(Date.now()),
+      titulo: infoGuiasAtuais[infoGuiaAtivaIndex].titulo || ('Ficha ' + (infoGuiaAtivaIndex + 1)),
+      idade: document.getElementById('infoIdade').value.trim(),
+      peso: document.getElementById('infoPeso').value.trim(),
+      altura: document.getElementById('infoAltura').value.trim(),
+      dataNasc: document.getElementById('infoDataNasc').value.trim(),
+      nomeCompleto: document.getElementById('infoNomeCompleto').value.trim(),
+      email: document.getElementById('infoEmail').value.trim(),
+      whats: document.getElementById('infoWhats').value.trim(),
+      nivelTreino: infoNivelTreinoAtual
+    };
+  }
+
+  function carregarGuiaInfo(idx) {
+    if (!infoGuiasAtuais[idx]) return;
+    infoGuiaAtivaIndex = idx;
+    var g = infoGuiasAtuais[idx];
+    document.getElementById('infoIdade').value = g.idade || '';
+    document.getElementById('infoPeso').value = g.peso || '';
+    document.getElementById('infoAltura').value = g.altura || '';
+    document.getElementById('infoDataNasc').value = g.dataNasc || '';
+    document.getElementById('infoNomeCompleto').value = g.nomeCompleto || '';
+    document.getElementById('infoEmail').value = g.email || '';
+    document.getElementById('infoWhats').value = g.whats || '';
+    infoNivelTreinoAtual = g.nivelTreino || 'moderado';
+
+    document.querySelectorAll('#treinoLevelSelector .level-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.level === infoNivelTreinoAtual);
+    });
+
+    atualizarVisualizacaoImc();
+    atualizarVisualizacaoKcal();
+    renderizarAbasInfo();
+  }
+
+  function renderizarAbasInfo() {
+    var list = document.getElementById('infoTabsList');
+    if (!list) return;
+    list.replaceChildren();
+    infoGuiasAtuais.forEach(function(guia, idx) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'info-tab-btn' + (idx === infoGuiaAtivaIndex ? ' active' : '');
+      var label = document.createElement('span');
+      label.textContent = guia.titulo || ('Ficha ' + (idx + 1));
+      btn.appendChild(label);
+      if (infoGuiasAtuais.length > 1) {
+        var closeBtn = document.createElement('span');
+        closeBtn.className = 'info-tab-close';
+        closeBtn.textContent = '✕';
+        closeBtn.title = 'Remover esta ficha';
+        closeBtn.onclick = function(e) {
+          e.stopPropagation();
+          if (confirm('Deseja remover ' + (guia.titulo || 'esta ficha') + '?')) {
+            infoGuiasAtuais.splice(idx, 1);
+            if (infoGuiaAtivaIndex >= infoGuiasAtuais.length) {
+              infoGuiaAtivaIndex = Math.max(0, infoGuiasAtuais.length - 1);
+            }
+            carregarGuiaInfo(infoGuiaAtivaIndex);
+          }
+        };
+        btn.appendChild(closeBtn);
+      }
+      btn.onclick = function() {
+        if (idx === infoGuiaAtivaIndex) return;
+        salvarGuiaInfoAtual();
+        carregarGuiaInfo(idx);
+      };
+      list.appendChild(btn);
+    });
+  }
+
   function autoPreencherCamposDaAnotacao(forcar) {
     var area = document.getElementById('obsTextarea');
     var texto = (area ? area.value : '') + '\n' + obsGuiasAtuais.map(function(g){ return g.texto || ''; }).join('\n');
@@ -6961,6 +7306,10 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var fDataNasc = document.getElementById('infoDataNasc');
     if (fDataNasc && (!fDataNasc.value.trim() || forcar) && extraido.dataNasc) {
       fDataNasc.value = extraido.dataNasc; preencheu++;
+      var idadeC = calcularIdadePorDataNasc(extraido.dataNasc);
+      if (idadeC !== null && (!fIdade.value.trim() || forcar)) {
+        fIdade.value = idadeC + ' anos';
+      }
     }
 
     var fEmail = document.getElementById('infoEmail');
@@ -6969,6 +7318,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     }
 
     atualizarVisualizacaoImc();
+    atualizarVisualizacaoKcal();
+    salvarGuiaInfoAtual();
     return preencheu;
   }
 
@@ -6981,15 +7332,22 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var email = document.getElementById('infoEmail').value.trim();
     var whats = document.getElementById('infoWhats').value.trim();
 
-    var calc = calcularImcEPesoIdeal(peso, altura);
-    var linhas = ['📋 FICHA DO ALUNO'];
+    var calcImc = calcularImcEPesoIdeal(peso, altura);
+    var calcKcal = calcularKcal(peso, altura, idade, infoNivelTreinoAtual);
+
+    var linhas = ['📋 FICHA DO ALUNO' + (infoGuiasAtuais[infoGuiaAtivaIndex] ? ' (' + infoGuiasAtuais[infoGuiaAtivaIndex].titulo + ')' : '')];
     if (nome) linhas.push('Nome: ' + nome);
     if (idade) linhas.push('Idade: ' + idade);
     if (peso) linhas.push('Peso: ' + peso);
     if (altura) linhas.push('Altura: ' + altura);
-    if (calc) {
-      linhas.push('IMC: ' + calc.imc + ' (' + calc.classificacao + ')');
-      linhas.push('Peso Ideal: ' + calc.pesoMin + ' kg – ' + calc.pesoMax + ' kg');
+    if (calcImc) {
+      linhas.push('IMC: ' + calcImc.imc + ' (' + calcImc.classificacao + ')');
+      linhas.push('Peso Ideal: ' + calcImc.pesoMin + ' kg – ' + calcImc.pesoMax + ' kg');
+    }
+    if (calcKcal) {
+      linhas.push('Nível de Treino: ' + (calcKcal.nivel.toUpperCase()));
+      linhas.push('Gasto Calórico Total: ~' + calcKcal.gastoTotal + ' kcal/dia (TMB: ~' + calcKcal.tmb + ' kcal)');
+      linhas.push('Meta Emagrecimento: ~' + calcKcal.deficit + ' kcal | Meta Hipertrofia: ~' + calcKcal.superavit + ' kcal');
     }
     if (dataNasc) linhas.push('Data de nasc.: ' + dataNasc);
     if (whats) linhas.push('WhatsApp: ' + whats);
@@ -7063,7 +7421,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var aluno = alunoNaTela() || buscarAluno(nome);
     document.getElementById('obsStudentHeader').textContent = 'Aluno: ' + (aluno ? aluno.nome : nome);
     
-    // Configurar Guias/Abas
+    // Configurar Guias/Abas de Observações
     if (aluno && Array.isArray(aluno.obsGuias) && aluno.obsGuias.length > 0) {
       obsGuiasAtuais = cloneData(aluno.obsGuias);
     } else if (aluno && aluno.observacoes) {
@@ -7075,19 +7433,30 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     renderizarAbasObs();
     document.getElementById('obsTextarea').value = (obsGuiasAtuais[0] && obsGuiasAtuais[0].texto) || '';
 
-    // Informações Relevantes
-    var info = (aluno && aluno.infoRelevante) || {};
-    document.getElementById('infoIdade').value = info.idade || '';
-    document.getElementById('infoPeso').value = info.peso || '';
-    document.getElementById('infoAltura').value = info.altura || '';
-    document.getElementById('infoDataNasc').value = info.dataNasc || '';
-    document.getElementById('infoNomeCompleto').value = info.nomeCompleto || (aluno ? aluno.nome : nome);
-    document.getElementById('infoEmail').value = info.email || '';
-    document.getElementById('infoWhats').value = info.whats || (aluno ? (aluno.whatsapp || '') : '');
+    // Configurar Guias/Abas de Informações Relevantes
+    if (aluno && Array.isArray(aluno.infoGuias) && aluno.infoGuias.length > 0) {
+      infoGuiasAtuais = cloneData(aluno.infoGuias);
+    } else if (aluno && aluno.infoRelevante) {
+      infoGuiasAtuais = [Object.assign({ id: '1', titulo: 'Ficha 1' }, aluno.infoRelevante)];
+    } else {
+      infoGuiasAtuais = [{
+        id: '1',
+        titulo: 'Ficha 1',
+        idade: '',
+        peso: '',
+        altura: '',
+        dataNasc: '',
+        nomeCompleto: aluno ? aluno.nome : nome,
+        email: '',
+        whats: aluno ? (aluno.whatsapp || '') : '',
+        nivelTreino: 'moderado'
+      }];
+    }
+    infoGuiaAtivaIndex = 0;
+    carregarGuiaInfo(0);
 
     // Auto-extrair dados do texto se campos estiverem vazios
     autoPreencherCamposDaAnotacao(false);
-    atualizarVisualizacaoImc();
 
     // Reset expand e sanfona
     obsDialog.classList.remove('expanded');
@@ -7112,8 +7481,37 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     arrow.textContent = isHidden ? '▼' : '▶';
   };
 
-  document.getElementById('infoPeso').addEventListener('input', atualizarVisualizacaoImc);
-  document.getElementById('infoAltura').addEventListener('input', atualizarVisualizacaoImc);
+  // Listeners de máscaras e cálculos
+  var alturaInput = document.getElementById('infoAltura');
+  alturaInput.addEventListener('input', function() { formatarCampoAltura(alturaInput); });
+  alturaInput.addEventListener('blur', function() { formatarCampoAltura(alturaInput); });
+
+  var dataNascInput = document.getElementById('infoDataNasc');
+  dataNascInput.addEventListener('input', function() { formatarCampoDataNasc(dataNascInput); });
+  dataNascInput.addEventListener('blur', function() { formatarCampoDataNasc(dataNascInput); });
+
+  document.getElementById('infoPeso').addEventListener('input', function() {
+    atualizarVisualizacaoImc();
+    atualizarVisualizacaoKcal();
+    salvarGuiaInfoAtual();
+  });
+  document.getElementById('infoIdade').addEventListener('input', function() {
+    atualizarVisualizacaoImc();
+    atualizarVisualizacaoKcal();
+    salvarGuiaInfoAtual();
+  });
+
+  // Seletor de Nível de Treino
+  document.getElementById('treinoLevelSelector').addEventListener('click', function(e) {
+    var b = e.target.closest('.level-btn');
+    if (!b) return;
+    infoNivelTreinoAtual = b.dataset.level || 'moderado';
+    document.querySelectorAll('#treinoLevelSelector .level-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn === b);
+    });
+    atualizarVisualizacaoKcal();
+    salvarGuiaInfoAtual();
+  });
 
   document.getElementById('copyAllInfoBtn').onclick = copiarTudoInfoRelevante;
   document.getElementById('autoFillInfoBtn').onclick = function() {
@@ -7123,6 +7521,38 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     } else {
       exibirMensagem('Nenhum dado novo detectado no texto da anotação.', '#64748b', false);
     }
+  };
+
+  document.getElementById('clearAllInfoBtn').onclick = function() {
+    if (!confirm('Deseja limpar todos os dados desta ficha?')) return;
+    ['infoIdade', 'infoPeso', 'infoAltura', 'infoDataNasc', 'infoNomeCompleto', 'infoEmail', 'infoWhats'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    atualizarVisualizacaoImc();
+    atualizarVisualizacaoKcal();
+    salvarGuiaInfoAtual();
+    exibirMensagem('Ficha limpa.', '#b22222', false);
+  };
+
+  document.getElementById('addInfoTabBtn').onclick = function() {
+    salvarGuiaInfoAtual();
+    var num = infoGuiasAtuais.length + 1;
+    var nomeAtual = document.getElementById('searchName').value.trim();
+    var aluno = alunoNaTela() || buscarAluno(nomeAtual);
+    infoGuiasAtuais.push({
+      id: String(Date.now()),
+      titulo: 'Ficha ' + num,
+      idade: '',
+      peso: '',
+      altura: '',
+      dataNasc: '',
+      nomeCompleto: aluno ? aluno.nome : nomeAtual,
+      email: '',
+      whats: aluno ? (aluno.whatsapp || '') : '',
+      nivelTreino: 'moderado'
+    });
+    carregarGuiaInfo(infoGuiasAtuais.length - 1);
   };
 
   document.getElementById('copyImcBtn').onclick = function() {
@@ -7136,21 +7566,50 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     });
   };
 
+  document.getElementById('copyKcalBtn').onclick = function() {
+    var p = document.getElementById('infoPeso').value;
+    var a = document.getElementById('infoAltura').value;
+    var i = document.getElementById('infoIdade').value;
+    var calc = calcularKcal(p, a, i, infoNivelTreinoAtual);
+    if (!calc) return;
+    var texto = 'Gasto Calórico: ~' + calc.gastoTotal + ' kcal/dia (TMB: ' + calc.tmb + ' kcal) · Nível: ' + calc.nivel.toUpperCase() + ' · Emagrecimento: ~' + calc.deficit + ' kcal · Hipertrofia: ~' + calc.superavit + ' kcal';
+    navigator.clipboard.writeText(texto).then(function() {
+      exibirMensagem('📋 Kcal copiadas!', '#1e6f3f', false);
+    });
+  };
+
   document.getElementById('infoRelevanteContent').addEventListener('click', function(e) {
-    var btn = e.target.closest('.copy-field-btn');
-    if (!btn) return;
-    var targetId = btn.dataset.target;
-    var label = btn.dataset.label || 'Campo';
-    var input = document.getElementById(targetId);
-    if (!input || !input.value.trim()) {
-      exibirMensagem('Campo ' + label + ' está vazio.', '#64748b', false);
+    // Botão de apagar rápido
+    var clearBtn = e.target.closest('.clear-field-btn');
+    if (clearBtn) {
+      var targetClearId = clearBtn.dataset.target;
+      var elClear = document.getElementById(targetClearId);
+      if (elClear) {
+        elClear.value = '';
+        elClear.focus();
+        atualizarVisualizacaoImc();
+        atualizarVisualizacaoKcal();
+        salvarGuiaInfoAtual();
+      }
       return;
     }
-    navigator.clipboard.writeText(input.value.trim()).then(function() {
-      exibirMensagem('📋 ' + label + ' copiado: ' + input.value.trim(), '#1e6f3f', false);
-    }).catch(function() {
-      exibirMensagem('Não foi possível copiar.', '#b22222', false);
-    });
+
+    // Botão de cópia individual
+    var copyBtn = e.target.closest('.copy-field-btn');
+    if (copyBtn) {
+      var targetId = copyBtn.dataset.target;
+      var label = copyBtn.dataset.label || 'Campo';
+      var input = document.getElementById(targetId);
+      if (!input || !input.value.trim()) {
+        exibirMensagem('Campo ' + label + ' está vazio.', '#64748b', false);
+        return;
+      }
+      navigator.clipboard.writeText(input.value.trim()).then(function() {
+        exibirMensagem('📋 ' + label + ' copiado: ' + input.value.trim(), '#1e6f3f', false);
+      }).catch(function() {
+        exibirMensagem('Não foi possível copiar.', '#b22222', false);
+      });
+    }
   });
 
   document.getElementById('addObsTabBtn').onclick = function() {
@@ -7180,20 +7639,14 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     if (area && obsGuiasAtuais[obsGuiaAtivaIndex]) {
       obsGuiasAtuais[obsGuiaAtivaIndex].texto = area.value;
     }
+    salvarGuiaInfoAtual();
     if (aluno) {
       aluno.obsGuias = cloneData(obsGuiasAtuais);
       aluno.observacoes = obsGuiasAtuais.map(function(g) { return g.texto.trim(); }).filter(Boolean).join('\n---\n') || (obsGuiasAtuais[0] ? obsGuiasAtuais[0].texto : '');
       
-      var whatsVal = document.getElementById('infoWhats').value.trim();
-      aluno.infoRelevante = {
-        idade: document.getElementById('infoIdade').value.trim(),
-        peso: document.getElementById('infoPeso').value.trim(),
-        altura: document.getElementById('infoAltura').value.trim(),
-        dataNasc: document.getElementById('infoDataNasc').value.trim(),
-        nomeCompleto: document.getElementById('infoNomeCompleto').value.trim(),
-        email: document.getElementById('infoEmail').value.trim(),
-        whats: whatsVal
-      };
+      aluno.infoGuias = cloneData(infoGuiasAtuais);
+      aluno.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex] || {});
+      var whatsVal = aluno.infoRelevante.whats || document.getElementById('infoWhats').value.trim();
       if (whatsVal) aluno.whatsapp = whatsVal;
 
       salvarLocalStorage();
@@ -7249,9 +7702,9 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   // IDs estáveis são acrescentados sem fabricar versões ou mudar datas antigas.
   alunos.forEach(garantirHistorico);salvarLocalStorage();
 
-  var compareContext=null,compareSteps=[],compareStepIndex=0,compareEditing=false,compareSide='current';
+  var compareContext=null,compareSteps=[],compareStepIndex=0,compareEditing=true,compareSide='both';
   var compareTools=document.createElement('div');compareTools.className='compare-inline-tools';
-  compareTools.innerHTML='<button id="compareUndo" type="button" title="Desfazer" aria-label="Desfazer edição">↶</button><button id="compareRedo" type="button" title="Refazer" aria-label="Refazer edição">↷</button><button id="compareEditingSwitch" type="button" role="switch" aria-checked="false" aria-label="Ativar edição" title="Ativar edição" class="compare-row-toggle"></button><select id="compareEditSide" aria-label="Qual treino editar"><option value="current">Editar Atual</option><option value="previous">Editar Anterior</option></select><span id="compareEditStatus" role="status"></span>';
+  compareTools.innerHTML='<button id="compareUndo" type="button" title="Desfazer" aria-label="Desfazer edição">↶</button><button id="compareRedo" type="button" title="Refazer" aria-label="Refazer edição">↷</button><button id="compareEditingSwitch" type="button" role="switch" aria-checked="true" aria-label="Ativar edição" title="Ativar edição" class="compare-row-toggle"></button><select id="compareEditSide" aria-label="Qual treino editar"><option value="both">✏️ Editar Ambos (Antigo e Atual)</option><option value="current">Editar apenas Atual</option><option value="previous">Editar apenas Anterior</option></select><span id="compareEditStatus" role="status"></span>';
   var compareHeader=document.createElement('div');compareHeader.className='compare-header';
   compareHeader.innerHTML='<label for="compareVersion">Treino anterior</label><select id="compareVersion"></select><div class="comparison-columns compare-column-headings"><strong id="comparePreviousHeading">Anterior</strong><strong id="compareCurrentHeading">Atual · Principal</strong></div>';
   document.getElementById('compareLabels').after(compareTools);compareTools.after(compareHeader);
@@ -7259,13 +7712,16 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   function estadoComparacao(){return JSON.stringify({current:compareContext.current,previous:compareContext.previous});}
   function rotuloVersao(v,index){return 'Anterior '+(index+1)+' · '+(v.original_student_name||v.name||'Treino')+' · '+(v.archived_at?new Date(v.archived_at).toLocaleDateString('pt-BR'):'Sem data');}
   function iniciarEditorComparacao(current,previous,scope,leftLabel,rightLabel){
-    compareContext={current:cloneData(current),previous:cloneData(previous),scope:scope,leftLabel:leftLabel,rightLabel:rightLabel,studentId:alunoNaTela()?alunoNaTela().student_id:null,suggestion:leftLabel==='Sugestão'};
-    compareSteps=[estadoComparacao()];compareStepIndex=0;compareEditing=false;compareSide='current';
-    document.getElementById('compareEditingSwitch').setAttribute('aria-checked','false');document.getElementById('compareEditSide').value='current';
-    var side=document.getElementById('compareEditSide');side.options[0].textContent=compareContext.suggestion?'Editar Sugestão':'Editar Atual';side.options[1].disabled=compareContext.suggestion;
+    var student=(current&&current.student_id?alunos.find(function(x){return x.student_id===current.student_id;}):null)||alunoNaTela()||(historyStudent?historyStudent:null);
+    compareContext={current:cloneData(current),previous:cloneData(previous),scope:scope,leftLabel:leftLabel,rightLabel:rightLabel,studentId:student?student.student_id:null,suggestion:leftLabel==='Sugestão'};
+    compareSteps=[estadoComparacao()];compareStepIndex=0;compareEditing=true;compareSide='both';
+    document.getElementById('compareEditingSwitch').setAttribute('aria-checked','true');
+    var side=document.getElementById('compareEditSide');side.value='both';
+    side.options[0].textContent=compareContext.suggestion?'Editar Sugestão':'✏️ Editar Ambos (Antigo e Atual)';
+    side.options[1].disabled=false;
+    side.options[2].disabled=compareContext.suggestion;
     var selector=document.getElementById('compareVersion');selector.replaceChildren();
-    var student=alunoNaTela();
-    if(!compareContext.suggestion&&student)student.historicoTreinos.forEach(function(v,i){var o=document.createElement('option');o.value=v.workout_id;o.textContent=rotuloVersao(v,i);selector.prepend(o);});
+    if(!compareContext.suggestion&&student&&Array.isArray(student.historicoTreinos))student.historicoTreinos.forEach(function(v,i){var o=document.createElement('option');o.value=v.workout_id;o.textContent=rotuloVersao(v,i);selector.prepend(o);});
     selector.value=previous.workout_id||'';selector.hidden=compareContext.suggestion;compareHeader.querySelector('label').hidden=compareContext.suggestion;
     compareApply.textContent=compareContext.suggestion?'Aplicar na prévia':'Aplicar alterações';document.getElementById('compareEditStatus').textContent='';atualizarHistoricoComparacao();
   }
@@ -7276,14 +7732,14 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   document.getElementById('compareUndo').onclick=function(){historicoComparacao(-1);};document.getElementById('compareRedo').onclick=function(){historicoComparacao(1);};
   function atualizarLadoEditavel(){
     document.getElementById('compareEditingSwitch').setAttribute('aria-checked',String(compareEditing));
-    compareDialog.querySelectorAll('.comparison-editable-line').forEach(function(line){var enabled=compareEditing&&line.dataset.side===compareSide;line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);if(!line.textContent.trim())line.textContent=compareContext[line.dataset.side].treino[line.dataset.section][Number(line.dataset.index)];});
+    compareDialog.querySelectorAll('.comparison-editable-line').forEach(function(line){var side=line.dataset.side;var enabled=compareEditing&&(compareSide==='both'||compareSide===side);line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);if(!line.textContent.trim())line.textContent=compareContext[side].treino[line.dataset.section][Number(line.dataset.index)];});
   }
   document.getElementById('compareEditingSwitch').onclick=function(){compareEditing=!compareEditing;atualizarLadoEditavel();};
   document.getElementById('compareEditSide').onchange=function(){compareSide=this.value;atualizarLadoEditavel();};
   document.getElementById('compareVersion').onchange=function(){
-    var id=this.value,a=alunoNaTela();if(!a)return;
+    var id=this.value,a=alunos.find(function(x){return x.student_id===compareContext.studentId;})||alunoNaTela()||historyStudent;if(!a)return;
     if(estadoComparacao()!==compareSteps[0]){this.value=compareContext.previous.workout_id;document.getElementById('compareEditStatus').textContent='Aplique as edições antes de trocar de anterior, ou feche para descartar.';return;}
-    var v=a.historicoTreinos.find(function(x){return x.workout_id===id;});if(v)abrirComparacao(snapshotAluno(a),v,compareContext.scope,'Atual','Anterior');
+    var v=a.historicoTreinos?a.historicoTreinos.find(function(x){return x.workout_id===id;}):null;if(v)abrirComparacao(snapshotAluno(a),v,compareContext.scope,'Atual','Anterior');
   };
   function prepararEdicaoLinhaComparacao(row,cell,sec,index,side){
     if(!Number.isInteger(index))return;
@@ -7291,9 +7747,9 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     cell.className='comparison-'+side;
     var line=document.createElement('div');line.className='comparison-editable-line comparison-'+side+'-line';line.dataset.side=side;line.dataset.section=sec;line.dataset.index=index;
     line.textContent=compareContext[side].treino[sec][index];cell.replaceChildren(line);
-    var enabled=compareEditing&&side===compareSide;line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);line.spellcheck=false;
+    var enabled=compareEditing&&(compareSide==='both'||compareSide===side);line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);line.spellcheck=false;
     line.setAttribute('aria-label',(side==='previous'?'Anterior':'Atual')+' · Exercício '+(index+1)+' da seção '+sec);
-    line.oninput=function(){var value=line.innerText.replace(/\r?\n/g,' ').trim();if(value){compareContext[side].treino[sec][index]=value;registrarComparacao();row.querySelector('h4').textContent='Editado';}};
+    line.oninput=function(){var value=line.innerText.replace(/\r?\n/g,' ').trim();if(value){compareContext[side].treino[sec][index]=value;registrarComparacao();row.querySelector('h4').textContent='Editado ('+(side==='previous'?'Anterior':'Atual')+')';}};
     line.addEventListener('paste',function(e){if(!e.clipboardData)return;e.preventDefault();insertPlainText(e.clipboardData.getData('text/plain').replace(/\r?\n/g,' '));line.dispatchEvent(new Event('input',{bubbles:true}));});
     line.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();line.blur();}});
   }
@@ -7305,19 +7761,28 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var empty=Array.from(compareDialog.querySelectorAll('.comparison-editable-line')).find(function(line){return !line.textContent.trim();});
     if(empty){document.getElementById('compareEditStatus').textContent='Preencha o exercício antes de aplicar.';empty.focus({preventScroll:true});return;}
     if(compareContext.suggestion){document.getElementById('generatorText').value=textoTreino(compareContext.current,generatorScope);compareDialog.close();return;}
-    var a=alunoNaTela();if(!a||a.student_id!==compareContext.studentId){document.getElementById('compareEditStatus').textContent='O aluno mudou. Abra novamente a comparação.';return;}
-    var previous=a.historicoTreinos.find(function(v){return v.workout_id===compareContext.previous.workout_id;});
+    var a=alunos.find(function(x){return x.student_id===compareContext.studentId;})||alunoNaTela()||historyStudent;
+    if(!a){document.getElementById('compareEditStatus').textContent='Aluno não encontrado. Abra novamente a comparação.';return;}
+    var previous=a.historicoTreinos?a.historicoTreinos.find(function(v){return v.workout_id===compareContext.previous.workout_id;}):null;
     var baseline=JSON.parse(compareSteps[0]);
-    if(JSON.stringify(baseline.previous)!==JSON.stringify(compareContext.previous)){
-      if(!previous){document.getElementById('compareEditStatus').textContent='Este anterior não está mais disponível.';return;}
+    var mudouPrevious=JSON.stringify(baseline.previous)!==JSON.stringify(compareContext.previous);
+    var mudouCurrent=JSON.stringify(baseline.current)!==JSON.stringify(compareContext.current);
+    if(mudouPrevious){
+      if(!previous){document.getElementById('compareEditStatus').textContent='Este treino anterior não está mais disponível.';return;}
       var backup=cloneData(previous);
       if(!Array.isArray(previous.revisoes))previous.revisoes=[];
       previous.revisoes.push({edited_at:new Date().toISOString(),treino:cloneData(previous.treino),titulos:cloneData(previous.titulos||{})});
       previous.treino=cloneData(compareContext.previous.treino);previous.titulos=cloneData(compareContext.previous.titulos||{});previous.edited_at=new Date().toISOString();
       if(!salvarLocalStorage()){Object.keys(previous).forEach(function(k){delete previous[k];});Object.assign(previous,backup);document.getElementById('compareEditStatus').textContent='Não foi possível salvar o anterior. Tente novamente.';return;}
     }
-    if(JSON.stringify(baseline.current)!==JSON.stringify(compareContext.current))aplicarDadosNaTela(compareContext.current,compareContext.scope);
+    if(mudouCurrent){
+      a.treino=cloneData(compareContext.current.treino);a.titulos=cloneData(compareContext.current.titulos||{});
+      if(compareContext.current.secaoFAtiva!==undefined)a.secaoFAtiva=!!compareContext.current.secaoFAtiva;
+      a.atualizadoEm=new Date().toISOString();salvarLocalStorage();
+      if(alunoNaTela()&&alunoNaTela().student_id===a.student_id){aplicarDadosNaTela(compareContext.current,compareContext.scope);}
+    }
     compareDialog.close();if(historyDialog.open)renderVersao();if(pasteModal.style.visibility==='visible')fecharPasteModal();
+    exibirMensagem('✅ Alterações aplicadas com sucesso no treino!','#1e6f3f',false);
   };
   // O histórico fica acessível tanto por Anteriores quanto pelo seletor do comparativo.
   var editPreviousButton=document.createElement('button');editPreviousButton.id='editHistoryVersion';editPreviousButton.textContent='Editar anterior';
