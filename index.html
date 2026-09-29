@@ -757,16 +757,17 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 #pasteModal #pasteTextarea { font-size:16px; line-height:1.45; flex:1 1 200px; min-height:90px; max-height:none; overflow:auto; -webkit-overflow-scrolling:touch; }
 #pasteModal .paste-tools { margin-bottom:6px; }
 #pasteModal .paste-help { font-size:.68rem; margin-bottom:6px; }
-.comparison-current { padding-right:38px; }
-.comparison-current-line { font-size:16px; line-height:1.35; border-radius:4px; min-width:0; }
-.comparison-current-line.editing { background:#fff7d6; outline:1px solid #dfc785; padding:2px 4px; }
-.comparison-previous-line { font-size:16px; line-height:1.35; border-radius:4px; min-width:0; }
-.comparison-previous-line.editing { background:#e0f2fe; outline:1px solid #7dd3fc; padding:2px 4px; }
+.comparison-current { padding-right:0; }
+.comparison-current-line { font-size:16px; line-height:1.35; border-radius:4px; min-width:0; padding:2px 4px; }
+.comparison-current-line.editing { background:transparent; outline:none; }
+.comparison-current-line.editing:focus { background:#f8fafc; outline:1px solid #94a3b8; }
+.comparison-previous-line { font-size:16px; line-height:1.35; border-radius:4px; min-width:0; padding:2px 4px; }
+.comparison-previous-line.editing { background:transparent; outline:none; }
+.comparison-previous-line.editing:focus { background:#f8fafc; outline:1px solid #94a3b8; }
 .app-dialog .compare-row-toggle { width:30px; height:18px; padding:0; border-radius:12px; background:#b9c4cc; border:0; }
 .compare-row-toggle::before { content:''; display:block; position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%; background:#fff; }
 .app-dialog .compare-row-toggle[aria-checked=true] { background:#267457; }
 .compare-row-toggle[aria-checked=true]::before { left:15px; }
-.comparison-current { padding-right:0; }
 .app-dialog #compareEditingSwitch { position:relative; top:auto; right:auto; flex-shrink:0; min-width:30px; margin:0 4px; }
 .exercise-extra-actions { display:flex; gap:6px; margin-top:6px; }
 .exercise-extra-actions button { flex:1; }
@@ -788,15 +789,31 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 #compareWorkoutsDialog #compareEditStatus { flex-basis:100%; }
 .compare-header { flex-shrink:0; }
 .compare-header label { margin-top:3px; }
-.compare-column-headings { margin:8px 0 4px; background:#eef3f6; padding:7px; border-radius:5px; }
+.compare-column-headings { margin:8px 0 4px; background:#eef3f6; padding:8px 10px; border-radius:8px; gap:10px; }
+.compare-heading-col { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.compare-col-header { display:flex; flex-direction:column; gap:2px; }
+.compare-picker-select { width:100%; font-size:0.75rem; font-weight:600; padding:4px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; color:#1e293b; cursor:pointer; }
+.compare-picker-select.previous-select { border-color:#7dd3fc; color:#0369a1; }
+.compare-picker-select.current-select { border-color:#86efac; color:#15803d; }
 #compareBody { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; }
 #compareWorkoutsDialog > .dialog-actions { position:static; flex-shrink:0; margin-top:6px; padding:6px 0 0; }
 .comparison-columns { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
-.comparison-editable-line { font-size:16px; line-height:1.35; border-radius:4px; min-width:0; }
-.comparison-editable-line.editing { background:#fff7d6; outline:1px solid #dfc785; }
+.comparison-editable-line { font-size:16px; line-height:1.35; border-radius:4px; min-width:0; padding:2px 4px; }
+.comparison-editable-line.editing { background:transparent; outline:none; }
+.comparison-editable-line.editing:focus { background:#f8fafc; outline:1px solid #94a3b8; }
 .comparison-row h4 { font-size:.67rem; margin-bottom:4px; }
 #moveCoverSummary { padding:9px; border:1px solid #b7d5c4; border-radius:6px; background:#eff8f2; }
 .cover-badge { flex-basis:100%; font-size:.62rem; color:#527365; text-align:center; }
+.name-suggestion-group { border-bottom:1px solid #e2e8f0; }
+.name-suggestion-group:last-child { border-bottom:none; }
+.name-suggestion-sublist { background:#f8fafc; padding:2px 0; }
+.name-suggestion-subitem { display:flex; align-items:center; justify-content:space-between; padding:5px 10px 5px 28px; font-size:0.78rem; border-top:1px dashed #e2e8f0; }
+.name-suggestion-subitem .sub-name { color:#334155; display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.name-suggestion-subitem .sub-badge { font-size:0.62rem; padding:1px 5px; border-radius:4px; font-weight:600; }
+.sub-badge.capa { background:#dcfce7; color:#15803d; }
+.sub-badge.anterior { background:#e0f2fe; color:#0369a1; }
+.name-suggestion-subitem .sub-load-btn { font-size:0.7rem; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1; background:#fff; color:#0f172a; cursor:pointer; }
+.name-suggestion-subitem .sub-load-btn:hover { background:#e2e8f0; }
 .comparison-section-titles { margin:0 0 6px; padding:0 8px; }
 .global-buttons { gap:3px; margin-bottom:5px; }
 .global-buttons .global-btn { padding:3px 4px; min-height:24px; border-radius:6px; font-size:.55rem; line-height:1.1; }
@@ -6408,7 +6425,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     return a;
   }
   function snapshotAluno(a) {
-    return {workout_id:a.treino_id,student_id:a.student_id,name:a.treinoNome||('Treino de '+a.nome),student_name:a.nome,original_student_name:a.nome,created_at:a.treinoCriadoEm||a.criadoEm||null,activated_at:a.treinoAtivadoEm||a.atualizadoEm||null,archived_at:null,status:'active',treino:cloneData(a.treino),titulos:cloneData(a.titulos||{}),secaoFAtiva:!!a.secaoFAtiva};
+    return {workout_id:a.treino_id,student_id:a.student_id,name:a.treinoNome||a.nome||('Treino de '+a.nome),student_name:a.nome,original_student_name:a.nome,created_at:a.treinoCriadoEm||a.criadoEm||null,activated_at:a.treinoAtivadoEm||a.atualizadoEm||null,archived_at:null,status:'active',treino:cloneData(a.treino),titulos:cloneData(a.titulos||{}),secaoFAtiva:!!a.secaoFAtiva};
   }
   function arquivarTreino(a) {
     garantirHistorico(a);
@@ -6469,22 +6486,74 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     atualizarDestinoSalvamento();
     salvarAlunoAtual();
   }
+  function carregarVersaoNaTela(aluno, versao) {
+    concluirAutoSave();
+    pushState();
+    todasSecoes.forEach(function(s){
+      sections[s].innerHTML = (versao.treino[s]||[]).map(formatExerciseLine).filter(Boolean).join('');
+      setTituloSecao(s, (versao.titulos||{})[s] || s + '. TREINO');
+    });
+    setSecaoFAtiva(!!versao.secaoFAtiva, true);
+    alunoVinculadoId = aluno.student_id;
+    searchNameInput.value = aluno.nome;
+    registrarAlunoSelecionado(aluno.nome);
+    pushState();
+    fecharSugestoes();
+    if(typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs();
+    var vNome = (versao.name && !versao.name.toLowerCase().startsWith('treino de ')) ? versao.name : (versao.treinoNome || 'anterior');
+    exibirMensagem('✅ Treino "' + vNome + '" de ' + aluno.nome + ' carregado na tela.', '#1e6f3f', false);
+  }
+
   function mostrarSugestoes() {
     var typed = searchNameInput.value.trim(), termo = baseNomeTreino(typed);
     if (!termo) { fecharSugestoes(); return; }
-    var found = alunos.filter(function(a) { return normalizarNome(a.nome).includes(termo); }).slice(0, 8);
+    var found = alunos.filter(function(a) {
+      return normalizarNome(a.nome).includes(termo) ||
+             baseNomeTreino(a.nome).includes(termo) ||
+             (a.treinoNome && normalizarNome(a.treinoNome).includes(termo)) ||
+             (Array.isArray(a.historicoTreinos) && a.historicoTreinos.some(function(v){
+               return (v.name && normalizarNome(v.name).includes(termo)) || (v.treinoNome && normalizarNome(v.treinoNome).includes(termo));
+             }));
+    }).slice(0, 8);
     if (!found.length) { fecharSugestoes(); return; }
+    
     nameSuggestions.innerHTML = found.map(function(a) {
-      return '<div class="name-suggestion-item" role="option" data-nome="' + escAttr(a.nome) + '">' +
-        '<button type="button" class="name-suggestion-load" data-nome="' + escAttr(a.nome) + '" title="Carregar treino de ' + escAttr(a.nome) + '">' +
-          '<span class="sugg-icon">👤</span>' +
-          '<span class="sugg-name">' + escHtml(a.nome) + '</span>' +
-        '</button>' +
-        '<button type="button" class="name-suggestion-save" data-nome="' + escAttr(a.nome) + '" title="Salvar treino atual para ' + escAttr(a.nome) + '">' +
-          '💾 Salvar' +
-        '</button>' +
-      '</div>';
+      var capaNome = (a.treinoNome && !a.treinoNome.toLowerCase().startsWith('treino de ')) ? a.treinoNome : a.nome;
+      var hist = (a.historicoTreinos || []).slice().reverse();
+      
+      var html = '<div class="name-suggestion-group" data-student-id="' + escAttr(a.student_id) + '">' +
+        '<div class="name-suggestion-item" role="option" data-nome="' + escAttr(a.nome) + '">' +
+          '<button type="button" class="name-suggestion-load" data-nome="' + escAttr(a.nome) + '" title="Carregar capa de ' + escAttr(a.nome) + '">' +
+            '<span class="sugg-icon">👤</span>' +
+            '<span class="sugg-name"><strong>' + escHtml(a.nome) + '</strong> <small style="color:#64748b;font-size:0.75rem;">(Principal)</small></span>' +
+          '</button>' +
+          '<button type="button" class="name-suggestion-save" data-nome="' + escAttr(a.nome) + '" title="Salvar novo treino para ' + escAttr(a.nome) + '">' +
+            '💾 Salvar aqui' +
+          '</button>' +
+        '</div>';
+      
+      if (capaNome !== a.nome || hist.length) {
+        html += '<div class="name-suggestion-sublist">';
+        html += '<div class="name-suggestion-subitem">' +
+          '<div class="sub-name">↳ <span class="sub-badge capa">⚡ Capa</span> <strong>' + escHtml(capaNome) + '</strong></div>' +
+          '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-type="cover">Carregar</button>' +
+        '</div>';
+        
+        hist.forEach(function(v, idx) {
+          var vNome = (v.name && !v.name.toLowerCase().startsWith('treino de ')) ? v.name : (v.treinoNome || ('Anterior ' + (hist.length - idx)));
+          var vData = v.archived_at ? new Date(v.archived_at).toLocaleDateString('pt-BR') : '';
+          html += '<div class="name-suggestion-subitem">' +
+            '<div class="sub-name">↳ <span class="sub-badge anterior">◷ Ant ' + (hist.length - idx) + '</span> <span>' + escHtml(vNome) + (vData ? ' <small style="color:#94a3b8;">(' + vData + ')</small>' : '') + '</span></div>' +
+            '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history">Carregar</button>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+      
+      html += '</div>';
+      return html;
     }).join('');
+    
     nameSuggestions.classList.add('visible');
     searchNameInput.setAttribute('aria-expanded', 'true');
     suggestionIndex = -1;
@@ -6495,6 +6564,24 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     nameSuggestions.querySelectorAll('.name-suggestion-save').forEach(function(b) {
       b.addEventListener('pointerdown', function(e) { e.preventDefault(); });
       b.onclick = function(e) { e.stopPropagation(); salvarDiretoSugestao(b.dataset.nome); };
+    });
+    nameSuggestions.querySelectorAll('.sub-load-btn').forEach(function(btn) {
+      btn.addEventListener('pointerdown', function(e) { e.preventDefault(); });
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        var sId = btn.dataset.studentId;
+        var a = alunos.find(function(x) { return x.student_id === sId; });
+        if (!a) return;
+        if (btn.dataset.type === 'cover') {
+          escolherSugestao(a.nome);
+        } else {
+          var wId = btn.dataset.workoutId;
+          var v = (a.historicoTreinos || []).find(function(x) { return x.workout_id === wId; });
+          if (v) {
+            carregarVersaoNaTela(a, v);
+          }
+        }
+      };
     });
   }
   var destinoBadge=document.createElement('div');destinoBadge.id='saveDestination';destinoBadge.hidden=true;
@@ -6528,7 +6615,10 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   function textoTreino(dados,scope) {
     return (scope?[scope]:['A','B','C','D','E'].concat(dados.secaoFAtiva?['F']:[])).map(function(s){return ((dados.titulos||{})[s]||s+'. TREINO')+'\n'+((dados.treino||{})[s]||[]).map(function(x,i){return(i+1)+'. '+x;}).join('\n');}).join('\n\n');
   }
-  function rotuloVersao(v,index){return 'Anterior '+(index+1)+' · '+(v.original_student_name||v.name||'Treino')+' · '+(v.archived_at?new Date(v.archived_at).toLocaleDateString('pt-BR'):'Sem data');}
+  function rotuloVersao(v,index){
+    var versaoNome = (v.name && !v.name.toLowerCase().startsWith('treino de ')) ? v.name : (v.treinoNome || v.original_student_name || v.student_name || 'Treino');
+    return 'Anterior ' + (index+1) + ' · ' + versaoNome + ' · ' + (v.archived_at ? new Date(v.archived_at).toLocaleDateString('pt-BR') : 'Sem data');
+  }
   var historyScope=null,historyStudent=null;
   var historyDialog=criarDialogo('workoutHistoryDialog','Histórico de treinos',
     '<div class="history-student-picker">'+
@@ -6709,6 +6799,12 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     document.getElementById('compareLabels').textContent = rightLabel + ' (' + nomeAntigo + ') × ' + leftLabel + ' (' + nomeAtual + ')';
     document.getElementById('comparePreviousHeading').innerHTML = '<span>' + escHtml(rightLabel) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#0284c7;margin-top:2px;">👤 ' + escHtml(nomeAntigo) + '</span>';
     document.getElementById('compareCurrentHeading').innerHTML = '<span>' + escHtml(leftLabel + (leftLabel === 'Atual' ? ' · Capa' : '')) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#16a34a;margin-top:2px;">👤 ' + escHtml(nomeAtual) + '</span>';
+    var pPicker = document.getElementById('comparePreviousPicker');
+    var cPicker = document.getElementById('compareCurrentPicker');
+    if (typeof selecionarNoPicker === 'function') {
+      if (pPicker) selecionarNoPicker(pPicker, previous);
+      if (cPicker) selecionarNoPicker(cPicker, current);
+    }
     var host=document.getElementById('compareBody');host.replaceChildren();
     (scope?[scope]:todasSecoes).forEach(function(s){
       var now=(current.treino||{})[s]||[],old=(previous.treino||{})[s]||[],used=new Set();if(!now.length&&!old.length)return;
@@ -7695,33 +7791,92 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   var compareContext=null,compareSteps=[],compareStepIndex=0,compareEditing=true,compareSide='both';
   var compareTools=document.createElement('div');compareTools.className='compare-inline-tools';
   compareTools.innerHTML='<button id="compareUndo" type="button" title="Desfazer" aria-label="Desfazer edição">↶</button><button id="compareRedo" type="button" title="Refazer" aria-label="Refazer edição">↷</button><button id="compareEditingSwitch" type="button" role="switch" aria-checked="true" aria-label="Ativar edição" title="Ativar edição" class="compare-row-toggle"></button><select id="compareEditSide" aria-label="Qual treino editar"><option value="both">✏️ Editar Ambos (Antigo e Atual)</option><option value="current">Editar apenas Atual</option><option value="previous">Editar apenas Anterior</option></select><span id="compareEditStatus" role="status"></span>';
+  var pendingCurrentVal=null;
+  var compareCurrentChoiceDialog=criarDialogo('compareCurrentChoiceDialog','Alterar Treino Atual / Capa',
+    '<p id="compareCurrentChoiceMsg" style="font-size:0.88rem;color:#1e293b;margin-bottom:12px;"></p>'+
+    '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">'+
+      '<button type="button" id="compareChoiceViewOnly" class="primary" style="text-align:left;padding:10px 12px;line-height:1.3;cursor:pointer;">'+
+        '<strong>👁️ Apenas Visualização</strong><br>'+
+        '<span style="font-size:0.78rem;opacity:0.9;">Carrega no comparador para analisar e editar, sem alterar a capa do aluno.</span>'+
+      '</button>'+
+      '<button type="button" id="compareChoiceSetCover" style="text-align:left;padding:10px 12px;line-height:1.3;border:1px solid #16a34a;background:#f0fdf4;color:#15803d;border-radius:6px;cursor:pointer;">'+
+        '<strong>📌 Definir como Capa</strong><br>'+
+        '<span style="font-size:0.78rem;color:#166534;">Torna este treino a nova Capa oficial do aluno ativo e atualiza a tela principal.</span>'+
+      '</button>'+
+    '</div>'+
+    '<div class="dialog-actions"><button type="button" data-close>Cancelar</button></div>');
+
   var compareHeader=document.createElement('div');compareHeader.className='compare-header';
-  compareHeader.innerHTML='<label for="compareVersion">Treino anterior</label><select id="compareVersion"></select><div class="comparison-columns compare-column-headings"><strong id="comparePreviousHeading">Anterior</strong><strong id="compareCurrentHeading">Atual · Principal</strong></div>';
+  compareHeader.innerHTML='<div class="comparison-columns compare-column-headings">'+
+    '<div class="compare-heading-col">'+
+      '<div class="compare-col-header"><strong id="comparePreviousHeading">Anterior</strong></div>'+
+      '<select id="comparePreviousPicker" class="compare-picker-select previous-select" aria-label="Selecionar treino anterior"></select>'+
+    '</div>'+
+    '<div class="compare-heading-col">'+
+      '<div class="compare-col-header"><strong id="compareCurrentHeading">Atual · Principal</strong></div>'+
+      '<select id="compareCurrentPicker" class="compare-picker-select current-select" aria-label="Selecionar treino atual"></select>'+
+    '</div>'+
+  '</div><select id="compareVersion" hidden></select>';
   document.getElementById('compareLabels').after(compareTools);compareTools.after(compareHeader);
   var compareApply=document.createElement('button');compareApply.id='applyCompareEdit';compareApply.className='primary';compareApply.textContent='Aplicar alterações';compareDialog.querySelector('.dialog-actions').prepend(compareApply);
   function estadoComparacao(){return JSON.stringify({current:compareContext.current,previous:compareContext.previous});}
-  function rotuloVersao(v,index){return 'Anterior '+(index+1)+' · '+(v.original_student_name||v.name||'Treino')+' · '+(v.archived_at?new Date(v.archived_at).toLocaleDateString('pt-BR'):'Sem data');}
-  function iniciarEditorComparacao(current,previous,scope,leftLabel,rightLabel){
-    var student=(current&&current.student_id?alunos.find(function(x){return x.student_id===current.student_id;}):null)||alunoNaTela()||(historyStudent?historyStudent:null);
-    compareContext={current:cloneData(current),previous:cloneData(previous),scope:scope,leftLabel:leftLabel,rightLabel:rightLabel,studentId:student?student.student_id:null,suggestion:leftLabel==='Sugestão'};
-    compareSteps=[estadoComparacao()];compareStepIndex=0;compareEditing=true;compareSide='both';
-    document.getElementById('compareEditingSwitch').setAttribute('aria-checked','true');
-    var side=document.getElementById('compareEditSide');side.value='both';
-    side.options[0].textContent=compareContext.suggestion?'Editar Sugestão':'✏️ Editar Ambos (Antigo e Atual)';
-    side.options[1].disabled=false;
-    side.options[2].disabled=compareContext.suggestion;
-    var selector=document.getElementById('compareVersion');selector.replaceChildren();
-    if(!compareContext.suggestion){
-      if(student&&Array.isArray(student.historicoTreinos)&&student.historicoTreinos.length){
+  function rotuloVersao(v,index){
+    var versaoNome=(v.name&&!v.name.toLowerCase().startsWith('treino de '))?v.name:(v.treinoNome||v.original_student_name||v.student_name||'Treino');
+    return 'Anterior '+(index+1)+' · '+versaoNome+' · '+(v.archived_at?new Date(v.archived_at).toLocaleDateString('pt-BR'):'Sem data');
+  }
+
+  function resolverTreinoComparacao(val){
+    if(!val)return null;
+    if(val.startsWith('student-')){
+      var sId=val.replace('student-','');
+      var st=alunos.find(function(x){return x.student_id===sId;});
+      if(st)return {student:st,workout:snapshotAluno(st),isCapa:true};
+    } else {
+      for(var i=0;i<alunos.length;i++){
+        var a=alunos[i];
+        if(Array.isArray(a.historicoTreinos)){
+          var found=a.historicoTreinos.find(function(x){return x.workout_id===val;});
+          if(found)return {student:a,workout:cloneData(found),isCapa:false};
+        }
+      }
+    }
+    return null;
+  }
+
+  function selecionarNoPicker(picker,workout){
+    if(!picker||!workout)return;
+    var wId=workout.workout_id;
+    var sId=workout.student_id?'student-'+workout.student_id:'';
+    for(var i=0;i<picker.options.length;i++){
+      var val=picker.options[i].value;
+      if(val===wId||(sId&&val===sId)){picker.selectedIndex=i;return;}
+    }
+  }
+
+  function popularPickersComparacao(student,currentWorkout,previousWorkout){
+    var prevPicker=document.getElementById('comparePreviousPicker');
+    var currPicker=document.getElementById('compareCurrentPicker');
+    if(!prevPicker||!currPicker)return;
+    prevPicker.replaceChildren();currPicker.replaceChildren();
+
+    function preencherSelect(targetSelect){
+      if(student){
         var grpAluno=document.createElement('optgroup');
-        grpAluno.label='Histórico de '+(student.nome||'Aluno');
-        student.historicoTreinos.slice().reverse().forEach(function(v,i){
-          var o=document.createElement('option');
-          o.value=v.workout_id;
-          o.textContent=rotuloVersao(v,student.historicoTreinos.length-1-i);
-          grpAluno.appendChild(o);
-        });
-        selector.appendChild(grpAluno);
+        grpAluno.label='Treinos de '+(student.nome||'Aluno');
+        var oCapa=document.createElement('option');
+        oCapa.value='student-'+student.student_id;
+        var capaNome=(student.treinoNome&&!student.treinoNome.toLowerCase().startsWith('treino de '))?student.treinoNome:'Capa / Atual';
+        oCapa.textContent='⚡ Capa: '+capaNome;
+        grpAluno.appendChild(oCapa);
+        if(Array.isArray(student.historicoTreinos)){
+          student.historicoTreinos.slice().reverse().forEach(function(v,i){
+            var o=document.createElement('option');
+            o.value=v.workout_id;
+            o.textContent=rotuloVersao(v,student.historicoTreinos.length-1-i);
+            grpAluno.appendChild(o);
+          });
+        }
+        targetSelect.appendChild(grpAluno);
       }
       var grpOutros=document.createElement('optgroup');
       grpOutros.label='Outros alunos e treinos';
@@ -7729,7 +7884,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         if(!student||a.student_id!==student.student_id){
           var oCapa=document.createElement('option');
           oCapa.value='student-'+a.student_id;
-          oCapa.textContent=a.nome+' · Capa';
+          var capaNome=(a.treinoNome&&!a.treinoNome.toLowerCase().startsWith('treino de '))?a.treinoNome:'Capa';
+          oCapa.textContent=a.nome+' · ⚡ '+capaNome;
           grpOutros.appendChild(oCapa);
           if(Array.isArray(a.historicoTreinos)){
             a.historicoTreinos.slice().reverse().forEach(function(v,idx){
@@ -7741,14 +7897,29 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
           }
         }
       });
-      if(grpOutros.children.length){
-        selector.appendChild(grpOutros);
-      }
+      if(grpOutros.children.length)targetSelect.appendChild(grpOutros);
     }
-    var prevVal=previous.workout_id||(previous.student_id?'student-'+previous.student_id:'');
-    selector.value=prevVal;
-    if(!selector.value&&selector.options.length){selector.selectedIndex=0;}
-    selector.hidden=compareContext.suggestion;compareHeader.querySelector('label').hidden=compareContext.suggestion;
+
+    preencherSelect(prevPicker);
+    preencherSelect(currPicker);
+
+    selecionarNoPicker(prevPicker,previousWorkout);
+    selecionarNoPicker(currPicker,currentWorkout);
+
+    prevPicker.hidden=!!compareContext.suggestion;
+    currPicker.hidden=!!compareContext.suggestion;
+  }
+
+  function iniciarEditorComparacao(current,previous,scope,leftLabel,rightLabel){
+    var student=(current&&current.student_id?alunos.find(function(x){return x.student_id===current.student_id;}):null)||alunoNaTela()||(historyStudent?historyStudent:null);
+    compareContext={current:cloneData(current),previous:cloneData(previous),scope:scope,leftLabel:leftLabel,rightLabel:rightLabel,studentId:student?student.student_id:null,suggestion:leftLabel==='Sugestão'};
+    compareSteps=[estadoComparacao()];compareStepIndex=0;compareEditing=true;compareSide='both';
+    document.getElementById('compareEditingSwitch').setAttribute('aria-checked','true');
+    var side=document.getElementById('compareEditSide');side.value='both';
+    side.options[0].textContent=compareContext.suggestion?'Editar Sugestão':'✏️ Editar Ambos (Antigo e Atual)';
+    side.options[1].disabled=false;
+    side.options[2].disabled=compareContext.suggestion;
+    popularPickersComparacao(student,current,previous);
     compareApply.textContent=compareContext.suggestion?'Aplicar na prévia':'Aplicar alterações';document.getElementById('compareEditStatus').textContent='';atualizarHistoricoComparacao();
   }
   function atualizarHistoricoComparacao(){document.getElementById('compareUndo').disabled=compareStepIndex===0;document.getElementById('compareRedo').disabled=compareStepIndex===compareSteps.length-1;}
@@ -7762,30 +7933,68 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   }
   document.getElementById('compareEditingSwitch').onclick=function(){compareEditing=!compareEditing;atualizarLadoEditavel();};
   document.getElementById('compareEditSide').onchange=function(){compareSide=this.value;atualizarLadoEditavel();};
-  document.getElementById('compareVersion').onchange=function(){
+
+  document.getElementById('comparePreviousPicker').onchange=function(){
     var val=this.value;if(!val)return;
     if(estadoComparacao()!==compareSteps[0]){
-      this.value=compareContext.previous.workout_id||(compareContext.previous.student_id?'student-'+compareContext.previous.student_id:'');
+      selecionarNoPicker(this,compareContext.previous);
       document.getElementById('compareEditStatus').textContent='Aplique as edições antes de trocar de anterior, ou feche para descartar.';
       return;
     }
-    var target=null;
-    if(val.startsWith('student-')){
-      var sId=val.replace('student-','');
-      var st=alunos.find(function(x){return x.student_id===sId;});
-      if(st)target=snapshotAluno(st);
-    } else {
-      for(var k=0;k<alunos.length;k++){
-        var a=alunos[k];
-        if(Array.isArray(a.historicoTreinos)){
-          var f=a.historicoTreinos.find(function(x){return x.workout_id===val;});
-          if(f){target=f;break;}
-        }
-      }
+    var res=resolverTreinoComparacao(val);
+    if(res&&res.workout){
+      var rotulo=res.isCapa?('Capa ('+res.student.nome+')'):(res.workout.name||'Anterior');
+      abrirComparacao(compareContext.current,res.workout,compareContext.scope,compareContext.leftLabel,rotulo);
+      document.getElementById('compareEditStatus').textContent='Anterior alterado para: '+rotulo;
     }
-    if(target){
-      abrirComparacao(compareContext.current,target,compareContext.scope,compareContext.leftLabel,'Anterior');
+  };
+
+  document.getElementById('compareCurrentPicker').onchange=function(){
+    var val=this.value;if(!val)return;
+    var res=resolverTreinoComparacao(val);
+    if(!res||!res.workout)return;
+    pendingCurrentVal=val;
+    selecionarNoPicker(this,compareContext.current);
+    var nomeTreino=(res.workout.name&&!res.workout.name.toLowerCase().startsWith('treino de '))?res.workout.name:(res.workout.treinoNome||(res.isCapa?('Capa de '+res.student.nome):res.student.nome));
+    document.getElementById('compareCurrentChoiceMsg').innerHTML='Você escolheu o treino: <strong>'+escHtml(nomeTreino)+'</strong> ('+escHtml(res.student.nome)+').<br>Como deseja visualizá-lo no lado <strong>Atual</strong>?';
+    compareCurrentChoiceDialog.showModal();
+  };
+
+  document.getElementById('compareChoiceViewOnly').onclick=function(){
+    compareCurrentChoiceDialog.close();
+    if(!pendingCurrentVal)return;
+    var res=resolverTreinoComparacao(pendingCurrentVal);
+    if(!res||!res.workout)return;
+    var rotulo=res.isCapa?('Capa ('+res.student.nome+')'):(res.workout.name||'Atual');
+    abrirComparacao(res.workout,compareContext.previous,compareContext.scope,rotulo,compareContext.rightLabel);
+    selecionarNoPicker(document.getElementById('compareCurrentPicker'),res.workout);
+    document.getElementById('compareEditStatus').textContent='👁️ Visualizando: '+rotulo+' (Capa mantida)';
+  };
+
+  document.getElementById('compareChoiceSetCover').onclick=function(){
+    compareCurrentChoiceDialog.close();
+    if(!pendingCurrentVal)return;
+    var res=resolverTreinoComparacao(pendingCurrentVal);
+    if(!res||!res.workout)return;
+    var student=(compareContext.studentId?alunos.find(function(x){return x.student_id===compareContext.studentId;}):null)||alunoNaTela()||historyStudent;
+    if(!student)student=res.student;
+    arquivarTreino(student);
+    student.treino=cloneData(res.workout.treino);
+    student.titulos=cloneData(res.workout.titulos||{});
+    student.secaoFAtiva=!!res.workout.secaoFAtiva;
+    var novoNome=(res.workout.name&&!res.workout.name.toLowerCase().startsWith('treino de '))?res.workout.name:(res.workout.treinoNome||('Treino de '+student.nome));
+    student.treinoNome=novoNome;
+    student.treinoProtegido=true;
+    student.atualizadoEm=new Date().toISOString();
+    student.treinoAtivadoEm=student.atualizadoEm;
+    salvarLocalStorage();
+    if(alunoNaTela()&&alunoNaTela().student_id===student.student_id){
+      aplicarDadosNaTela(student,compareContext.scope);
     }
+    var novoSnapshot=snapshotAluno(student);
+    abrirComparacao(novoSnapshot,compareContext.previous,compareContext.scope,'Atual · Capa',compareContext.rightLabel);
+    selecionarNoPicker(document.getElementById('compareCurrentPicker'),novoSnapshot);
+    exibirMensagem('📌 Novo treino definido como Capa de '+student.nome+'!','#1e6f3f',false);
   };
   function prepararEdicaoLinhaComparacao(row,cell,sec,index,side){
     if(!Number.isInteger(index))return;
@@ -7930,24 +8139,61 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   if(window.visualViewport){visualViewport.addEventListener('resize',ajustarViewportPaste);visualViewport.addEventListener('scroll',ajustarViewportPaste);}
 
   var sourceStudentId=null,moveTargetId=null,refreshStudentList=null;
-  var mergeStudentDialog=criarDialogo('moveStudentDialog','Mover para outro aluno',
-    '<p id="moveStudentDescription"></p><label for="moveStudentSearch">Buscar aluno de destino</label><input id="moveStudentSearch" placeholder="Ex.: Mayana"><div id="moveStudentTargets" class="student-picks"></div><div id="moveCoverChoice" hidden><label for="moveCover">Qual treino ficará na capa?</label><select id="moveCover"></select><p id="moveCoverSummary"></p><p>O treino da capa aparece ao abrir o aluno. Os demais ficam em Treinos anteriores.</p></div><p id="moveStudentStatus" role="status"></p><div class="dialog-actions"><button data-close>Cancelar</button><button id="confirmMoveStudent" class="primary" disabled>Mover</button></div>');
+  var mergeStudentDialog=criarDialogo('moveStudentDialog','Organizar Ciclos de Treino (Mover / Unir)',
+    '<p id="moveStudentDescription" style="font-size:0.85rem;color:#475569;margin-bottom:8px;"></p>'+
+    '<label for="moveStudentSearch">Aluno Principal de Destino (onde reunir):</label>'+
+    '<input id="moveStudentSearch" placeholder="Ex.: Caio 1 ou Caio">'+
+    '<div id="moveStudentTargets" class="student-picks"></div>'+
+    '<div id="moveCoverChoice" hidden style="margin-top:10px;padding:10px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;">'+
+      '<strong style="display:block;font-size:0.85rem;color:#0f172a;margin-bottom:6px;">Como você deseja organizar este ciclo de treino?</strong>'+
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">'+
+        '<label style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;cursor:pointer;">'+
+          '<input type="radio" name="moveRole" id="moveRoleCover" value="cover" checked style="margin-top:2px;">'+
+          '<span><strong>⚡ Definir como Treino ATUAL (Capa)</strong><br><small style="color:#64748b;">O treino movido vira a nova Capa. O treino atual de destino é arquivado no histórico anterior.</small></span>'+
+        '</label>'+
+        '<label style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;cursor:pointer;">'+
+          '<input type="radio" name="moveRole" id="moveRoleHistory" value="history" style="margin-top:2px;">'+
+          '<span><strong>◷ Guardar como Treino ANTERIOR (Histórico)</strong><br><small style="color:#64748b;">O treino movido é guardado no histórico de treinos anteriores. A capa atual de destino é mantida.</small></span>'+
+        '</label>'+
+      '</div>'+
+      '<label for="moveCoverCustomName" style="font-size:0.8rem;font-weight:600;color:#334155;margin-bottom:3px;display:block;">Nome identificador deste treino/ciclo:</label>'+
+      '<input type="text" id="moveCoverCustomName" placeholder="Ex.: Caio 2 ou Caio 3" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;margin-bottom:8px;">'+
+      '<div id="moveCoverSummary" style="font-size:0.8rem;padding:8px;border-radius:6px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;"></div>'+
+    '</div>'+
+    '<p id="moveStudentStatus" role="status" style="font-size:0.8rem;color:#b91c1c;margin:6px 0;"></p>'+
+    '<div class="dialog-actions"><button type="button" data-close>Cancelar</button><button type="button" id="confirmMoveStudent" class="primary" disabled>Salvar Organização</button></div>');
   function resumirCapa(a){var sec=Object.keys(a.treino||{}).find(function(s){return a.treino[s].length;});return sec?((a.titulos||{})[sec]||sec)+' · '+a.treino[sec].slice(0,2).join(' / '):'Treino vazio';}
   function atualizarEscolhaCapa(reset){
     var source=alunos.find(function(a){return a.student_id===sourceStudentId;}),target=alunos.find(function(a){return a.student_id===moveTargetId;});
     document.getElementById('moveCoverChoice').hidden=!target;if(!source||!target)return;
-    var select=document.getElementById('moveCover');if(reset){select.replaceChildren();[['target','Manter o treino de '+target.nome],['source','Usar o treino de '+source.nome]].forEach(function(item){var o=document.createElement('option');o.value=item[0];o.textContent=item[1];select.appendChild(o);});}
-    var cover=select.value==='source'?source:target;
-    document.getElementById('moveCoverSummary').textContent='Capa de '+target.nome+': '+resumirCapa(cover);
+    var nameInput=document.getElementById('moveCoverCustomName');
+    if(reset){
+      document.getElementById('moveRoleCover').checked=true;
+      nameInput.value=source.nome;
+    }
+    var isCover=document.getElementById('moveRoleCover').checked;
+    var customName=nameInput.value.trim()||source.nome;
+    var targetCapaNome=(target.treinoNome&&!target.treinoNome.toLowerCase().startsWith('treino de '))?target.treinoNome:target.nome;
+    if(isCover){
+      document.getElementById('moveCoverSummary').innerHTML='⚡ <strong>Nova Capa de '+escHtml(target.nome)+':</strong> '+escHtml(customName)+'<br>◷ <strong>Vai para o Histórico Anterior:</strong> '+escHtml(targetCapaNome);
+    }else{
+      document.getElementById('moveCoverSummary').innerHTML='⚡ <strong>Capa mantida:</strong> '+escHtml(targetCapaNome)+'<br>◷ <strong>Guardado no Histórico Anterior:</strong> '+escHtml(customName);
+    }
   }
-  document.getElementById('moveCover').onchange=function(){atualizarEscolhaCapa(false);};
+  document.getElementById('moveRoleCover').onchange=function(){atualizarEscolhaCapa(false);};
+  document.getElementById('moveRoleHistory').onchange=function(){atualizarEscolhaCapa(false);};
+  document.getElementById('moveCoverCustomName').oninput=function(){atualizarEscolhaCapa(false);};
   function abrirMoverAluno(nome,refresh){
     concluirAutoSave();var source=buscarAluno(nome);if(!source)return;garantirHistorico(source);
     sourceStudentId=source.student_id;moveTargetId=null;refreshStudentList=refresh;
-    document.getElementById('moveStudentDescription').textContent='Reunir os treinos de '+source.nome+' em outro aluno. Escolha abaixo qual treino ficará na capa. O cadastro separado de '+source.nome+' deixará de aparecer na lista.';
+    document.getElementById('moveStudentDescription').innerHTML='Organize os ciclos de treino de <strong>'+escHtml(source.nome)+'</strong> com outro aluno.<br>O cadastro individual de '+escHtml(source.nome)+' será unificado sob o aluno principal.';
     document.getElementById('moveCoverChoice').hidden=true;
-    document.getElementById('moveStudentSearch').value=baseNomeTreino(source.nome);
-    document.getElementById('moveStudentStatus').textContent='Escolha o aluno correto abaixo.';listarDestinosAluno();mergeStudentDialog.showModal();
+    var base=baseNomeTreino(source.nome);
+    document.getElementById('moveStudentSearch').value=base;
+    document.getElementById('moveCoverCustomName').value=source.nome;
+    document.getElementById('moveStudentStatus').textContent='Escolha o aluno principal de destino abaixo.';
+    listarDestinosAluno();
+    mergeStudentDialog.showModal();
   }
   function listarDestinosAluno(){
     var q=normalizarNome(document.getElementById('moveStudentSearch').value),host=document.getElementById('moveStudentTargets');host.replaceChildren();
@@ -7958,23 +8204,86 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   document.getElementById('moveStudentSearch').oninput=function(){moveTargetId=null;listarDestinosAluno();document.getElementById('moveCoverChoice').hidden=true;};
   document.getElementById('confirmMoveStudent').onclick=function(){
     concluirAutoSave();
-    var source=alunos.find(function(a){return a.student_id===sourceStudentId;}),target=alunos.find(function(a){return a.student_id===moveTargetId;});if(!source||!target||source===target)return;
-    var backup=cloneData(alunos),useSource=document.getElementById('moveCover').value==='source';
+    var source=alunos.find(function(a){return a.student_id===sourceStudentId;}),target=alunos.find(function(a){return a.student_id===moveTargetId;});
+    if(!source||!target||source===target)return;
+    var backup=cloneData(alunos);
+    var isCover=document.getElementById('moveRoleCover').checked;
+    var customName=document.getElementById('moveCoverCustomName').value.trim()||source.nome;
+    garantirHistorico(target);garantirHistorico(source);
     var existingIds=new Set(target.historicoTreinos.map(function(v){return v.workout_id;}).concat([target.treino_id]));
-    source.historicoTreinos.concat(useSource?[]:[snapshotAluno(source)]).forEach(function(version){var v=cloneData(version);v.original_student_id=v.original_student_id||source.student_id;v.original_student_name=v.original_student_name||source.nome;v.student_id=target.student_id;v.status='archived';v.archived_at=v.archived_at||new Date().toISOString();if(existingIds.has(v.workout_id))v.workout_id=novoId('treino');existingIds.add(v.workout_id);target.historicoTreinos.push(v);});
-    if(useSource){
-      arquivarTreino(target);target.treino=cloneData(source.treino);target.titulos=cloneData(source.titulos||{});target.secaoFAtiva=!!source.secaoFAtiva;
-      target.treinoNome='Treino de '+target.nome;target.treinoOrigem=source.nome;target.treinoProtegido=true;target.atualizadoEm=new Date().toISOString();
+
+    if(isCover){
+      var oldTarget=snapshotAluno(target);
+      oldTarget.status='archived';
+      oldTarget.archived_at=oldTarget.archived_at||new Date().toISOString();
+      oldTarget.name=(target.treinoNome&&!target.treinoNome.toLowerCase().startsWith('treino de '))?target.treinoNome:target.nome;
+      oldTarget.original_student_name=target.nome;
+      if(existingIds.has(oldTarget.workout_id))oldTarget.workout_id=novoId('treino');
+      existingIds.add(oldTarget.workout_id);
+      target.historicoTreinos.push(oldTarget);
+
+      source.historicoTreinos.forEach(function(v){
+        var item=cloneData(v);
+        item.original_student_id=item.original_student_id||source.student_id;
+        item.original_student_name=item.original_student_name||source.nome;
+        item.student_id=target.student_id;
+        item.status='archived';
+        item.archived_at=item.archived_at||new Date().toISOString();
+        if(existingIds.has(item.workout_id))item.workout_id=novoId('treino');
+        existingIds.add(item.workout_id);
+        target.historicoTreinos.push(item);
+      });
+
+      target.treino_id=novoId('treino');
+      target.treino=cloneData(source.treino);
+      target.titulos=cloneData(source.titulos||{});
+      target.secaoFAtiva=!!source.secaoFAtiva;
+      target.treinoNome=customName;
+      target.treinoOrigem=source.nome;
+      target.treinoProtegido=true;
+      target.atualizadoEm=new Date().toISOString();
+      target.treinoAtivadoEm=target.atualizadoEm;
+    }else{
+      var oldSource=snapshotAluno(source);
+      oldSource.status='archived';
+      oldSource.archived_at=oldSource.archived_at||new Date().toISOString();
+      oldSource.name=customName;
+      oldSource.original_student_name=source.nome;
+      oldSource.student_id=target.student_id;
+      if(existingIds.has(oldSource.workout_id))oldSource.workout_id=novoId('treino');
+      existingIds.add(oldSource.workout_id);
+      target.historicoTreinos.push(oldSource);
+
+      source.historicoTreinos.forEach(function(v){
+        var item=cloneData(v);
+        item.original_student_id=item.original_student_id||source.student_id;
+        item.original_student_name=item.original_student_name||source.nome;
+        item.student_id=target.student_id;
+        item.status='archived';
+        item.archived_at=item.archived_at||new Date().toISOString();
+        if(existingIds.has(item.workout_id))item.workout_id=novoId('treino');
+        existingIds.add(item.workout_id);
+        target.historicoTreinos.push(item);
+      });
     }
-    // Guardar também dados adicionais do cadastro de origem, caso existam.
+
     if(!Array.isArray(target.cadastrosReunidos))target.cadastrosReunidos=[];
     target.cadastrosReunidos.push(cloneData(source));
     target.historicoTreinos.sort(function(a,b){return String(a.archived_at||a.activated_at||'').localeCompare(String(b.archived_at||b.activated_at||''));});
-    var selected=alunoVinculadoId;alunos=alunos.filter(function(a){return a!==source;});
-    if(!salvarLocalStorage()){alunos=backup;document.getElementById('moveStudentStatus').textContent='Não foi possível mover. Os cadastros foram preservados.';return;}
+
+    var selected=alunoVinculadoId;
+    alunos=alunos.filter(function(a){return a.student_id!==source.student_id;});
+    if(!salvarLocalStorage()){
+      alunos=backup;
+      document.getElementById('moveStudentStatus').textContent='Não foi possível salvar a organização.';
+      return;
+    }
     if(selected===source.student_id||selected===target.student_id)carregarTreinoAluno(target);
     if(destinoSugeridoId===source.student_id){destinoSugeridoId=null;atualizarDestinoSalvamento();}
-    mergeStudentDialog.close();if(refreshStudentList)refreshStudentList();atualizarStatusSalvo('✅ Treinos reunidos no histórico de '+target.nome);
+    mergeStudentDialog.close();
+    if(refreshStudentList)refreshStudentList();
+    atualizarStatusSalvo('✅ Treinos organizados com sucesso sob '+target.nome);
+    exibirMensagem('✅ Demanda organizada: Capa de '+target.nome+' agora é "'+(target.treinoNome||target.nome)+'"!','#1e6f3f',false);
   };
 
   function exportarJSON() {
