@@ -6512,7 +6512,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var before=cloneData(alunos),selected=destinoNomeDigitado===typed?alunos.find(function(a){return a.student_id===destinoSugeridoId;}):null;
     var base=baseNomeTreino(typed);
     var a=selected||alunos.find(function(x){return normalizarNome(x.nome)===normalizarNome(typed);});
-    var alunoBase=(!a&&base&&base!==normalizarNome(typed))?alunos.find(function(x){return normalizarNome(x.nome)===base;}):null;
+    var alunoBase=(!a&&base)?((alunoNaTela()&&baseNomeTreino(alunoNaTela().nome)===base)?alunoNaTela():alunos.find(function(x){return normalizarNome(x.nome)===base||baseNomeTreino(x.nome)===base;})):null;
     if(alunoBase){a=alunoBase;}
     var proposedName=workoutName||(selected&&normalizarNome(typed)!==normalizarNome(a.nome)?typed:(alunoBase?typed:(a&&a.treinoNome||'Treino de '+typed)));
     if(!a){a=garantirHistorico({nome:typed,treino:cloneData(dados.treino),titulos:cloneData(dados.titulos),secaoFAtiva:!!dados.secaoFAtiva,criadoEm:new Date().toISOString()});alunos.push(a);}
@@ -6703,22 +6703,12 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var student = (current && current.student_id ? alunos.find(function(x){ return x.student_id === current.student_id; }) : null) ||
                   alunoNaTela() ||
                   (historyStudent ? historyStudent : null);
-    var vIndex = -1;
-    if (student && Array.isArray(student.historicoTreinos)) {
-      vIndex = student.historicoTreinos.findIndex(function(v){ return v.workout_id === previous.workout_id; });
-    }
-    var versaoTexto = vIndex >= 0 ? 'Anterior #' + (vIndex + 1) : rightLabel;
-    var dataAnterior = previous.archived_at ? new Date(previous.archived_at).toLocaleDateString('pt-BR') : '';
+    var nomeAntigo = previous.original_student_name || previous.student_name || (previous.name && !previous.name.toLowerCase().startsWith('treino de ') ? previous.name : '') || (student ? student.nome : '') || previous.name || 'Anterior';
+    var nomeAtual = (current.treinoNome && current.treinoNome !== ('Treino de ' + current.student_name) ? current.treinoNome : '') || (current.name && !current.name.toLowerCase().startsWith('treino de ') ? current.name : '') || current.student_name || (student ? student.nome : '') || (alunoNaTela() ? alunoNaTela().nome : '') || document.getElementById('searchName').value.trim() || current.name || 'Atual';
 
-    var nomeAntigo = previous.name && !previous.name.toLowerCase().startsWith('treino de ') ? previous.name : (previous.original_student_name || previous.student_name || (student ? student.nome : 'Anterior'));
-    var rotuloAntigoCompleto = nomeAntigo + ' (' + versaoTexto + (dataAnterior ? ' · ' + dataAnterior : '') + ')';
-
-    var nomeAtual = current.name && !current.name.toLowerCase().startsWith('treino de ') ? current.name : (current.student_name || (student ? student.nome : '') || (alunoNaTela() ? alunoNaTela().nome : '') || document.getElementById('searchName').value.trim() || 'Atual');
-    var rotuloAtualCompleto = nomeAtual + ' · Capa';
-
-    document.getElementById('compareLabels').textContent = versaoTexto + ' (' + nomeAntigo + ') × ' + leftLabel + ' (' + nomeAtual + ')';
-    document.getElementById('comparePreviousHeading').innerHTML = '<span>' + escHtml(rightLabel + (vIndex >= 0 ? ' (#' + (vIndex + 1) + ')' : '')) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#0284c7;margin-top:2px;">📁 ' + escHtml(rotuloAntigoCompleto) + '</span>';
-    document.getElementById('compareCurrentHeading').innerHTML = '<span>' + escHtml(leftLabel + (leftLabel === 'Atual' ? ' · Capa' : '')) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#16a34a;margin-top:2px;">👤 ' + escHtml(rotuloAtualCompleto) + '</span>';
+    document.getElementById('compareLabels').textContent = rightLabel + ' (' + nomeAntigo + ') × ' + leftLabel + ' (' + nomeAtual + ')';
+    document.getElementById('comparePreviousHeading').innerHTML = '<span>' + escHtml(rightLabel) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#0284c7;margin-top:2px;">👤 ' + escHtml(nomeAntigo) + '</span>';
+    document.getElementById('compareCurrentHeading').innerHTML = '<span>' + escHtml(leftLabel + (leftLabel === 'Atual' ? ' · Capa' : '')) + '</span><span class="compare-heading-name" style="display:block;font-size:0.75rem;font-weight:600;color:#16a34a;margin-top:2px;">👤 ' + escHtml(nomeAtual) + '</span>';
     var host=document.getElementById('compareBody');host.replaceChildren();
     (scope?[scope]:todasSecoes).forEach(function(s){
       var now=(current.treino||{})[s]||[],old=(previous.treino||{})[s]||[],used=new Set();if(!now.length&&!old.length)return;
@@ -7721,8 +7711,44 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     side.options[1].disabled=false;
     side.options[2].disabled=compareContext.suggestion;
     var selector=document.getElementById('compareVersion');selector.replaceChildren();
-    if(!compareContext.suggestion&&student&&Array.isArray(student.historicoTreinos))student.historicoTreinos.forEach(function(v,i){var o=document.createElement('option');o.value=v.workout_id;o.textContent=rotuloVersao(v,i);selector.prepend(o);});
-    selector.value=previous.workout_id||'';selector.hidden=compareContext.suggestion;compareHeader.querySelector('label').hidden=compareContext.suggestion;
+    if(!compareContext.suggestion){
+      if(student&&Array.isArray(student.historicoTreinos)&&student.historicoTreinos.length){
+        var grpAluno=document.createElement('optgroup');
+        grpAluno.label='Histórico de '+(student.nome||'Aluno');
+        student.historicoTreinos.slice().reverse().forEach(function(v,i){
+          var o=document.createElement('option');
+          o.value=v.workout_id;
+          o.textContent=rotuloVersao(v,student.historicoTreinos.length-1-i);
+          grpAluno.appendChild(o);
+        });
+        selector.appendChild(grpAluno);
+      }
+      var grpOutros=document.createElement('optgroup');
+      grpOutros.label='Outros alunos e treinos';
+      alunos.forEach(function(a){
+        if(!student||a.student_id!==student.student_id){
+          var oCapa=document.createElement('option');
+          oCapa.value='student-'+a.student_id;
+          oCapa.textContent=a.nome+' · Capa';
+          grpOutros.appendChild(oCapa);
+          if(Array.isArray(a.historicoTreinos)){
+            a.historicoTreinos.slice().reverse().forEach(function(v,idx){
+              var o=document.createElement('option');
+              o.value=v.workout_id;
+              o.textContent=a.nome+' · '+rotuloVersao(v,a.historicoTreinos.length-1-idx);
+              grpOutros.appendChild(o);
+            });
+          }
+        }
+      });
+      if(grpOutros.children.length){
+        selector.appendChild(grpOutros);
+      }
+    }
+    var prevVal=previous.workout_id||(previous.student_id?'student-'+previous.student_id:'');
+    selector.value=prevVal;
+    if(!selector.value&&selector.options.length){selector.selectedIndex=0;}
+    selector.hidden=compareContext.suggestion;compareHeader.querySelector('label').hidden=compareContext.suggestion;
     compareApply.textContent=compareContext.suggestion?'Aplicar na prévia':'Aplicar alterações';document.getElementById('compareEditStatus').textContent='';atualizarHistoricoComparacao();
   }
   function atualizarHistoricoComparacao(){document.getElementById('compareUndo').disabled=compareStepIndex===0;document.getElementById('compareRedo').disabled=compareStepIndex===compareSteps.length-1;}
@@ -7737,9 +7763,29 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   document.getElementById('compareEditingSwitch').onclick=function(){compareEditing=!compareEditing;atualizarLadoEditavel();};
   document.getElementById('compareEditSide').onchange=function(){compareSide=this.value;atualizarLadoEditavel();};
   document.getElementById('compareVersion').onchange=function(){
-    var id=this.value,a=alunos.find(function(x){return x.student_id===compareContext.studentId;})||alunoNaTela()||historyStudent;if(!a)return;
-    if(estadoComparacao()!==compareSteps[0]){this.value=compareContext.previous.workout_id;document.getElementById('compareEditStatus').textContent='Aplique as edições antes de trocar de anterior, ou feche para descartar.';return;}
-    var v=a.historicoTreinos?a.historicoTreinos.find(function(x){return x.workout_id===id;}):null;if(v)abrirComparacao(snapshotAluno(a),v,compareContext.scope,'Atual','Anterior');
+    var val=this.value;if(!val)return;
+    if(estadoComparacao()!==compareSteps[0]){
+      this.value=compareContext.previous.workout_id||(compareContext.previous.student_id?'student-'+compareContext.previous.student_id:'');
+      document.getElementById('compareEditStatus').textContent='Aplique as edições antes de trocar de anterior, ou feche para descartar.';
+      return;
+    }
+    var target=null;
+    if(val.startsWith('student-')){
+      var sId=val.replace('student-','');
+      var st=alunos.find(function(x){return x.student_id===sId;});
+      if(st)target=snapshotAluno(st);
+    } else {
+      for(var k=0;k<alunos.length;k++){
+        var a=alunos[k];
+        if(Array.isArray(a.historicoTreinos)){
+          var f=a.historicoTreinos.find(function(x){return x.workout_id===val;});
+          if(f){target=f;break;}
+        }
+      }
+    }
+    if(target){
+      abrirComparacao(compareContext.current,target,compareContext.scope,compareContext.leftLabel,'Anterior');
+    }
   };
   function prepararEdicaoLinhaComparacao(row,cell,sec,index,side){
     if(!Number.isInteger(index))return;
@@ -7761,25 +7807,44 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var empty=Array.from(compareDialog.querySelectorAll('.comparison-editable-line')).find(function(line){return !line.textContent.trim();});
     if(empty){document.getElementById('compareEditStatus').textContent='Preencha o exercício antes de aplicar.';empty.focus({preventScroll:true});return;}
     if(compareContext.suggestion){document.getElementById('generatorText').value=textoTreino(compareContext.current,generatorScope);compareDialog.close();return;}
-    var a=alunos.find(function(x){return x.student_id===compareContext.studentId;})||alunoNaTela()||historyStudent;
-    if(!a){document.getElementById('compareEditStatus').textContent='Aluno não encontrado. Abra novamente a comparação.';return;}
-    var previous=a.historicoTreinos?a.historicoTreinos.find(function(v){return v.workout_id===compareContext.previous.workout_id;}):null;
     var baseline=JSON.parse(compareSteps[0]);
     var mudouPrevious=JSON.stringify(baseline.previous)!==JSON.stringify(compareContext.previous);
     var mudouCurrent=JSON.stringify(baseline.current)!==JSON.stringify(compareContext.current);
     if(mudouPrevious){
-      if(!previous){document.getElementById('compareEditStatus').textContent='Este treino anterior não está mais disponível.';return;}
-      var backup=cloneData(previous);
-      if(!Array.isArray(previous.revisoes))previous.revisoes=[];
-      previous.revisoes.push({edited_at:new Date().toISOString(),treino:cloneData(previous.treino),titulos:cloneData(previous.titulos||{})});
-      previous.treino=cloneData(compareContext.previous.treino);previous.titulos=cloneData(compareContext.previous.titulos||{});previous.edited_at=new Date().toISOString();
-      if(!salvarLocalStorage()){Object.keys(previous).forEach(function(k){delete previous[k];});Object.assign(previous,backup);document.getElementById('compareEditStatus').textContent='Não foi possível salvar o anterior. Tente novamente.';return;}
+      var prevWorkoutId=compareContext.previous.workout_id;
+      var prevStudentId=compareContext.previous.student_id;
+      var found=false;
+      for(var i=0;i<alunos.length;i++){
+        var st=alunos[i];
+        if(Array.isArray(st.historicoTreinos)){
+          var item=st.historicoTreinos.find(function(v){return v.workout_id===prevWorkoutId;});
+          if(item){
+            if(!Array.isArray(item.revisoes))item.revisoes=[];
+            item.revisoes.push({edited_at:new Date().toISOString(),treino:cloneData(item.treino),titulos:cloneData(item.titulos||{})});
+            item.treino=cloneData(compareContext.previous.treino);item.titulos=cloneData(compareContext.previous.titulos||{});item.edited_at=new Date().toISOString();
+            found=true;break;
+          }
+        }
+      }
+      if(!found&&prevStudentId){
+        var stCapa=alunos.find(function(x){return x.student_id===prevStudentId;});
+        if(stCapa){
+          stCapa.treino=cloneData(compareContext.previous.treino);
+          stCapa.titulos=cloneData(compareContext.previous.titulos||{});
+          stCapa.atualizadoEm=new Date().toISOString();
+          found=true;
+        }
+      }
+      salvarLocalStorage();
     }
     if(mudouCurrent){
-      a.treino=cloneData(compareContext.current.treino);a.titulos=cloneData(compareContext.current.titulos||{});
-      if(compareContext.current.secaoFAtiva!==undefined)a.secaoFAtiva=!!compareContext.current.secaoFAtiva;
-      a.atualizadoEm=new Date().toISOString();salvarLocalStorage();
-      if(alunoNaTela()&&alunoNaTela().student_id===a.student_id){aplicarDadosNaTela(compareContext.current,compareContext.scope);}
+      var a=alunos.find(function(x){return x.student_id===compareContext.studentId;})||alunoNaTela()||historyStudent;
+      if(a){
+        a.treino=cloneData(compareContext.current.treino);a.titulos=cloneData(compareContext.current.titulos||{});
+        if(compareContext.current.secaoFAtiva!==undefined)a.secaoFAtiva=!!compareContext.current.secaoFAtiva;
+        a.atualizadoEm=new Date().toISOString();salvarLocalStorage();
+        if(alunoNaTela()&&alunoNaTela().student_id===a.student_id){aplicarDadosNaTela(compareContext.current,compareContext.scope);}
+      }
     }
     compareDialog.close();if(historyDialog.open)renderVersao();if(pasteModal.style.visibility==='visible')fecharPasteModal();
     exibirMensagem('✅ Alterações aplicadas com sucesso no treino!','#1e6f3f',false);
