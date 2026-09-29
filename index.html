@@ -465,6 +465,9 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 .aluno-list-item { padding: 10px; border-bottom: 1px solid #ddd; cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .aluno-list-item:hover { background: #f0f0f0; }
 .aluno-list-item:focus-visible { outline: 2px solid #4a90e2; outline-offset: -2px; background: #f0f0f0; }
+.aluno-list-item.aluno-selecionado { background: #f0fdf4 !important; border: 1.5px solid #22c55e !important; border-left: 5px solid #16a34a !important; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(22, 163, 74, 0.15); }
+.aluno-list-item.aluno-selecionado:hover { background: #dcfce7 !important; }
+.aluno-list-item.aluno-selecionado:focus-visible { outline: 2px solid #16a34a; outline-offset: -2px; background: #dcfce7 !important; }
 .aluno-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .aluno-actions button { margin: 0; }
 .lista-ordem-label { display: block; font-size: .75rem; margin-bottom: 5px; color: #555; }
@@ -5220,18 +5223,29 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       var lista = document.getElementById('listaAlunosItens');
       var buscaLista = document.getElementById('buscarAlunoLista');
       function atualizarItens() {
-        // Sempre ordenar a lista completa; o aluno aberto não é um filtro
-        // nem ganha prioridade. Manter o select no DOM evita interrompê-lo.
+        var alunoAtivo = (typeof alunoNaTela === 'function' ? alunoNaTela() : null) || (document.getElementById('searchName') && document.getElementById('searchName').value.trim() ? buscarAluno(document.getElementById('searchName').value.trim()) : null);
         var termo = normalizarBusca(buscaLista.value);
         var encontrados = ordenarAlunos().filter(function(a) { return normalizarBusca(a.nome).includes(termo); });
+        if (alunoAtivo) {
+          var idxAtivo = encontrados.findIndex(function(a) {
+            return (a.student_id && a.student_id === alunoAtivo.student_id) || normalizarNome(a.nome) === normalizarNome(alunoAtivo.nome);
+          });
+          if (idxAtivo > -1) {
+            var itemAtivo = encontrados.splice(idxAtivo, 1)[0];
+            encontrados.unshift(itemAtivo);
+          }
+        }
         lista.innerHTML = encontrados.map(function(a) {
+          var isSelecionado = alunoAtivo && ((a.student_id && a.student_id === alunoAtivo.student_id) || normalizarNome(a.nome) === normalizarNome(alunoAtivo.nome));
           var isNovo = (!Array.isArray(a.historicoTreinos) || a.historicoTreinos.length === 0);
           var badgeNovo = isNovo ? ' <span class="sub-badge novo" style="font-size:0.62rem;padding:1px 5px;border-radius:4px;vertical-align:middle;">🆕 Novo</span>' : '';
-          return '<div class="aluno-list-item" tabindex="0" role="button" aria-label="Abrir treino de ' + escAttr(a.nome) + '" data-nome="' + escAttr(a.nome) + '">'
-          + '<div class="aluno-info"><div class="aluno-nome">' + escHtml(a.nome) + badgeNovo + '</div>'
-          + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + '</div></div>'
+          var badgeSel = isSelecionado ? ' <span class="sub-badge selecionado" style="background:#16a34a;color:#ffffff;font-size:0.65rem;padding:2px 7px;border-radius:12px;font-weight:700;vertical-align:middle;box-shadow:0 1px 3px rgba(22,163,74,0.35);">📌 Selecionado(a)</span>' : '';
+          var itemClass = 'aluno-list-item' + (isSelecionado ? ' aluno-selecionado' : '');
+          return '<div class="' + itemClass + '" tabindex="0" role="button" aria-label="Abrir treino de ' + escAttr(a.nome) + (isSelecionado ? ' (atualmente selecionado)' : '') + '" data-nome="' + escAttr(a.nome) + '">'
+          + '<div class="aluno-info"><div class="aluno-nome">' + escHtml(a.nome) + badgeSel + badgeNovo + '</div>'
+          + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + (isSelecionado ? ' · <strong style="color:#16a34a;">🟢 Aluno ativo na tela</strong>' : '') + '</div></div>'
           + '<div class="aluno-actions">'
-          + '<button class="hist-aluno-btn" data-nome="' + escAttr(a.nome) + '">📜 Histórico</button>'
+          + '<button class="hist-aluno-btn' + (isSelecionado ? ' hist-selecionado' : '') + '" data-nome="' + escAttr(a.nome) + '"' + (isSelecionado ? ' style="background:#0284c7!important;font-weight:700;box-shadow:0 1px 3px rgba(2,132,199,0.35);"' : '') + '>📜 Histórico</button>'
           + '<button class="wpp-aluno-btn" data-nome="' + escAttr(a.nome) + '" style="background:#25d366!important;font-size:.62rem!important;padding:3px 7px!important;" title="Editar WhatsApp">📱 ' + escHtml(a.whatsapp || 'WhatsApp') + '</button>'
           + '<button class="move-student-btn" data-nome="' + escAttr(a.nome) + '">↪ Mover</button>'
           + '<button class="delete-aluno-btn" data-nome="' + escAttr(a.nome) + '">🗑️ Apagar</button>'
@@ -5272,26 +5286,10 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         if (e.target.closest('.hist-aluno-btn')) {
           var aHist = buscarAluno(item.dataset.nome);
           if (!aHist) return;
-          garantirHistorico(aHist);
-          var hist = aHist.historicoTreinos || [];
-          if (!hist.length) { alert('Nenhum histórico salvo para ' + aHist.nome + '.'); return; }
-          var opcoes = hist.map(function(h, i) { return (i+1) + ') ' + (h.tituloTreino || h.treinoNome || 'Treino ' + (i+1)) + ' — ' + (h.arquivadoEm ? h.arquivadoEm.slice(0,10) : ''); }).join('\n');
-          var escolha = prompt('📜 Histórico de ' + aHist.nome + '\n\nDigite o número do treino para carregar:\n\n' + opcoes);
-          if (escolha === null) return;
-          var idx2 = parseInt(escolha, 10) - 1;
-          if (isNaN(idx2) || idx2 < 0 || idx2 >= hist.length) { alert('Número inválido.'); return; }
-          var entrada = hist[idx2];
-          if (!confirm('Carregar treino "' + (entrada.tituloTreino || entrada.treinoNome || 'Treino ' + (idx2+1)) + '" de ' + aHist.nome + '?\n\nO treino atual será arquivado antes.')) return;
-          carregarTreinoAluno(aHist);
-          arquivarTreino(aHist);
-          aHist.treino = JSON.parse(JSON.stringify(entrada.treino));
-          aHist.titulos = JSON.parse(JSON.stringify(entrada.titulos || {}));
-          aHist.secaoFAtiva = !!entrada.secaoFAtiva;
-          aHist.atualizadoEm = new Date().toISOString();
-          salvarLocalStorage();
-          carregarTreinoAluno(aHist);
-          exibirMensagem('📜 Treino histórico carregado para ' + aHist.nome + '.', '#4a90e2', false);
           modal.style.visibility = 'hidden';
+          if (typeof abrirHistorico === 'function') {
+            abrirHistorico(null, false, aHist);
+          }
           return;
         }
         if (e.target.closest('.wpp-aluno-btn')) {
@@ -6759,6 +6757,16 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       if (hx !== hy) return hy - hx;
       return x.nome.localeCompare(y.nome, 'pt-BR');
     });
+    var alunoAtivo = (typeof alunoNaTela === 'function' ? alunoNaTela() : null) || (document.getElementById('searchName') && document.getElementById('searchName').value.trim() ? buscarAluno(document.getElementById('searchName').value.trim()) : null);
+    if (alunoAtivo) {
+      var idxAtivo = lista.findIndex(function(a) {
+        return (a.student_id && a.student_id === alunoAtivo.student_id) || normalizarNome(a.nome) === normalizarNome(alunoAtivo.nome);
+      });
+      if (idxAtivo > -1) {
+        var itemAtivo = lista.splice(idxAtivo, 1)[0];
+        lista.unshift(itemAtivo);
+      }
+    }
     sug.replaceChildren();
     if (!lista.length) {
       var empty = document.createElement('div');
@@ -6768,10 +6776,17 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       sug.appendChild(empty);
     } else {
       lista.forEach(function(aluno) {
+        var isAtivo = alunoAtivo && ((aluno.student_id && aluno.student_id === alunoAtivo.student_id) || normalizarNome(aluno.nome) === normalizarNome(alunoAtivo.nome));
         var count = (aluno.historicoTreinos || []).length;
         var item = document.createElement('div');
-        item.className = 'history-suggestion-item';
-        item.innerHTML = '<span><strong>' + escHtml(aluno.nome) + '</strong></span>' +
+        item.className = 'history-suggestion-item' + (isAtivo ? ' selected' : '');
+        if (isAtivo) {
+          item.style.background = '#f0fdf4';
+          item.style.borderLeft = '3px solid #16a34a';
+        }
+        item.innerHTML = '<span><strong>' + escHtml(aluno.nome) + '</strong>' +
+          (isAtivo ? ' <span class="history-suggestion-badge" style="background:#15803d;color:#fff;font-weight:700;">📌 Selecionado</span>' : '') +
+          '</span>' +
           '<span class="history-suggestion-badge ' + (count > 0 ? 'has-history' : '') + '">' +
           (count === 1 ? '1 anterior' : count > 1 ? count + ' anteriores' : 'sem anteriores') +
           '</span>';
@@ -6799,9 +6814,9 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     atualizarVersoesHistorico('');
   }
 
-  function abrirHistorico(scope, compare) {
+  function abrirHistorico(scope, compare, alunoAlvo) {
     concluirAutoSave();
-    var a = alunoNaTela() || (document.getElementById('searchName').value ? buscarAluno(document.getElementById('searchName').value) : null);
+    var a = alunoAlvo || alunoNaTela() || (document.getElementById('searchName').value ? buscarAluno(document.getElementById('searchName').value) : null);
     if (!a && alunos.length > 0) {
       a = alunos.find(function(x) { return x.historicoTreinos && x.historicoTreinos.length > 0; }) || alunos[0];
     }
@@ -8358,8 +8373,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     atualizarLadoEditavel();
   };
   var originalOpenHistory=abrirHistorico;
-  abrirHistorico=function(scope,compare){
-    originalOpenHistory(scope,compare);
+  abrirHistorico=function(scope,compare,alunoAlvo){
+    originalOpenHistory(scope,compare,alunoAlvo);
     if(!historyStudent)return;
     atualizarVersoesHistorico('');
   };
