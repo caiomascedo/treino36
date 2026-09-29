@@ -8,8 +8,12 @@
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Treinos do Caio">
-<link rel="icon" type="image/png" href="https://i.postimg.cc/VSd6FLPy/1-1.png">
+<meta name="apple-mobile-web-app-title" content="Treinos">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
+<link rel="shortcut icon" href="favicon.ico">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#b22222">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
@@ -30,12 +34,12 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 .clear-name-btn { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #e2e8f0; color: #64748b; border: none; cursor: pointer; font-size: 0.65rem; font-weight: bold; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all .15s ease; }
 .clear-name-btn:hover, .clear-name-btn:active { background: #cbd5e1; color: #0f172a; transform: scale(1.1); }
 .clear-name-btn[hidden] { display: none !important; }
-#wppIconBtn { flex-shrink: 0; padding: 2px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: transparent; border: none; cursor: pointer; transition: transform .15s ease; }
-#wppIconBtn:hover { transform: scale(1.12); }
-#wppIconBtn:active { transform: scale(0.95); }
-#wppIconBtn svg { display: block; }
-.obs-tools-btn { position: relative; }
-.obs-tools-dot { color: #e53935; font-size: .8rem; line-height: 1; margin-left: 2px; }
+.search-action-btn { flex-shrink: 0; width: 26px; height: 26px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: transparent; border: none; cursor: pointer; position: relative; transition: transform .15s ease, background .15s ease; }
+.search-action-btn:hover { background: #f1f5f9; transform: scale(1.1); }
+.search-action-btn:active { transform: scale(0.95); }
+.search-action-btn svg { display: block; }
+.obs-indicator-dot { position: absolute; top: 1px; right: 1px; width: 7px; height: 7px; background-color: #ef4444; border-radius: 50%; border: 1.5px solid #fff; pointer-events: none; }
+.obs-indicator-dot[hidden] { display: none !important; }
 #workoutObsDialog.expanded {
   width: calc(100% - 16px) !important;
   max-width: 820px !important;
@@ -87,6 +91,26 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 }
 .toggle-info-btn:hover { background: #e2e8f0; }
 .info-arrow { font-size: 0.75rem; color: #475569; transition: transform .2s ease; display: inline-block; width: 12px; }
+.info-tools-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.info-tool-btn {
+  background: #e2e8f0;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.info-tool-btn:hover { background: #cbd5e1; }
+.info-tool-btn.primary { background: #1e3a5f; color: #fff; border-color: #1e3a5f; }
+.info-tool-btn.primary:hover { background: #152942; }
 .info-relevante-content {
   padding: 10px;
   background: #fff;
@@ -103,12 +127,76 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 .info-field { display: flex; flex-direction: column; gap: 3px; }
 .info-field.full-width { grid-column: 1 / -1; }
 .info-field label { font-size: 0.72rem; font-weight: 600; color: #475569; margin: 0; }
-.info-field input {
-  padding: 5px 8px !important;
+.info-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.info-input-wrap input {
+  width: 100% !important;
+  padding: 5px 28px 5px 8px !important;
   font-size: 0.82rem !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 6px !important;
   box-sizing: border-box;
+}
+.copy-field-btn {
+  position: absolute;
+  right: 4px;
+  background: transparent !important;
+  border: none !important;
+  padding: 2px 4px !important;
+  font-size: 0.72rem !important;
+  color: #64748b !important;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+}
+.copy-field-btn:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+.imc-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 2px;
+}
+.imc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.imc-title { font-size: 0.76rem; font-weight: bold; color: #1e293b; }
+.imc-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #e2e8f0;
+  color: #64748b;
+  transition: all .2s ease;
+}
+.copy-imc-btn {
+  background: transparent !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 4px !important;
+  padding: 1px 6px !important;
+  font-size: 0.68rem !important;
+  color: #475569 !important;
+  cursor: pointer;
+}
+.copy-imc-btn:hover { background: #e2e8f0 !important; color: #0f172a !important; }
+.imc-details {
+  font-size: 0.74rem;
+  color: #475569;
+  line-height: 1.35;
 }
 .obs-tabs-container {
   display: flex;
@@ -253,9 +341,10 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 .paste-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .paste-tools button { margin: 0; background: #8b5a2b; }
 .paste-tools button.expand-paste-btn { background: #4a90e2; }
-#pasteModal.expanded { padding: 10px; }
-#pasteModal.expanded .paste-modal-card { width: min(96vw, 1000px); height: calc(100dvh - 20px); max-height: none; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; }
-#pasteModal.expanded #pasteTextarea { flex: 1; height: auto; min-height: 0; font-size: 1rem; line-height: 1.45; resize: none; }
+#pasteModal.expanded { padding: 8px 8px env(safe-area-inset-bottom, 20px) 8px; }
+#pasteModal.expanded .paste-modal-card { width: min(96vw, 1000px); height: calc(100dvh - 16px); max-height: none; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; padding-bottom: max(40px, env(safe-area-inset-bottom, 20px)); }
+#pasteModal.expanded #pasteTextarea { flex: 1; height: auto; min-height: 200px; font-size: 1rem; line-height: 1.45; resize: none; padding-bottom: max(260px, 45vh) !important; box-sizing: border-box !important; -webkit-overflow-scrolling: touch; }
+.paste-actions-bar { position: sticky; bottom: 0; background: #ffffff; padding: 8px 0; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; z-index: 10; margin-top: 6px; }
 .modal-card button { background: #2c3e50; color: white; border: none; border-radius: 20px; padding: 6px 12px; margin-right: 8px; cursor: pointer; }
 .modal-card select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 20px; }
 .aluno-list-item { padding: 10px; border-bottom: 1px solid #ddd; cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -609,10 +698,27 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     <div class="search-input-wrap">
       <input type="text" id="searchName" placeholder="Nome do aluno" autocomplete="off" aria-autocomplete="list" aria-controls="nameSuggestions">
       <button type="button" id="clearNameBtn" class="clear-name-btn" title="Limpar nome" aria-label="Limpar nome" hidden>✕</button>
-      <button type="button" id="wppIconBtn" title="Adicionar/editar WhatsApp do aluno" aria-label="WhatsApp do aluno">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366">
+      <button type="button" id="wppIconBtn" class="search-action-btn" title="Adicionar/editar WhatsApp do aluno" aria-label="WhatsApp do aluno">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#25D366">
           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
         </svg>
+      </button>
+      <button type="button" id="listIconBtn" class="search-action-btn" title="Lista de alunos" aria-label="Lista de alunos">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+          <path d="M9 12h6"></path>
+          <path d="M9 16h6"></path>
+          <path d="M9 8h6"></path>
+        </svg>
+      </button>
+      <button type="button" id="obsIconBtn" class="search-action-btn" title="Observações do aluno" aria-label="Observações do aluno">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+        <span id="obsInputDot" class="obs-indicator-dot" hidden></span>
+      </button>
       <div id="nameSuggestions" class="name-suggestions" role="listbox"></div>
     </div>
     <button id="listBtn" class="list">📋 Lista</button>
@@ -800,7 +906,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       <button type="button" id="expandPasteBtn" class="expand-paste-btn">⛶ Expandir</button>
     </div>
     <textarea id="pasteTextarea" placeholder="Cole o treino completo ou de uma seção"></textarea>
-    <div>
+    <div class="paste-actions-bar">
       <button id="confirmPasteBtn">✅ Preencher</button>
       <button id="cancelPasteBtn">❌ Cancelar</button>
     </div>
@@ -6605,10 +6711,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   document.getElementById('pasteUndoBtn').onclick=function(){historicoTexto(-1);};document.getElementById('pasteRedoBtn').onclick=function(){historicoTexto(1);};
   document.addEventListener('keydown',function(e){if(e.target.closest('#pasteModal')&&(e.ctrlKey||e.metaKey)&&['z','y'].includes(e.key.toLowerCase())){e.preventDefault();e.stopImmediatePropagation();historicoTexto(e.key.toLowerCase()==='y'||e.shiftKey?1:-1);}else if(e.key==='Escape'&&pasteModal.style.visibility==='visible'&&!document.querySelector('dialog[open]')){e.preventDefault();fecharPasteModal();}},true);
 
-  var toolsRow=document.createElement('div');toolsRow.className='workout-tools';toolsRow.innerHTML='<button id="createWorkoutBtn">＋ Criar treino</button><button id="historyWorkoutBtn">◷ Treinos anteriores</button><button id="compareWorkoutBtn">⇄ Comparar</button><button id="obsWorkoutBtn" class="obs-tools-btn" type="button">📝 Obs<span class="obs-tools-dot" hidden> •</span></button>';
+  var toolsRow=document.createElement('div');toolsRow.className='workout-tools';toolsRow.innerHTML='<button id="createWorkoutBtn">＋ Criar treino</button><button id="historyWorkoutBtn">◷ Treinos anteriores</button><button id="compareWorkoutBtn">⇄ Comparar</button>';
   document.querySelector('.global-buttons').after(toolsRow);
   document.getElementById('createWorkoutBtn').onclick=function(){abrirGerador();};document.getElementById('historyWorkoutBtn').onclick=function(){abrirHistorico();};document.getElementById('compareWorkoutBtn').onclick=function(){abrirHistorico(null,true);};
-  document.getElementById('obsWorkoutBtn').onclick=function(){abrirObservacoes();};
+  if(document.getElementById('listIconBtn')) document.getElementById('listIconBtn').onclick=mostrarListaAlunos;
+  if(document.getElementById('obsIconBtn')) document.getElementById('obsIconBtn').onclick=function(){abrirObservacoes();};
 
   /* Modal e controle de observações do treino/aluno com abas, ficha e indicador discreto */
   var obsDialog=criarDialogo('workoutObsDialog','📝 Observações do Treino',
@@ -6619,37 +6726,72 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     '<div class="obs-info-relevante-wrap">'+
       '<button type="button" id="toggleInfoRelevanteBtn" class="toggle-info-btn">'+
         '<span id="infoRelevanteArrow" class="info-arrow">▶</span>'+
-        '<span class="info-title">📋 Informações Relevantes</span>'+
+        '<span class="info-title">📋 Informações Relevantes & Ficha</span>'+
       '</button>'+
       '<div id="infoRelevanteContent" class="info-relevante-content" hidden>'+
+        '<div class="info-tools-bar">'+
+          '<button type="button" id="copyAllInfoBtn" class="info-tool-btn primary" title="Copiar resumo completo da ficha">📋 Copiar Tudo</button>'+
+          '<button type="button" id="autoFillInfoBtn" class="info-tool-btn" title="Preencher automaticamente a partir do texto das observações">⚡ Auto-preencher da anotação</button>'+
+        '</div>'+
         '<div class="info-grid">'+
           '<div class="info-field">'+
             '<label for="infoIdade">Idade:</label>'+
-            '<input type="text" id="infoIdade" placeholder="Ex: 32 anos">'+
+            '<div class="info-input-wrap">'+
+              '<input type="text" id="infoIdade" placeholder="Ex: 32 anos">'+
+              '<button type="button" class="copy-field-btn" data-target="infoIdade" data-label="Idade" title="Copiar Idade">📋</button>'+
+            '</div>'+
           '</div>'+
           '<div class="info-field">'+
             '<label for="infoPeso">Peso:</label>'+
-            '<input type="text" id="infoPeso" placeholder="Ex: 110 kg">'+
+            '<div class="info-input-wrap">'+
+              '<input type="text" id="infoPeso" placeholder="Ex: 110 kg">'+
+              '<button type="button" class="copy-field-btn" data-target="infoPeso" data-label="Peso" title="Copiar Peso">📋</button>'+
+            '</div>'+
           '</div>'+
           '<div class="info-field">'+
             '<label for="infoAltura">Altura:</label>'+
-            '<input type="text" id="infoAltura" placeholder="Ex: 160 cm">'+
+            '<div class="info-input-wrap">'+
+              '<input type="text" id="infoAltura" placeholder="Ex: 160 cm ou 1.60 m">'+
+              '<button type="button" class="copy-field-btn" data-target="infoAltura" data-label="Altura" title="Copiar Altura">📋</button>'+
+            '</div>'+
           '</div>'+
           '<div class="info-field">'+
             '<label for="infoDataNasc">Data de nasc.:</label>'+
-            '<input type="text" id="infoDataNasc" placeholder="Ex: 15/05/1992">'+
+            '<div class="info-input-wrap">'+
+              '<input type="text" id="infoDataNasc" placeholder="Ex: 15/05/1992">'+
+              '<button type="button" class="copy-field-btn" data-target="infoDataNasc" data-label="Data de nasc." title="Copiar Data de nasc.">📋</button>'+
+            '</div>'+
+          '</div>'+
+          '<div class="info-field full-width">'+
+            '<div id="imcContainer" class="imc-card">'+
+              '<div class="imc-header">'+
+                '<span class="imc-title">⚖️ IMC & Peso Ideal:</span>'+
+                '<span id="imcBadge" class="imc-badge">Aguardando peso e altura</span>'+
+                '<button type="button" id="copyImcBtn" class="copy-imc-btn" title="Copiar IMC e Peso Ideal" hidden>📋 Copiar</button>'+
+              '</div>'+
+              '<div id="imcDetails" class="imc-details">Informe peso e altura para calcular IMC e peso ideal automaticamente.</div>'+
+            '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
             '<label for="infoNomeCompleto">Nome completo:</label>'+
-            '<input type="text" id="infoNomeCompleto" placeholder="Nome completo do aluno">'+
+            '<div class="info-input-wrap">'+
+              '<input type="text" id="infoNomeCompleto" placeholder="Nome completo do aluno">'+
+              '<button type="button" class="copy-field-btn" data-target="infoNomeCompleto" data-label="Nome completo" title="Copiar Nome completo">📋</button>'+
+            '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
             '<label for="infoEmail">E-mail:</label>'+
-            '<input type="email" id="infoEmail" placeholder="email@exemplo.com">'+
+            '<div class="info-input-wrap">'+
+              '<input type="email" id="infoEmail" placeholder="email@exemplo.com">'+
+              '<button type="button" class="copy-field-btn" data-target="infoEmail" data-label="E-mail" title="Copiar E-mail">📋</button>'+
+            '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
             '<label for="infoWhats">Whats:</label>'+
-            '<input type="tel" id="infoWhats" placeholder="DDD + WhatsApp">'+
+            '<div class="info-input-wrap">'+
+              '<input type="tel" id="infoWhats" placeholder="DDD + WhatsApp">'+
+              '<button type="button" class="copy-field-btn" data-target="infoWhats" data-label="WhatsApp" title="Copiar WhatsApp">📋</button>'+
+            '</div>'+
           '</div>'+
         '</div>'+
       '</div>'+
@@ -6658,7 +6800,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       '<div id="obsTabsList" class="obs-tabs-list"></div>'+
       '<button type="button" id="addObsTabBtn" class="add-obs-tab-btn">＋ Nova guia</button>'+
     '</div>'+
-    '<textarea id="obsTextarea" placeholder="Digite as observações, restrições articulares, cuidados ou orientações deste aluno..." style="width:100%;box-sizing:border-box;min-height:120px;padding:8px;border:1px solid #ccc;border-radius:6px;font-family:inherit;font-size:0.88rem;resize:vertical;"></textarea>'+
+    '<textarea id="obsTextarea" placeholder="Digite as observações, restrições articulares, cuidados ou orientações deste aluno..." style="width:100%;box-sizing:border-box;min-height:120px;padding:8px;padding-bottom:max(140px,30vh);border:1px solid #ccc;border-radius:6px;font-family:inherit;font-size:0.88rem;resize:vertical;-webkit-overflow-scrolling:touch;"></textarea>'+
     '<div class="dialog-actions" style="margin-top:10px;display:flex;gap:6px;justify-content:flex-end;">'+
       '<button type="button" id="saveObsBtn" class="primary">Salvar Observação</button>'+
       '<button type="button" id="clearObsBtn">Limpar</button>'+
@@ -6668,6 +6810,201 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 
   var obsGuiasAtuais = [];
   var obsGuiaAtivaIndex = 0;
+
+  function extrairInfoDoTexto(texto) {
+    if (!texto || typeof texto !== 'string') return {};
+    var res = {};
+    var mIdade = texto.match(/(?:idade\s*[:=-]?\s*(\d{1,2}(?:\s*anos)?))|(?:\b(\d{1,2})\s*anos\b)/i);
+    if (mIdade) {
+      var vId = (mIdade[1] || mIdade[2]).trim();
+      if (!/anos$/i.test(vId)) vId += ' anos';
+      res.idade = vId;
+    }
+    var mPeso = texto.match(/(?:peso\s*[:=-]?\s*(\d{2,3}(?:[.,]\d+)?\s*(?:kg)?))|(?:\b(\d{2,3}(?:[.,]\d+)?)\s*(?:kg|quilos)\b)/i);
+    if (mPeso) {
+      var vP = (mPeso[1] || mPeso[2]).trim();
+      if (!/kg$/i.test(vP)) vP += ' kg';
+      res.peso = vP;
+    }
+    var mAlt = texto.match(/(?:altura\s*[:=-]?\s*(\d(?:[.,]\d{1,2})?\s*m|\d{3}\s*cm|\d[.,]\d{2}))|(?:\b(\d[.,]\d{2})\s*m\b)|(?:\b(\d{3})\s*cm\b)/i);
+    if (mAlt) {
+      res.altura = (mAlt[1] || mAlt[2] || mAlt[3]).trim();
+    }
+    var mNasc = texto.match(/(?:(?:data\s*(?:de\s*)?)?nasc(?:imento)?\s*[:=-]?\s*(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}))|(?:\b(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{4})\b)/i);
+    if (mNasc) {
+      res.dataNasc = (mNasc[1] || mNasc[2]).trim();
+    }
+    var mEmail = texto.match(/(?:e-?mail\s*[:=-]?\s*)?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+    if (mEmail) {
+      res.email = mEmail[1].trim();
+    }
+    var mWhats = texto.match(/(?:whats(?:app)?|cel(?:ular)?|tel(?:efone)?)\s*[:=-]?\s*([+]?\d[\d\s().-]{8,}\d)/i);
+    if (mWhats) {
+      res.whats = mWhats[1].trim();
+    }
+    return res;
+  }
+
+  function calcularImcEPesoIdeal(pesoStr, alturaStr) {
+    if (!pesoStr || !alturaStr) return null;
+    var pMatch = String(pesoStr).replace(',', '.').match(/(\d+(?:\.\d+)?)/);
+    var aMatch = String(alturaStr).replace(',', '.').match(/(\d+(?:\.\d+)?)/);
+    if (!pMatch || !aMatch) return null;
+    var pesoNum = parseFloat(pMatch[1]);
+    var altNum = parseFloat(aMatch[1]);
+    if (!pesoNum || isNaN(pesoNum) || pesoNum <= 10 || pesoNum > 350) return null;
+    if (altNum > 3.0) altNum = altNum / 100.0;
+    if (altNum < 0.6 || altNum > 2.6) return null;
+
+    var imc = pesoNum / (altNum * altNum);
+    var imcFixed = imc.toFixed(1);
+    var classificacao = 'Peso normal';
+    var badgeColor = '#10b981';
+
+    if (imc < 18.5) {
+      classificacao = 'Abaixo do peso';
+      badgeColor = '#f59e0b';
+    } else if (imc < 25.0) {
+      classificacao = 'Peso normal';
+      badgeColor = '#10b981';
+    } else if (imc < 30.0) {
+      classificacao = 'Sobrepeso';
+      badgeColor = '#f97316';
+    } else if (imc < 35.0) {
+      classificacao = 'Obesidade Grau I';
+      badgeColor = '#ef4444';
+    } else if (imc < 40.0) {
+      classificacao = 'Obesidade Grau II';
+      badgeColor = '#dc2626';
+    } else {
+      classificacao = 'Obesidade Grau III';
+      badgeColor = '#991b1b';
+    }
+
+    var pesoMin = (18.5 * altNum * altNum).toFixed(1);
+    var pesoMax = (24.9 * altNum * altNum).toFixed(1);
+
+    return {
+      imc: imcFixed,
+      classificacao: classificacao,
+      badgeColor: badgeColor,
+      pesoMin: pesoMin,
+      pesoMax: pesoMax,
+      alturaM: altNum.toFixed(2),
+      pesoKg: pesoNum.toFixed(1)
+    };
+  }
+
+  function atualizarVisualizacaoImc() {
+    var pEl = document.getElementById('infoPeso');
+    var aEl = document.getElementById('infoAltura');
+    var badge = document.getElementById('imcBadge');
+    var details = document.getElementById('imcDetails');
+    var copyBtn = document.getElementById('copyImcBtn');
+    if (!badge || !details) return;
+
+    var peso = pEl ? pEl.value : '';
+    var altura = aEl ? aEl.value : '';
+    var calc = calcularImcEPesoIdeal(peso, altura);
+
+    if (calc) {
+      badge.textContent = 'IMC: ' + calc.imc + ' (' + calc.classificacao + ')';
+      badge.style.backgroundColor = calc.badgeColor;
+      badge.style.color = '#fff';
+      details.innerHTML = 'Faixa de <strong>Peso Ideal</strong> para ' + calc.alturaM + 'm: <strong>' + calc.pesoMin + ' kg – ' + calc.pesoMax + ' kg</strong>';
+      if (copyBtn) copyBtn.hidden = false;
+    } else {
+      badge.textContent = 'Aguardando peso e altura';
+      badge.style.backgroundColor = '#e2e8f0';
+      badge.style.color = '#64748b';
+      details.textContent = 'Informe peso e altura para calcular IMC e peso ideal automaticamente.';
+      if (copyBtn) copyBtn.hidden = true;
+    }
+  }
+
+  function autoPreencherCamposDaAnotacao(forcar) {
+    var area = document.getElementById('obsTextarea');
+    var texto = (area ? area.value : '') + '\n' + obsGuiasAtuais.map(function(g){ return g.texto || ''; }).join('\n');
+    var extraido = extrairInfoDoTexto(texto);
+    var preencheu = 0;
+
+    var nomeAtual = document.getElementById('searchName').value.trim();
+    var aluno = alunoNaTela() || buscarAluno(nomeAtual);
+
+    var fNome = document.getElementById('infoNomeCompleto');
+    if (fNome && (!fNome.value.trim() || forcar)) {
+      if (aluno && aluno.nome) { fNome.value = aluno.nome; preencheu++; }
+      else if (nomeAtual) { fNome.value = nomeAtual; preencheu++; }
+    }
+
+    var fWhats = document.getElementById('infoWhats');
+    if (fWhats && (!fWhats.value.trim() || forcar)) {
+      if (extraido.whats) { fWhats.value = extraido.whats; preencheu++; }
+      else if (aluno && aluno.whatsapp) { fWhats.value = aluno.whatsapp; preencheu++; }
+    }
+
+    var fIdade = document.getElementById('infoIdade');
+    if (fIdade && (!fIdade.value.trim() || forcar) && extraido.idade) {
+      fIdade.value = extraido.idade; preencheu++;
+    }
+
+    var fPeso = document.getElementById('infoPeso');
+    if (fPeso && (!fPeso.value.trim() || forcar) && extraido.peso) {
+      fPeso.value = extraido.peso; preencheu++;
+    }
+
+    var fAltura = document.getElementById('infoAltura');
+    if (fAltura && (!fAltura.value.trim() || forcar) && extraido.altura) {
+      fAltura.value = extraido.altura; preencheu++;
+    }
+
+    var fDataNasc = document.getElementById('infoDataNasc');
+    if (fDataNasc && (!fDataNasc.value.trim() || forcar) && extraido.dataNasc) {
+      fDataNasc.value = extraido.dataNasc; preencheu++;
+    }
+
+    var fEmail = document.getElementById('infoEmail');
+    if (fEmail && (!fEmail.value.trim() || forcar) && extraido.email) {
+      fEmail.value = extraido.email; preencheu++;
+    }
+
+    atualizarVisualizacaoImc();
+    return preencheu;
+  }
+
+  function copiarTudoInfoRelevante() {
+    var nome = document.getElementById('infoNomeCompleto').value.trim() || document.getElementById('searchName').value.trim();
+    var idade = document.getElementById('infoIdade').value.trim();
+    var peso = document.getElementById('infoPeso').value.trim();
+    var altura = document.getElementById('infoAltura').value.trim();
+    var dataNasc = document.getElementById('infoDataNasc').value.trim();
+    var email = document.getElementById('infoEmail').value.trim();
+    var whats = document.getElementById('infoWhats').value.trim();
+
+    var calc = calcularImcEPesoIdeal(peso, altura);
+    var linhas = ['📋 FICHA DO ALUNO'];
+    if (nome) linhas.push('Nome: ' + nome);
+    if (idade) linhas.push('Idade: ' + idade);
+    if (peso) linhas.push('Peso: ' + peso);
+    if (altura) linhas.push('Altura: ' + altura);
+    if (calc) {
+      linhas.push('IMC: ' + calc.imc + ' (' + calc.classificacao + ')');
+      linhas.push('Peso Ideal: ' + calc.pesoMin + ' kg – ' + calc.pesoMax + ' kg');
+    }
+    if (dataNasc) linhas.push('Data de nasc.: ' + dataNasc);
+    if (whats) linhas.push('WhatsApp: ' + whats);
+    if (email) linhas.push('E-mail: ' + email);
+
+    if (linhas.length <= 1) {
+      exibirMensagem('Nenhuma informação preenchida na ficha para copiar.', '#64748b', false);
+      return;
+    }
+    navigator.clipboard.writeText(linhas.join('\n')).then(function() {
+      exibirMensagem('📋 Ficha completa copiada com sucesso!', '#1e6f3f', false);
+    }).catch(function() {
+      exibirMensagem('Não foi possível copiar.', '#b22222', false);
+    });
+  }
 
   function renderizarAbasObs() {
     var list = document.getElementById('obsTabsList');
@@ -6748,6 +7085,10 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     document.getElementById('infoEmail').value = info.email || '';
     document.getElementById('infoWhats').value = info.whats || (aluno ? (aluno.whatsapp || '') : '');
 
+    // Auto-extrair dados do texto se campos estiverem vazios
+    autoPreencherCamposDaAnotacao(false);
+    atualizarVisualizacaoImc();
+
     // Reset expand e sanfona
     obsDialog.classList.remove('expanded');
     document.getElementById('expandObsBtn').textContent = '⛶ Ampliar';
@@ -6770,6 +7111,47 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     content.hidden = !isHidden;
     arrow.textContent = isHidden ? '▼' : '▶';
   };
+
+  document.getElementById('infoPeso').addEventListener('input', atualizarVisualizacaoImc);
+  document.getElementById('infoAltura').addEventListener('input', atualizarVisualizacaoImc);
+
+  document.getElementById('copyAllInfoBtn').onclick = copiarTudoInfoRelevante;
+  document.getElementById('autoFillInfoBtn').onclick = function() {
+    var qtd = autoPreencherCamposDaAnotacao(true);
+    if (qtd > 0) {
+      exibirMensagem('⚡ ' + qtd + ' campo(s) preenchidos da anotação!', '#1e6f3f', false);
+    } else {
+      exibirMensagem('Nenhum dado novo detectado no texto da anotação.', '#64748b', false);
+    }
+  };
+
+  document.getElementById('copyImcBtn').onclick = function() {
+    var p = document.getElementById('infoPeso').value;
+    var a = document.getElementById('infoAltura').value;
+    var calc = calcularImcEPesoIdeal(p, a);
+    if (!calc) return;
+    var texto = 'IMC: ' + calc.imc + ' (' + calc.classificacao + ') · Peso Ideal: ' + calc.pesoMin + ' kg – ' + calc.pesoMax + ' kg';
+    navigator.clipboard.writeText(texto).then(function() {
+      exibirMensagem('📋 IMC copiado!', '#1e6f3f', false);
+    });
+  };
+
+  document.getElementById('infoRelevanteContent').addEventListener('click', function(e) {
+    var btn = e.target.closest('.copy-field-btn');
+    if (!btn) return;
+    var targetId = btn.dataset.target;
+    var label = btn.dataset.label || 'Campo';
+    var input = document.getElementById(targetId);
+    if (!input || !input.value.trim()) {
+      exibirMensagem('Campo ' + label + ' está vazio.', '#64748b', false);
+      return;
+    }
+    navigator.clipboard.writeText(input.value.trim()).then(function() {
+      exibirMensagem('📋 ' + label + ' copiado: ' + input.value.trim(), '#1e6f3f', false);
+    }).catch(function() {
+      exibirMensagem('Não foi possível copiar.', '#b22222', false);
+    });
+  });
 
   document.getElementById('addObsTabBtn').onclick = function() {
     var area = document.getElementById('obsTextarea');
@@ -6853,11 +7235,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       if (aluno.observacoes && aluno.observacoes.trim()) temObs = true;
       if (Array.isArray(aluno.obsGuias) && aluno.obsGuias.some(function(g) { return g.texto && g.texto.trim(); })) temObs = true;
     }
-    var toolsDot = document.querySelector('.obs-tools-dot');
-    if (toolsDot) toolsDot.hidden = !temObs;
-    var obsBtn = document.getElementById('obsWorkoutBtn');
-    if (obsBtn) {
-      obsBtn.title = temObs ? '📝 Observação prescrita salva' : '📝 Observações do aluno / treino';
+    var inputDot = document.getElementById('obsInputDot');
+    if (inputDot) inputDot.hidden = !temObs;
+    var obsIconBtn = document.getElementById('obsIconBtn');
+    if (obsIconBtn) {
+      obsIconBtn.title = temObs ? '📝 Observação prescrita salva (toque para ver)' : '📝 Observações do aluno / treino';
     }
   }
   todasSecoes.forEach(function(s){var host=document.querySelector('.sec-'+s.toLowerCase()+' .action-buttons');var b=document.createElement('button');b.type='button';b.className='mobility-btn';b.textContent='🧘 Mobilidade';b.onclick=function(){abrirMobilidades(s);};host.insertBefore(b,host.querySelector('.section-zoom-btn'));});
