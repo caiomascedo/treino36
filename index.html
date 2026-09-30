@@ -5377,15 +5377,16 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     favoritos = [];
     try {
       var salvos = JSON.parse(localStorage.getItem(TREINO_FAVORITOS_KEY) || '[]');
-      if (Array.isArray(salvos)) favoritos = salvos;
+      if (Array.isArray(salvos)) {
+        favoritos = salvos.map(function(item) {
+          if (typeof item === 'string') return { student_id: null, nome: item };
+          if (item && item.nome) return item;
+          return null;
+        }).filter(Boolean);
+      }
     } catch(e) {}
-    try {
-      favoritosTrancado = localStorage.getItem(TREINO_FAVORITOS_TRANCADO_KEY) === 'true';
-      favoritosExpandido = favoritosTrancado;
-    } catch(e) {
-      favoritosTrancado = false;
-      favoritosExpandido = false;
-    }
+    favoritosExpandido = false;
+    favoritosTrancado = false;
     try {
       favoritosFixado = localStorage.getItem(TREINO_FAVORITOS_FIXADO_KEY) === 'true';
     } catch(e) {
@@ -5415,10 +5416,6 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var pinBtn = document.getElementById('pinFavoritesBtn');
     var expandBtn = document.getElementById('expandFavoritesBtn');
     if (!container) return;
-
-    if (favoritosTrancado) {
-      favoritosExpandido = true;
-    }
 
     if (favoritosExpandido) {
       container.classList.add('expanded');
@@ -5462,22 +5459,12 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   }
 
   function alternarExpansaoFavoritos() {
-    if (favoritosExpandido) {
-      favoritosExpandido = false;
-      favoritosTrancado = false;
-      try { localStorage.setItem(TREINO_FAVORITOS_TRANCADO_KEY, 'false'); } catch(e){}
-    } else {
-      favoritosExpandido = true;
-    }
+    favoritosExpandido = !favoritosExpandido;
     atualizarModoFavoritos();
   }
 
   function alternarFixarFavoritos() {
     favoritosFixado = !favoritosFixado;
-    if (favoritosExpandido) {
-      favoritosTrancado = favoritosFixado;
-      try { localStorage.setItem(TREINO_FAVORITOS_TRANCADO_KEY, favoritosTrancado ? 'true' : 'false'); } catch(e){}
-    }
     try {
       localStorage.setItem(TREINO_FAVORITOS_FIXADO_KEY, favoritosFixado ? 'true' : 'false');
     } catch(e){}
@@ -6418,19 +6405,6 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   if (expandFavBtn) {
     expandFavBtn.addEventListener('click', alternarExpansaoFavoritos);
   }
-  var favLockBtn = document.getElementById('favLockBtn');
-  if (favLockBtn) {
-    favLockBtn.addEventListener('click', alternarTrancarFavoritos);
-  }
-  var favCollapseBtn = document.getElementById('favCollapseBtn');
-  if (favCollapseBtn) {
-    favCollapseBtn.addEventListener('click', function() {
-      favoritosTrancado = false;
-      favoritosExpandido = false;
-      try { localStorage.setItem(TREINO_FAVORITOS_TRANCADO_KEY, 'false'); } catch(e){}
-      atualizarModoFavoritos();
-    });
-  }
   var addFavBtn = document.getElementById('addFavoriteBtn');
   if (addFavBtn) {
     addFavBtn.addEventListener('click', function() {
@@ -6494,8 +6468,6 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   if (favCollapseBtn) {
     favCollapseBtn.addEventListener('click', function() {
       favoritosExpandido = false;
-      favoritosTrancado = false;
-      try { localStorage.setItem(TREINO_FAVORITOS_TRANCADO_KEY, 'false'); } catch(e){}
       atualizarModoFavoritos();
     });
   }
@@ -9768,6 +9740,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   try { ultimoAlunoNome = localStorage.getItem(ALUNO_SELECIONADO_KEY) || ''; } catch(e) {}
   var ultimoAluno = buscarAluno(ultimoAlunoNome);
   if (ultimoAluno) carregarTreinoAluno(ultimoAluno);
+  else if (alunos.length) carregarTreinoAluno(alunos[0]);
   else registrarAlunoSelecionado('');
 
   initHistory();
