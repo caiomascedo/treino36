@@ -59,17 +59,16 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .workout-favorites-header-bar {
-  display: flex;
-  justify-content: space-between;
+  display: none !important;
+}
+.workout-favorites-container.expanded .workout-favorites-header-bar {
+  display: flex !important;
+  justify-content: flex-end;
   align-items: center;
+  gap: 4px;
   width: 100%;
   padding-bottom: 4px;
   border-bottom: 1px solid #e2e8f0;
-}
-.workout-favorites-title-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 .workout-favorites-header-actions {
   display: inline-flex;
@@ -1152,14 +1151,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     </div>
     <div id="workoutFavoritesContainer" class="workout-favorites-container">
       <div class="workout-favorites-header-bar" id="workoutFavoritesHeaderBar" hidden>
-        <div class="workout-favorites-title-wrap">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="#f59e0b" stroke="#d97706" stroke-width="1.5">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-          </svg>
-          <span style="font-weight:bold;font-size:0.75rem;color:#1e293b;">Favoritos</span>
-        </div>
         <div class="workout-favorites-header-actions">
-          <button type="button" id="favLockBtn" class="fav-header-btn" title="Trancar/destrancar favoritos expandidos">🔓 Trancar</button>
+          <button type="button" id="favLockBtn" class="fav-header-btn" title="Trancar favoritos abertos">🔓 Trancar</button>
           <button type="button" id="favCollapseBtn" class="fav-header-btn" title="Recolher favoritos">▲ Recolher</button>
         </div>
       </div>
@@ -5229,10 +5222,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 
   /* ===== TREINOS FAVORITOS (GUIAS ESTILO NAVEGADOR COM VETOR) ===== */
   var TREINO_FAVORITOS_KEY = 'treinoFavoritos';
-  var TREINO_FAVORITOS_TRANCADO_KEY = 'treinoFavoritosTrancado';
+  var TREINO_FAVORITOS_TRANCADO_KEY = 'treinoFavTrancado_v2';
   var favoritos = [];
   var favoritosTrancado = false;
   var favoritosExpandido = false;
+  var favScrollMoved = false;
 
   function svgEstrela(preenchida, tamanho) {
     var tam = tamanho || 13;
@@ -5250,8 +5244,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     } catch(e) {}
     try {
       favoritosTrancado = localStorage.getItem(TREINO_FAVORITOS_TRANCADO_KEY) === 'true';
-      if (favoritosTrancado) favoritosExpandido = true;
-    } catch(e) {}
+      favoritosExpandido = favoritosTrancado;
+    } catch(e) {
+      favoritosTrancado = false;
+      favoritosExpandido = false;
+    }
     alunos.forEach(function(a) {
       if (a.favorito && !favoritos.some(function(f) { return normalizarNome(f.nome) === normalizarNome(a.nome); })) {
         favoritos.push({ student_id: a.student_id || null, nome: a.nome });
@@ -5292,7 +5289,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       if (header) header.hidden = true;
       if (expandBtn) {
         expandBtn.textContent = '⛶';
-        expandBtn.title = 'Ampliar e ver todos os favoritos';
+        expandBtn.title = 'Ampliar favoritos';
       }
     }
 
@@ -5300,7 +5297,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       if (favoritosTrancado) {
         lockBtn.textContent = '🔒 Trancado';
         lockBtn.classList.add('locked');
-        lockBtn.title = 'Favoritos trancados abertos. Clique para destrancar.';
+        lockBtn.title = 'Favoritos fixos abertos. Clique para destrancar.';
       } else {
         lockBtn.textContent = '🔓 Trancar';
         lockBtn.classList.remove('locked');
@@ -5310,12 +5307,12 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   }
 
   function alternarExpansaoFavoritos() {
-    if (favoritosTrancado) {
-      favoritosTrancado = false;
+    if (favoritosExpandido) {
       favoritosExpandido = false;
+      favoritosTrancado = false;
       try { localStorage.setItem(TREINO_FAVORITOS_TRANCADO_KEY, 'false'); } catch(e){}
     } else {
-      favoritosExpandido = !favoritosExpandido;
+      favoritosExpandido = true;
     }
     atualizarModoFavoritos();
   }
@@ -5407,7 +5404,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     if (!favoritos.length) {
       var empty = document.createElement('div');
       empty.className = 'fav-tab-empty';
-      empty.innerHTML = svgEstrela(true, 13) + ' <span style="margin-left:3px;color:#64748b;">Favoritos vazios</span>';
+      empty.innerHTML = '<span style="color:#64748b;font-size:0.72rem;padding:2px 4px;">Nenhum salvo nas guias</span>';
       host.appendChild(empty);
     } else {
       favoritos.forEach(function(f) {
@@ -5416,7 +5413,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         tab.className = 'fav-tab-item' + (isAtivo ? ' active' : '');
         tab.setAttribute('role', 'button');
         tab.setAttribute('tabindex', '0');
-        tab.setAttribute('title', 'Abrir treino favorito de ' + f.nome + (isAtivo ? ' (ativo)' : ''));
+        tab.setAttribute('title', 'Abrir treino de ' + f.nome + (isAtivo ? ' (ativo)' : ''));
 
         var icon = document.createElement('span');
         icon.className = 'fav-tab-icon';
@@ -5445,10 +5442,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         tab.appendChild(closeBtn);
 
         tab.onclick = function() {
+          if (favScrollMoved) return;
           var a = buscarAluno(f.nome);
           if (a) {
             carregarTreinoAluno(a);
-            exibirMensagem('✅ Treino favorito de ' + escHtml(a.nome) + ' carregado.', '#1e6f3f', false);
+            exibirMensagem('✅ Treino de ' + escHtml(a.nome) + ' carregado.', '#1e6f3f', false);
             renderizarBarraFavoritos();
             try { tab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' }); } catch(err){}
           } else {
@@ -5477,21 +5475,26 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   function configurarScrollArrastoFavoritos() {
     var slider = document.getElementById('workoutFavoritesScroll');
     if (!slider) return;
-    var isDown = false, startX, scrollLeft, moved = false;
+    var isDown = false, startX, scrollLeft;
     slider.addEventListener('mousedown', function(e) {
       if (e.target.closest('.fav-tab-close') || e.target.closest('button')) return;
       isDown = true;
-      moved = false;
+      favScrollMoved = false;
       startX = e.pageX - slider.offsetLeft;
       scrollLeft = slider.scrollLeft;
     });
     slider.addEventListener('mouseleave', function() { isDown = false; });
-    slider.addEventListener('mouseup', function() { isDown = false; });
+    window.addEventListener('mouseup', function() {
+      if (isDown) {
+        setTimeout(function() { favScrollMoved = false; }, 60);
+      }
+      isDown = false;
+    });
     slider.addEventListener('mousemove', function(e) {
       if (!isDown) return;
       var x = e.pageX - slider.offsetLeft;
       var walk = (x - startX) * 1.5;
-      if (Math.abs(walk) > 4) moved = true;
+      if (Math.abs(walk) > 4) favScrollMoved = true;
       slider.scrollLeft = scrollLeft - walk;
     });
     slider.addEventListener('wheel', function(e) {
