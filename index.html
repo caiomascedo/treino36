@@ -31,9 +31,169 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 .search-bar { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; background: #f5f5f5; padding: 5px; border-radius: 12px; }
 .search-input-wrap { position: relative; grid-column: 1 / -1; min-width: 0; display: flex; align-items: center; gap: 4px; background: white; border-radius: 30px; padding-right: 8px; }
 .search-input-wrap #searchName { flex: 1; min-width: 0; border-radius: 30px 0 0 30px; background: transparent; padding: 6px 8px 6px 12px; }
-.clear-name-btn { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #e2e8f0; color: #64748b; border: none; cursor: pointer; font-size: 0.65rem; font-weight: bold; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all .15s ease; }
+.clear-name-btn { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: #e2e8f0; color: #64748b; border: none; cursor: pointer; font-size: 0.82rem; font-weight: bold; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all .15s ease; }
 .clear-name-btn:hover, .clear-name-btn:active { background: #cbd5e1; color: #0f172a; transform: scale(1.1); }
 .clear-name-btn[hidden] { display: none !important; }
+.workout-favorites-container {
+  grid-column: 1 / -1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 3px 5px;
+  margin: 1px 0 3px 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.workout-favorites-header-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 3px;
+  flex-shrink: 0;
+}
+.workout-favorites-scroll {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 1px;
+  cursor: grab;
+}
+.workout-favorites-scroll:active {
+  cursor: grabbing;
+}
+.workout-favorites-scroll::-webkit-scrollbar {
+  display: none;
+}
+.fav-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #e2e8f0;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  transition: all .15s ease;
+  max-width: 140px;
+}
+.fav-tab-item:hover {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+.fav-tab-item.active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  border-color: #3b82f6 !important;
+  border-top: 2.5px solid #2563eb !important;
+  box-shadow: 0 1px 4px rgba(37,99,235,0.18);
+}
+.fav-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.fav-tab-title {
+  max-width: 85px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fav-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  margin-left: 2px;
+  transition: all .15s ease;
+}
+.fav-tab-close:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  transform: scale(1.15);
+}
+.fav-tab-empty {
+  font-size: 0.72rem;
+  color: #64748b;
+  padding: 2px 4px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.add-favorite-tab-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px dashed #94a3b8;
+  background: #ffffff;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1;
+  padding: 0;
+  transition: all .15s ease;
+}
+.add-favorite-tab-btn:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #3b82f6;
+  border-style: solid;
+  transform: scale(1.08);
+}
+.fav-aluno-btn {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  font-size: 0.62rem !important;
+  padding: 3px 7px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  border-radius: 4px !important;
+  cursor: pointer;
+}
+.fav-aluno-btn:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+.fav-aluno-btn.fav-ativo {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border: 1px solid #f59e0b !important;
+  font-weight: 700 !important;
+}
 .search-action-btn { flex-shrink: 0; width: 26px; height: 26px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: transparent; border: none; cursor: pointer; position: relative; transition: transform .15s ease, background .15s ease; }
 .search-action-btn:hover { background: #f1f5f9; transform: scale(1.1); }
 .search-action-btn:active { transform: scale(0.95); }
@@ -854,6 +1014,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     <div class="search-input-wrap">
       <input type="text" id="searchName" placeholder="Nome do aluno" autocomplete="off" aria-autocomplete="list" aria-controls="nameSuggestions">
       <button type="button" id="clearNameBtn" class="clear-name-btn" title="Limpar nome" aria-label="Limpar nome" hidden>✕</button>
+      <button type="button" id="favStarIconBtn" class="search-action-btn" title="Favoritar este aluno" aria-label="Favoritar este aluno">
+        <svg id="favStarIconSvg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+      </button>
       <button type="button" id="wppIconBtn" class="search-action-btn" title="Adicionar/editar WhatsApp do aluno" aria-label="WhatsApp do aluno">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="#25D366">
           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
@@ -867,6 +1032,15 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         <span id="obsInputDot" class="obs-indicator-dot" hidden></span>
       </button>
       <div id="nameSuggestions" class="name-suggestions" role="listbox"></div>
+    </div>
+    <div id="workoutFavoritesContainer" class="workout-favorites-container">
+      <div class="workout-favorites-header-label" title="Treinos favoritos">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="#f59e0b" stroke="#d97706" stroke-width="1.5">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+      </div>
+      <div class="workout-favorites-scroll" id="workoutFavoritesScroll"></div>
+      <button type="button" id="addFavoriteBtn" class="add-favorite-tab-btn" title="Adicionar aos favoritos" aria-label="Adicionar aos favoritos">＋</button>
     </div>
     <button id="listBtn" class="list">📋 Lista</button>
     <button id="saveBtn" class="save">💾 Salvar</button>
@@ -4922,6 +5096,211 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     modal.style.visibility = 'visible';
   }
 
+  /* ===== TREINOS FAVORITOS (GUIAS ESTILO NAVEGADOR COM VETOR) ===== */
+  var TREINO_FAVORITOS_KEY = 'treinoFavoritos';
+  var favoritos = [];
+
+  function svgEstrela(preenchida, tamanho) {
+    var tam = tamanho || 13;
+    if (preenchida) {
+      return '<svg viewBox="0 0 24 24" width="' + tam + '" height="' + tam + '" fill="#f59e0b" stroke="#d97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" width="' + tam + '" height="' + tam + '" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+  }
+
+  function carregarFavoritos() {
+    favoritos = [];
+    try {
+      var salvos = JSON.parse(localStorage.getItem(TREINO_FAVORITOS_KEY) || '[]');
+      if (Array.isArray(salvos)) favoritos = salvos;
+    } catch(e) {}
+    alunos.forEach(function(a) {
+      if (a.favorito && !favoritos.some(function(f) { return normalizarNome(f.nome) === normalizarNome(a.nome); })) {
+        favoritos.push({ student_id: a.student_id || null, nome: a.nome });
+      }
+    });
+    favoritos.forEach(function(f) {
+      var a = buscarAluno(f.nome);
+      if (a) a.favorito = true;
+    });
+  }
+
+  function salvarFavoritos() {
+    try {
+      localStorage.setItem(TREINO_FAVORITOS_KEY, JSON.stringify(favoritos));
+    } catch(e) {}
+  }
+
+  function isFavorito(alunoOuNome) {
+    var nome = typeof alunoOuNome === 'string' ? alunoOuNome : (alunoOuNome && alunoOuNome.nome ? alunoOuNome.nome : '');
+    if (!nome) return false;
+    return favoritos.some(function(f) {
+      return normalizarNome(f.nome) === normalizarNome(nome);
+    });
+  }
+
+  function adicionarFavorito(alunoOuNome) {
+    var a = typeof alunoOuNome === 'string' ? buscarAluno(alunoOuNome) : alunoOuNome;
+    var nome = a ? a.nome : (typeof alunoOuNome === 'string' ? alunoOuNome.trim() : '');
+    if (!nome) return false;
+    if (isFavorito(nome)) return true;
+    if (a) {
+      a.favorito = true;
+      salvarLocalStorage();
+    }
+    favoritos.push({ student_id: a ? a.student_id : null, nome: nome });
+    salvarFavoritos();
+    renderizarBarraFavoritos();
+    atualizarEstrelaBusca();
+    return true;
+  }
+
+  function removerFavorito(alunoOuNome) {
+    var nome = typeof alunoOuNome === 'string' ? alunoOuNome : (alunoOuNome && alunoOuNome.nome ? alunoOuNome.nome : '');
+    if (!nome) return;
+    var a = buscarAluno(nome);
+    if (a) {
+      a.favorito = false;
+      salvarLocalStorage();
+    }
+    favoritos = favoritos.filter(function(f) {
+      return normalizarNome(f.nome) !== normalizarNome(nome);
+    });
+    salvarFavoritos();
+    renderizarBarraFavoritos();
+    atualizarEstrelaBusca();
+  }
+
+  function atualizarEstrelaBusca() {
+    var btn = document.getElementById('favStarIconBtn');
+    var svg = document.getElementById('favStarIconSvg');
+    if (!btn || !svg) return;
+    var inp = document.getElementById('searchName');
+    var val = inp ? inp.value.trim() : '';
+    if (!val) {
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', '#cbd5e1');
+      btn.title = 'Favoritar este aluno';
+      return;
+    }
+    var fav = isFavorito(val);
+    if (fav) {
+      svg.setAttribute('fill', '#f59e0b');
+      svg.setAttribute('stroke', '#d97706');
+      btn.title = 'Remover dos favoritos';
+    } else {
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', '#94a3b8');
+      btn.title = 'Adicionar aos favoritos';
+    }
+  }
+
+  function renderizarBarraFavoritos() {
+    var host = document.getElementById('workoutFavoritesScroll');
+    if (!host) return;
+    var inp = document.getElementById('searchName');
+    var nomeAtivo = inp ? inp.value.trim() : '';
+
+    host.replaceChildren();
+
+    if (!favoritos.length) {
+      var empty = document.createElement('div');
+      empty.className = 'fav-tab-empty';
+      empty.innerHTML = svgEstrela(true, 13) + ' <span style="margin-left:3px;color:#64748b;">Favoritos vazios</span>';
+      host.appendChild(empty);
+    } else {
+      favoritos.forEach(function(f) {
+        var isAtivo = normalizarNome(f.nome) === normalizarNome(nomeAtivo);
+        var tab = document.createElement('div');
+        tab.className = 'fav-tab-item' + (isAtivo ? ' active' : '');
+        tab.setAttribute('role', 'button');
+        tab.setAttribute('tabindex', '0');
+        tab.setAttribute('title', 'Abrir treino favorito de ' + f.nome + (isAtivo ? ' (ativo)' : ''));
+
+        var icon = document.createElement('span');
+        icon.className = 'fav-tab-icon';
+        icon.innerHTML = svgEstrela(true, 12);
+
+        var title = document.createElement('span');
+        title.className = 'fav-tab-title';
+        title.textContent = f.nome;
+
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'fav-tab-close';
+        closeBtn.setAttribute('title', 'Remover "' + f.nome + '" dos favoritos');
+        closeBtn.setAttribute('aria-label', 'Remover ' + f.nome + ' dos favoritos');
+        closeBtn.textContent = '✕';
+        closeBtn.onclick = function(e) {
+          e.stopPropagation();
+          if (confirm('Deseja realmente retirar "' + f.nome + '" dos favoritos?')) {
+            removerFavorito(f.nome);
+            exibirMensagem('⭐ "' + f.nome + '" removido dos favoritos.', '#b8860b', false);
+          }
+        };
+
+        tab.appendChild(icon);
+        tab.appendChild(title);
+        tab.appendChild(closeBtn);
+
+        tab.onclick = function() {
+          var a = buscarAluno(f.nome);
+          if (a) {
+            carregarTreinoAluno(a);
+            exibirMensagem('✅ Treino favorito de ' + escHtml(a.nome) + ' carregado.', '#1e6f3f', false);
+            renderizarBarraFavoritos();
+            try { tab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' }); } catch(err){}
+          } else {
+            exibirMensagem('⚠️ Aluno "' + f.nome + '" não encontrado.', '#b8860b', false);
+          }
+        };
+
+        tab.onkeydown = function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            tab.click();
+          }
+        };
+
+        host.appendChild(tab);
+        if (isAtivo) {
+          setTimeout(function() {
+            try { tab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' }); } catch(err){}
+          }, 60);
+        }
+      });
+    }
+    atualizarEstrelaBusca();
+  }
+
+  function configurarScrollArrastoFavoritos() {
+    var slider = document.getElementById('workoutFavoritesScroll');
+    if (!slider) return;
+    var isDown = false, startX, scrollLeft, moved = false;
+    slider.addEventListener('mousedown', function(e) {
+      if (e.target.closest('.fav-tab-close') || e.target.closest('button')) return;
+      isDown = true;
+      moved = false;
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+    });
+    slider.addEventListener('mouseleave', function() { isDown = false; });
+    slider.addEventListener('mouseup', function() { isDown = false; });
+    slider.addEventListener('mousemove', function(e) {
+      if (!isDown) return;
+      var x = e.pageX - slider.offsetLeft;
+      var walk = (x - startX) * 1.5;
+      if (Math.abs(walk) > 4) moved = true;
+      slider.scrollLeft = scrollLeft - walk;
+    });
+    slider.addEventListener('wheel', function(e) {
+      if (e.deltaY && !e.deltaX) {
+        e.preventDefault();
+        slider.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
   /* ===== ALUNO SELECIONADO ===== */
   var ALUNO_SELECIONADO_KEY = 'treinoAlunoSelecionado';
   function atualizarNomeTreino() {
@@ -4933,6 +5312,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     document.getElementById('alunoAtualCabecalho').hidden = !nome;
     var clearBtn = document.getElementById('clearNameBtn');
     if (clearBtn) clearBtn.hidden = !val;
+    atualizarEstrelaBusca();
+    renderizarBarraFavoritos();
   }
   function registrarAlunoSelecionado(nome) {
     nome = String(nome || '').trim();
@@ -4943,6 +5324,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       if (nome) localStorage.setItem(ALUNO_SELECIONADO_KEY, nome);
       else localStorage.removeItem(ALUNO_SELECIONADO_KEY);
     } catch(e) {}
+    renderizarBarraFavoritos();
   }
 
   function editarNomeAluno(nomeAtual) {
@@ -4965,7 +5347,13 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     aluno = buscarAluno(nomeAtual);
     if (aluno) {
       aluno.nome = novoNome;
+      var fav = favoritos.find(function(f) { return normalizarNome(f.nome) === normalizarNome(nomeAtual); });
+      if (fav) {
+        fav.nome = novoNome;
+        salvarFavoritos();
+      }
       salvarLocalStorage();
+      renderizarBarraFavoritos();
     }
     if (document.getElementById('searchName').value.trim() === nomeAtual) {
       registrarAlunoSelecionado(novoNome);
@@ -5101,6 +5489,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     if (!nome) { exibirMensagem('❌ Digite o nome do aluno a ser apagado.', '#b22222', false); return; }
     var idx = alunos.findIndex(function(a) { return a.nome.toLowerCase() === nome.toLowerCase(); });
     if (idx === -1) { exibirMensagem('❌ Aluno "' + nome + '" não encontrado.', '#b22222', false); return; }
+    removerFavorito(nome);
     alunos.splice(idx, 1); salvarLocalStorage();
     exibirMensagem('🗑️ Aluno <strong>' + nome + '</strong> removido.', '#b22222', false);
     registrarAlunoSelecionado('');
@@ -5114,12 +5503,15 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   /* ===== EXPORT / IMPORT JSON ===== */
   function exportarJSON() {
     var n = document.getElementById('searchName').value.trim(); if (n) salvarAlunoAtual(false);
+    alunos.forEach(function(a) {
+      a.favorito = isFavorito(a);
+    });
     var blob = new Blob([JSON.stringify(alunos, null, 2)], {type:'application/json'});
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a'); a.href = url;
     a.download = 'treinos_' + new Date().toISOString().slice(0,19) + '.json';
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    exibirMensagem('💾 JSON exportado!', '#1e6f3f', false);
+    exibirMensagem('💾 JSON exportado (com favoritos)!', '#1e6f3f', false);
   }
   
   function importarJSON() {
@@ -5130,8 +5522,9 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       reader.onload = function(ev) {
         try {
           var dados = JSON.parse(ev.target.result);
-          if (!Array.isArray(dados)) throw new Error();
-          dados.forEach(function(item) {
+          var lista = Array.isArray(dados) ? dados : (dados && Array.isArray(dados.alunos) ? dados.alunos : null);
+          if (!lista) throw new Error();
+          lista.forEach(function(item) {
             if (!item.nome || !item.treino) throw new Error();
             if (!item.titulos) item.titulos = {};
             if (item.secaoFAtiva === undefined) item.secaoFAtiva = false;
@@ -5142,9 +5535,19 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
           });
           concluirAutoSave();
           var nomeAntesImportacao = document.getElementById('searchName').value.trim();
-          alunos = dados; 
+          alunos = lista;
+          carregarFavoritos();
+          if (!Array.isArray(dados) && Array.isArray(dados.favoritos)) {
+            dados.favoritos.forEach(function(f) {
+              if (f && f.nome && !isFavorito(f.nome)) {
+                favoritos.push({ student_id: f.student_id || null, nome: f.nome });
+              }
+            });
+            salvarFavoritos();
+          }
           salvarLocalStorage();
-          exibirMensagem('📂 JSON carregado! ' + alunos.length + ' aluno(s).', '#1e6f3f', false);
+          renderizarBarraFavoritos();
+          exibirMensagem('📂 JSON carregado! ' + alunos.length + ' aluno(s) e ' + favoritos.length + ' favorito(s).', '#1e6f3f', false);
           if (alunos.length) carregarTreinoAluno(buscarAluno(nomeAntesImportacao) || alunos[0]);
           else registrarAlunoSelecionado('');
           pushState();
@@ -5238,13 +5641,16 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         lista.innerHTML = encontrados.map(function(a) {
           var isSelecionado = alunoAtivo && ((a.student_id && a.student_id === alunoAtivo.student_id) || normalizarNome(a.nome) === normalizarNome(alunoAtivo.nome));
           var isNovo = (!Array.isArray(a.historicoTreinos) || a.historicoTreinos.length === 0);
+          var isFav = isFavorito(a);
+          var badgeFav = isFav ? ' <span class="sub-badge fav" style="background:#fef3c7;color:#b45309;font-size:0.62rem;padding:1px 5px;border-radius:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:3px;">' + svgEstrela(true, 11) + ' Favorito</span>' : '';
           var badgeNovo = isNovo ? ' <span class="sub-badge novo" style="font-size:0.62rem;padding:1px 5px;border-radius:4px;vertical-align:middle;">🆕 Novo</span>' : '';
           var badgeSel = isSelecionado ? ' <span class="sub-badge selecionado" style="background:#16a34a;color:#ffffff;font-size:0.65rem;padding:2px 7px;border-radius:12px;font-weight:700;vertical-align:middle;box-shadow:0 1px 3px rgba(22,163,74,0.35);">📌 Selecionado(a)</span>' : '';
           var itemClass = 'aluno-list-item' + (isSelecionado ? ' aluno-selecionado' : '');
           return '<div class="' + itemClass + '" tabindex="0" role="button" aria-label="Abrir treino de ' + escAttr(a.nome) + (isSelecionado ? ' (atualmente selecionado)' : '') + '" data-nome="' + escAttr(a.nome) + '">'
-          + '<div class="aluno-info"><div class="aluno-nome">' + escHtml(a.nome) + badgeSel + badgeNovo + '</div>'
+          + '<div class="aluno-info"><div class="aluno-nome">' + escHtml(a.nome) + badgeSel + badgeFav + badgeNovo + '</div>'
           + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + (isSelecionado ? ' · <strong style="color:#16a34a;">🟢 Aluno ativo na tela</strong>' : '') + '</div></div>'
           + '<div class="aluno-actions">'
+          + '<button class="fav-aluno-btn' + (isFav ? ' fav-ativo' : '') + '" data-nome="' + escAttr(a.nome) + '" title="' + (isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + svgEstrela(isFav, 13) + (isFav ? ' Favorito' : ' Favoritar') + '</button>'
           + '<button class="hist-aluno-btn' + (isSelecionado ? ' hist-selecionado' : '') + '" data-nome="' + escAttr(a.nome) + '"' + (isSelecionado ? ' style="background:#0284c7!important;font-weight:700;box-shadow:0 1px 3px rgba(2,132,199,0.35);"' : '') + '>📜 Histórico</button>'
           + '<button class="wpp-aluno-btn" data-nome="' + escAttr(a.nome) + '" style="background:#25d366!important;font-size:.62rem!important;padding:3px 7px!important;" title="Editar WhatsApp">📱 ' + escHtml(a.whatsapp || 'WhatsApp') + '</button>'
           + '<button class="move-student-btn" data-nome="' + escAttr(a.nome) + '">↪ Mover</button>'
@@ -5283,6 +5689,22 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       lista.addEventListener('click', function(e) {
         var item = e.target.closest('.aluno-list-item');
         if (!item) return;
+        if (e.target.closest('.fav-aluno-btn')) {
+          var aFav = buscarAluno(item.dataset.nome);
+          if (!aFav) return;
+          if (isFavorito(aFav)) {
+            if (confirm('Deseja realmente retirar "' + aFav.nome + '" dos favoritos?')) {
+              removerFavorito(aFav);
+              atualizarItens();
+              exibirMensagem('⭐ "' + aFav.nome + '" removido dos favoritos.', '#b8860b', false);
+            }
+          } else {
+            adicionarFavorito(aFav);
+            atualizarItens();
+            exibirMensagem('⭐ "' + aFav.nome + '" adicionado aos favoritos!', '#16a34a', false);
+          }
+          return;
+        }
         if (e.target.closest('.hist-aluno-btn')) {
           var aHist = buscarAluno(item.dataset.nome);
           if (!aHist) return;
@@ -5466,6 +5888,64 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       input.focus();
     });
   }
+  var favStarBtn = document.getElementById('favStarIconBtn');
+  if (favStarBtn) {
+    favStarBtn.addEventListener('click', function() {
+      var val = document.getElementById('searchName').value.trim();
+      if (!val) {
+        exibirMensagem('❌ Selecione ou digite o nome de um aluno para favoritar.', '#b8860b', false);
+        return;
+      }
+      var a = buscarAluno(val) || { nome: val };
+      if (isFavorito(val)) {
+        if (confirm('Deseja realmente retirar "' + val + '" dos favoritos?')) {
+          removerFavorito(val);
+          exibirMensagem('⭐ "' + val + '" removido dos favoritos.', '#b8860b', false);
+        }
+      } else {
+        adicionarFavorito(a);
+        exibirMensagem('⭐ "' + val + '" adicionado aos favoritos!', '#16a34a', false);
+      }
+    });
+  }
+  var addFavBtn = document.getElementById('addFavoriteBtn');
+  if (addFavBtn) {
+    addFavBtn.addEventListener('click', function() {
+      var alunoAtivo = (typeof alunoNaTela === 'function' ? alunoNaTela() : null) || 
+                       (document.getElementById('searchName') && document.getElementById('searchName').value.trim() ? buscarAluno(document.getElementById('searchName').value.trim()) : null);
+      if (alunoAtivo) {
+        if (isFavorito(alunoAtivo)) {
+          exibirMensagem('⭐ "' + alunoAtivo.nome + '" já está nos favoritos.', '#0284c7', false);
+        } else {
+          adicionarFavorito(alunoAtivo);
+          exibirMensagem('⭐ "' + alunoAtivo.nome + '" adicionado aos favoritos!', '#16a34a', false);
+        }
+      } else {
+        if (!alunos.length) {
+          exibirMensagem('Nenhum aluno cadastrado para favoritar.', '#b8860b', false);
+          return;
+        }
+        var opcoes = alunos.map(function(a, idx) { return (idx + 1) + ') ' + a.nome + (isFavorito(a) ? ' ⭐' : ''); }).join('\n');
+        var escolha = prompt('⭐ Adicionar aos favoritos\n\nDigite o número do aluno:\n\n' + opcoes);
+        if (escolha === null) return;
+        var idx = parseInt(escolha, 10) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= alunos.length) {
+          alert('Número inválido.');
+          return;
+        }
+        var escolhido = alunos[idx];
+        if (isFavorito(escolhido)) {
+          exibirMensagem('⭐ "' + escolhido.nome + '" já está nos favoritos.', '#0284c7', false);
+        } else {
+          adicionarFavorito(escolhido);
+          exibirMensagem('⭐ "' + escolhido.nome + '" adicionado aos favoritos!', '#16a34a', false);
+        }
+      }
+    });
+  }
+  carregarFavoritos();
+  renderizarBarraFavoritos();
+  configurarScrollArrastoFavoritos();
   document.getElementById('wppIconBtn').addEventListener('click', function() {
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) { exibirMensagem('❌ Digite o nome do aluno primeiro.', '#b22222', false); return; }
