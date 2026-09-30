@@ -254,6 +254,176 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
   color: #0f172a;
   border-color: #94a3b8;
 }
+.fav-tab-item.is-dragging {
+  opacity: 0.45 !important;
+  transform: scale(0.96);
+  border-style: dashed !important;
+}
+.fav-tab-item.drag-over {
+  border-left: 3px solid #2563eb !important;
+  background: #eff6ff !important;
+  transform: translateX(2px);
+}
+.fav-floating-handle {
+  display: none !important;
+  width: 100%;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: #ffffff;
+  border-radius: 6px 6px 0 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  box-sizing: border-box;
+}
+.fav-floating-handle:active {
+  cursor: grabbing;
+}
+.workout-favorites-container.is-floating {
+  position: fixed !important;
+  z-index: 10050 !important;
+  max-width: 94vw !important;
+  width: auto !important;
+  min-width: 270px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0,0,0,0.15) !important;
+  border: 1.5px solid #3b82f6 !important;
+  background: #ffffff !important;
+  border-radius: 10px !important;
+  padding: 4px 6px 6px 6px !important;
+  margin: 0 !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+.workout-favorites-container.is-floating .fav-floating-handle {
+  display: flex !important;
+}
+.fav-mini-btn {
+  background: rgba(255,255,255,0.22);
+  border: 1px solid rgba(255,255,255,0.45);
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  padding: 1px 7px;
+  cursor: pointer;
+  line-height: 1.3;
+  font-weight: 600;
+  transition: all .15s ease;
+}
+.fav-mini-btn:hover {
+  background: rgba(255,255,255,0.4);
+}
+.fav-reorder-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10100;
+  padding: 12px;
+}
+.fav-reorder-content {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 100%;
+  max-width: 380px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.28);
+}
+.fav-reorder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.fav-reorder-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+.fav-reorder-list {
+  overflow-y: auto;
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 55vh;
+}
+.fav-reorder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  gap: 6px;
+}
+.fav-reorder-item.is-front {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+.fav-reorder-item-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.fav-reorder-pos {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  min-width: 22px;
+}
+.fav-reorder-name {
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fav-reorder-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.fav-reorder-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  padding: 2px 5px;
+  cursor: pointer;
+  color: #334155;
+  line-height: 1.2;
+}
+.fav-reorder-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+.fav-reorder-btn.front-btn {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+  font-weight: 700;
+}
+.fav-reorder-btn.front-btn:hover {
+  background: #bfdbfe;
+}
 .fav-aluno-btn {
   background: #f8fafc !important;
   color: #475569 !important;
@@ -1150,8 +1320,20 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       <div id="nameSuggestions" class="name-suggestions" role="listbox"></div>
     </div>
     <div id="workoutFavoritesContainer" class="workout-favorites-container">
+      <div id="favFloatingHandle" class="fav-floating-handle" title="Arraste para mover livremente pela tela">
+        <span class="fav-handle-label" style="display:inline-flex;align-items:center;gap:4px;">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+            <circle cx="8" cy="6" r="1.8"/><circle cx="16" cy="6" r="1.8"/>
+            <circle cx="8" cy="12" r="1.8"/><circle cx="16" cy="12" r="1.8"/>
+            <circle cx="8" cy="18" r="1.8"/><circle cx="16" cy="18" r="1.8"/>
+          </svg>
+          Mover Favoritos
+        </span>
+        <button type="button" id="unfloatFavBtn" class="fav-mini-btn" title="Fixar favoritos de volta no topo">📌 Fixar no topo</button>
+      </div>
       <div class="workout-favorites-header-bar" id="workoutFavoritesHeaderBar" hidden>
         <div class="workout-favorites-header-actions">
+          <button type="button" id="favReorderHeaderBtn" class="fav-header-btn" title="Organizar quem fica na frente">⇅ Organizar</button>
           <button type="button" id="favLockBtn" class="fav-header-btn" title="Trancar favoritos abertos">🔓 Trancar</button>
           <button type="button" id="favCollapseBtn" class="fav-header-btn" title="Recolher favoritos">▲ Recolher</button>
         </div>
@@ -1163,6 +1345,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg>＋
         </button>
+        <button type="button" id="reorderFavoritesBtn" class="fav-expand-tab-btn" title="Organizar quem fica na frente" aria-label="Organizar ordem dos favoritos">⇅</button>
+        <button type="button" id="floatFavoritesBtn" class="fav-expand-tab-btn" title="Flutuar favoritos para arrastar livremente na tela" aria-label="Flutuar favoritos">🗗</button>
         <button type="button" id="expandFavoritesBtn" class="fav-expand-tab-btn" title="Ampliar e ver todos os favoritos" aria-label="Ampliar favoritos">⛶</button>
       </div>
     </div>
@@ -5223,10 +5407,14 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   /* ===== TREINOS FAVORITOS (GUIAS ESTILO NAVEGADOR COM VETOR) ===== */
   var TREINO_FAVORITOS_KEY = 'treinoFavoritos';
   var TREINO_FAVORITOS_TRANCADO_KEY = 'treinoFavTrancado_v2';
+  var TREINO_FAVORITOS_FLOAT_KEY = 'treinoFavFloat_v2';
+  var TREINO_FAVORITOS_FLOAT_POS_KEY = 'treinoFavFloatCoords_v2';
   var favoritos = [];
   var favoritosTrancado = false;
   var favoritosExpandido = false;
+  var isFavoritosFlutuando = false;
   var favScrollMoved = false;
+  var favDraggedIdx = null;
 
   function svgEstrela(preenchida, tamanho) {
     var tam = tamanho || 13;
@@ -5248,6 +5436,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     } catch(e) {
       favoritosTrancado = false;
       favoritosExpandido = false;
+    }
+    try {
+      isFavoritosFlutuando = localStorage.getItem(TREINO_FAVORITOS_FLOAT_KEY) === 'true';
+    } catch(e) {
+      isFavoritosFlutuando = false;
     }
     alunos.forEach(function(a) {
       if (a.favorito && !favoritos.some(function(f) { return normalizarNome(f.nome) === normalizarNome(a.nome); })) {
@@ -5333,6 +5526,247 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     }
   }
 
+  function aplicarModoFlutuanteFavoritos(ativar) {
+    var container = document.getElementById('workoutFavoritesContainer');
+    var floatBtn = document.getElementById('floatFavoritesBtn');
+    if (!container) return;
+
+    if (ativar === undefined) {
+      isFavoritosFlutuando = !isFavoritosFlutuando;
+    } else {
+      isFavoritosFlutuando = !!ativar;
+    }
+
+    try {
+      localStorage.setItem(TREINO_FAVORITOS_FLOAT_KEY, isFavoritosFlutuando ? 'true' : 'false');
+    } catch(e){}
+
+    if (isFavoritosFlutuando) {
+      container.classList.add('is-floating');
+      if (floatBtn) {
+        floatBtn.textContent = '📌';
+        floatBtn.title = 'Fixar favoritos de volta no topo';
+      }
+      try {
+        var rawPos = localStorage.getItem(TREINO_FAVORITOS_FLOAT_POS_KEY);
+        if (rawPos) {
+          var pos = JSON.parse(rawPos);
+          if (pos && pos.left && pos.top) {
+            container.style.left = pos.left;
+            container.style.top = pos.top;
+            container.style.right = 'auto';
+            container.style.bottom = 'auto';
+          }
+        } else {
+          container.style.top = '70px';
+          container.style.left = Math.max(10, (window.innerWidth - 320)) + 'px';
+        }
+      } catch(e){}
+      exibirMensagem('🗗 Favoritos flutuando! Arraste pelo cabeçalho para onde quiser.', '#0284c7', false);
+    } else {
+      container.classList.remove('is-floating');
+      container.style.left = '';
+      container.style.top = '';
+      container.style.right = '';
+      container.style.bottom = '';
+      if (floatBtn) {
+        floatBtn.textContent = '🗗';
+        floatBtn.title = 'Flutuar favoritos para arrastar livremente na tela';
+      }
+      exibirMensagem('📌 Favoritos fixados no topo!', '#1e6f3f', false);
+    }
+  }
+
+  function configurarArrastoFlutuante() {
+    var handle = document.getElementById('favFloatingHandle');
+    var container = document.getElementById('workoutFavoritesContainer');
+    if (!handle || !container) return;
+
+    var isDragging = false;
+    var startX = 0, startY = 0;
+    var initialLeft = 0, initialTop = 0;
+
+    handle.addEventListener('pointerdown', function(e) {
+      if (e.target.closest('button')) return;
+      isDragging = true;
+      try { handle.setPointerCapture(e.pointerId); } catch(err){}
+      startX = e.clientX;
+      startY = e.clientY;
+
+      var rect = container.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      e.preventDefault();
+    });
+
+    handle.addEventListener('pointermove', function(e) {
+      if (!isDragging) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+
+      var newLeft = initialLeft + dx;
+      var newTop = initialTop + dy;
+
+      var maxLeft = Math.max(10, window.innerWidth - container.offsetWidth - 10);
+      var maxTop = Math.max(10, window.innerHeight - container.offsetHeight - 10);
+
+      newLeft = Math.max(10, Math.min(maxLeft, newLeft));
+      newTop = Math.max(10, Math.min(maxTop, newTop));
+
+      container.style.left = newLeft + 'px';
+      container.style.top = newTop + 'px';
+      container.style.right = 'auto';
+      container.style.bottom = 'auto';
+    });
+
+    function terminarArrasto(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      try { handle.releasePointerCapture(e.pointerId); } catch(err){}
+      try {
+        var pos = {
+          left: container.style.left,
+          top: container.style.top
+        };
+        localStorage.setItem(TREINO_FAVORITOS_FLOAT_POS_KEY, JSON.stringify(pos));
+      } catch(err){}
+    }
+
+    handle.addEventListener('pointerup', terminarArrasto);
+    handle.addEventListener('pointercancel', terminarArrasto);
+  }
+
+  function abrirModalOrganizarFavoritos() {
+    if (!favoritos.length) {
+      exibirMensagem('⚠️ Adicione ao menos um favorito para organizar.', '#b8860b', false);
+      return;
+    }
+
+    var existingModal = document.getElementById('favReorderModal');
+    if (existingModal) existingModal.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'favReorderModal';
+    modal.className = 'fav-reorder-modal';
+
+    function renderModalContent() {
+      modal.replaceChildren();
+
+      var card = document.createElement('div');
+      card.className = 'fav-reorder-content';
+
+      var header = document.createElement('div');
+      header.className = 'fav-reorder-header';
+      header.innerHTML = '<span class="fav-reorder-title">⇅ Organizar Quem Fica na Frente</span><button type="button" class="fav-reorder-btn" style="font-size:0.85rem;padding:2px 8px;font-weight:bold;">✕</button>';
+      header.querySelector('button').onclick = function() { modal.remove(); };
+
+      var desc = document.createElement('p');
+      desc.style.cssText = 'font-size:0.72rem;color:#64748b;margin:6px 0 2px 0;line-height:1.3;';
+      desc.textContent = 'Escolha quem fica em primeiro na frente da lista de favoritos:';
+
+      var list = document.createElement('div');
+      list.className = 'fav-reorder-list';
+
+      favoritos.forEach(function(f, idx) {
+        var item = document.createElement('div');
+        item.className = 'fav-reorder-item' + (idx === 0 ? ' is-front' : '');
+
+        var info = document.createElement('div');
+        info.className = 'fav-reorder-item-info';
+
+        var pos = document.createElement('span');
+        pos.className = 'fav-reorder-pos';
+        pos.textContent = (idx === 0 ? '🥇 ' : '') + '#' + (idx + 1);
+
+        var name = document.createElement('span');
+        name.className = 'fav-reorder-name';
+        name.textContent = f.nome;
+        if (idx === 0) name.innerHTML += ' <span style="font-size:0.65rem;color:#2563eb;font-weight:bold;">(Na Frente)</span>';
+
+        info.appendChild(pos);
+        info.appendChild(name);
+
+        var actions = document.createElement('div');
+        actions.className = 'fav-reorder-actions';
+
+        if (idx > 0) {
+          var frontBtn = document.createElement('button');
+          frontBtn.type = 'button';
+          frontBtn.className = 'fav-reorder-btn front-btn';
+          frontBtn.title = 'Colocar na frente de todos (posição 1)';
+          frontBtn.textContent = '🔝 1º';
+          frontBtn.onclick = function() {
+            var moved = favoritos.splice(idx, 1)[0];
+            favoritos.unshift(moved);
+            salvarFavoritos();
+            renderizarBarraFavoritos();
+            renderModalContent();
+            exibirMensagem('⭐ "' + moved.nome + '" agora está na frente (#1)!', '#1e6f3f', false);
+          };
+          actions.appendChild(frontBtn);
+
+          var upBtn = document.createElement('button');
+          upBtn.type = 'button';
+          upBtn.className = 'fav-reorder-btn';
+          upBtn.title = 'Mover para frente';
+          upBtn.textContent = '▲';
+          upBtn.onclick = function() {
+            var temp = favoritos[idx];
+            favoritos[idx] = favoritos[idx - 1];
+            favoritos[idx - 1] = temp;
+            salvarFavoritos();
+            renderizarBarraFavoritos();
+            renderModalContent();
+          };
+          actions.appendChild(upBtn);
+        }
+
+        if (idx < favoritos.length - 1) {
+          var downBtn = document.createElement('button');
+          downBtn.type = 'button';
+          downBtn.className = 'fav-reorder-btn';
+          downBtn.title = 'Mover para trás';
+          downBtn.textContent = '▼';
+          downBtn.onclick = function() {
+            var temp = favoritos[idx];
+            favoritos[idx] = favoritos[idx + 1];
+            favoritos[idx + 1] = temp;
+            salvarFavoritos();
+            renderizarBarraFavoritos();
+            renderModalContent();
+          };
+          actions.appendChild(downBtn);
+        }
+
+        item.appendChild(info);
+        item.appendChild(actions);
+        list.appendChild(item);
+      });
+
+      var footer = document.createElement('div');
+      footer.style.cssText = 'display:flex;justify-content:flex-end;margin-top:8px;';
+      var closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'fav-header-btn';
+      closeBtn.style.cssText = 'background:#3b82f6;color:#ffffff;border:none;padding:5px 14px;font-size:0.75rem;border-radius:6px;font-weight:bold;cursor:pointer;';
+      closeBtn.textContent = 'Concluir';
+      closeBtn.onclick = function() { modal.remove(); };
+      footer.appendChild(closeBtn);
+
+      card.appendChild(header);
+      card.appendChild(desc);
+      card.appendChild(list);
+      card.appendChild(footer);
+      modal.appendChild(card);
+    }
+
+    renderModalContent();
+    modal.onclick = function(e) {
+      if (e.target === modal) modal.remove();
+    };
+    document.body.appendChild(modal);
+  }
+
   function isFavorito(alunoOuNome) {
     var nome = typeof alunoOuNome === 'string' ? alunoOuNome : (alunoOuNome && alunoOuNome.nome ? alunoOuNome.nome : '');
     if (!nome) return false;
@@ -5407,13 +5841,46 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       empty.innerHTML = '<span style="color:#64748b;font-size:0.72rem;padding:2px 4px;">Nenhum salvo nas guias</span>';
       host.appendChild(empty);
     } else {
-      favoritos.forEach(function(f) {
+      favoritos.forEach(function(f, idx) {
         var isAtivo = normalizarNome(f.nome) === normalizarNome(nomeAtivo);
         var tab = document.createElement('div');
         tab.className = 'fav-tab-item' + (isAtivo ? ' active' : '');
         tab.setAttribute('role', 'button');
         tab.setAttribute('tabindex', '0');
-        tab.setAttribute('title', 'Abrir treino de ' + f.nome + (isAtivo ? ' (ativo)' : ''));
+        tab.setAttribute('draggable', 'true');
+        tab.setAttribute('title', 'Abrir treino de ' + f.nome + (isAtivo ? ' (ativo)' : '') + ' · Arraste para mover de posição');
+
+        tab.addEventListener('dragstart', function(e) {
+          favDraggedIdx = idx;
+          tab.classList.add('is-dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          try { e.dataTransfer.setData('text/plain', String(idx)); } catch(err){}
+        });
+        tab.addEventListener('dragend', function() {
+          tab.classList.remove('is-dragging');
+          document.querySelectorAll('.fav-tab-item').forEach(function(el) {
+            el.classList.remove('drag-over');
+          });
+        });
+        tab.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          tab.classList.add('drag-over');
+        });
+        tab.addEventListener('dragleave', function() {
+          tab.classList.remove('drag-over');
+        });
+        tab.addEventListener('drop', function(e) {
+          e.preventDefault();
+          tab.classList.remove('drag-over');
+          if (favDraggedIdx === null || favDraggedIdx === undefined || favDraggedIdx === idx) return;
+          var movedItem = favoritos.splice(favDraggedIdx, 1)[0];
+          favoritos.splice(idx, 0, movedItem);
+          favDraggedIdx = null;
+          salvarFavoritos();
+          renderizarBarraFavoritos();
+          exibirMensagem('⭐ "' + movedItem.nome + '" movido para a posição ' + (idx + 1) + '!', '#1e6f3f', false);
+        });
 
         var icon = document.createElement('span');
         icon.className = 'fav-tab-icon';
@@ -6152,10 +6619,34 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       }
     });
   }
+  var reorderFavBtn = document.getElementById('reorderFavoritesBtn');
+  if (reorderFavBtn) {
+    reorderFavBtn.addEventListener('click', abrirModalOrganizarFavoritos);
+  }
+  var favReorderHeaderBtn = document.getElementById('favReorderHeaderBtn');
+  if (favReorderHeaderBtn) {
+    favReorderHeaderBtn.addEventListener('click', abrirModalOrganizarFavoritos);
+  }
+  var floatFavBtn = document.getElementById('floatFavoritesBtn');
+  if (floatFavBtn) {
+    floatFavBtn.addEventListener('click', function() {
+      aplicarModoFlutuanteFavoritos();
+    });
+  }
+  var unfloatFavBtn = document.getElementById('unfloatFavBtn');
+  if (unfloatFavBtn) {
+    unfloatFavBtn.addEventListener('click', function() {
+      aplicarModoFlutuanteFavoritos(false);
+    });
+  }
   carregarFavoritos();
   renderizarBarraFavoritos();
   atualizarModoFavoritos();
   configurarScrollArrastoFavoritos();
+  configurarArrastoFlutuante();
+  if (isFavoritosFlutuando) {
+    aplicarModoFlutuanteFavoritos(true);
+  }
   document.getElementById('wppIconBtn').addEventListener('click', function() {
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) { exibirMensagem('❌ Digite o nome do aluno primeiro.', '#b22222', false); return; }
