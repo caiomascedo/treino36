@@ -330,6 +330,39 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
   border-radius: 7px;
   font-size: 0.78rem;
   gap: 6px;
+  user-select: none;
+  cursor: grab;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background-color .15s ease;
+}
+.fav-reorder-item.is-dragging {
+  opacity: 0.88;
+  transform: scale(1.025);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+  border-color: #3b82f6 !important;
+  background: #eff6ff !important;
+  cursor: grabbing !important;
+  z-index: 100;
+}
+.fav-reorder-item.drag-over-top {
+  border-top: 3px solid #2563eb !important;
+}
+.fav-reorder-item.drag-over-bottom {
+  border-bottom: 3px solid #2563eb !important;
+}
+.fav-reorder-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  padding: 0 4px;
+  touch-action: none;
+  line-height: 1;
+}
+.fav-reorder-handle:active {
+  cursor: grabbing;
+  color: #2563eb;
 }
 .fav-reorder-item.is-front {
   border-color: #3b82f6;
@@ -366,7 +399,7 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   font-size: 0.65rem;
-  padding: 2px 5px;
+  padding: 2px 6px;
   cursor: pointer;
   color: #334155;
   line-height: 1.2;
@@ -384,6 +417,10 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 }
 .fav-reorder-btn.front-btn:hover {
   background: #bfdbfe;
+}
+.fav-tab-item.is-first-fixed {
+  border-left: 2px solid #f59e0b;
+  font-weight: 700;
 }
 .fav-aluno-btn {
   background: #f8fafc !important;
@@ -1222,13 +1259,14 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 .name-suggestion-group { border-bottom:1px solid #e2e8f0; }
 .name-suggestion-group:last-child { border-bottom:none; }
 .name-suggestion-sublist { background:#f8fafc; padding:2px 0; }
-.name-suggestion-subitem { display:flex; align-items:center; justify-content:space-between; padding:5px 10px 5px 28px; font-size:0.78rem; border-top:1px dashed #e2e8f0; }
-.name-suggestion-subitem .sub-name { color:#334155; display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.name-suggestion-subitem { display:flex; align-items:center; justify-content:space-between; padding:6px 10px 6px 28px; font-size:0.78rem; border-top:1px dashed #e2e8f0; cursor:pointer; transition:background .15s ease; }
+.name-suggestion-subitem:hover { background:#eff6ff; }
+.name-suggestion-subitem .sub-name { color:#334155; display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; cursor:pointer; }
 .name-suggestion-subitem .sub-badge { font-size:0.62rem; padding:1px 5px; border-radius:4px; font-weight:600; }
 .sub-badge.capa { background:#dcfce7; color:#15803d; }
 .sub-badge.anterior { background:#e0f2fe; color:#0369a1; }
 .name-suggestion-subitem .sub-load-btn { font-size:0.7rem; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1; background:#fff; color:#0f172a; cursor:pointer; }
-.name-suggestion-subitem .sub-load-btn:hover { background:#e2e8f0; }
+.name-suggestion-subitem .sub-load-btn:hover { background:#dbeafe; border-color:#93c5fd; color:#1d4ed8; }
 .sub-badge.novo { background:#dbeafe; color:#1e40af; }
 .compare-search-container { position:relative; margin:6px 0 8px; flex-shrink:0; }
 .compare-search-bar { display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:6px 10px; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
@@ -4954,7 +4992,32 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     lastStateSnapshot = snapshot;
     autoSave();
   }
-  function undo() { if (currentIndex > 0) { currentIndex--; applyState(historyStack[currentIndex]); } }
+  var alunoApagadoRecente = null;
+  function restaurarAlunoApagado() {
+    if (!alunoApagadoRecente || !alunoApagadoRecente.aluno) return false;
+    var recuperado = alunoApagadoRecente.aluno;
+    var idx = Math.min(alunoApagadoRecente.indice, alunos.length);
+    var existenteIdx = alunos.findIndex(function(a) { return normalizarNome(a.nome) === normalizarNome(recuperado.nome); });
+    if (existenteIdx !== -1) {
+      alunos[existenteIdx] = recuperado;
+    } else {
+      alunos.splice(idx, 0, recuperado);
+    }
+    if (alunoApagadoRecente.eraFavorito && typeof adicionarFavorito === 'function') {
+      adicionarFavorito(recuperado);
+    }
+    salvarLocalStorage();
+    carregarTreinoAluno(recuperado);
+    document.getElementById('searchName').value = recuperado.nome;
+    var msgNome = recuperado.nome;
+    alunoApagadoRecente = null;
+    exibirMensagem('↩️ Aluno <strong>' + escHtml(msgNome) + '</strong> restaurado com sucesso!', '#16a34a', false);
+    return true;
+  }
+  function undo() {
+    if (alunoApagadoRecente && restaurarAlunoApagado()) return;
+    if (currentIndex > 0) { currentIndex--; applyState(historyStack[currentIndex]); }
+  }
   function redo() { if (currentIndex < historyStack.length - 1) { currentIndex++; applyState(historyStack[currentIndex]); } }
   function initHistory() { ocultarDesfazerMovimento(); atualizarStatusSalvo(''); historyStack = [getCurrentState()]; currentIndex = 0; lastStateSnapshot = JSON.stringify(historyStack[0]); }
 
@@ -5490,6 +5553,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var modal = document.createElement('div');
     modal.id = 'favReorderModal';
     modal.className = 'fav-reorder-modal';
+    var modalDraggedIdx = null;
 
     function renderModalContent() {
       modal.replaceChildren();
@@ -5504,7 +5568,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 
       var desc = document.createElement('p');
       desc.style.cssText = 'font-size:0.72rem;color:#64748b;margin:6px 0 2px 0;line-height:1.3;';
-      desc.textContent = 'Escolha quem fica em primeiro na frente da lista de favoritos:';
+      desc.textContent = 'Pressione e arraste para flutuar e mover, ou clique em 📌 para fixar quem fica em 1º lugar:';
 
       var list = document.createElement('div');
       list.className = 'fav-reorder-list';
@@ -5512,6 +5576,120 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       favoritos.forEach(function(f, idx) {
         var item = document.createElement('div');
         item.className = 'fav-reorder-item' + (idx === 0 ? ' is-front' : '');
+        item.dataset.idx = String(idx);
+        item.setAttribute('draggable', 'true');
+
+        var handle = document.createElement('span');
+        handle.className = 'fav-reorder-handle';
+        handle.setAttribute('title', 'Pressione e arraste para flutuar e mover de posição');
+        handle.innerHTML = '⠿';
+
+        // Suporte a toque no celular / pointer events para flutuar e arrastar
+        var isPointerDragging = false;
+        handle.addEventListener('pointerdown', function(e) {
+          isPointerDragging = true;
+          modalDraggedIdx = idx;
+          item.classList.add('is-dragging');
+          try { handle.setPointerCapture(e.pointerId); } catch(err){}
+        });
+        handle.addEventListener('pointermove', function(e) {
+          if (!isPointerDragging) return;
+          e.preventDefault();
+          var targetEl = document.elementFromPoint(e.clientX, e.clientY);
+          var targetItem = targetEl ? targetEl.closest('.fav-reorder-item') : null;
+          list.querySelectorAll('.fav-reorder-item').forEach(function(el) {
+            if (el !== targetItem) el.classList.remove('drag-over-top', 'drag-over-bottom');
+          });
+          if (targetItem && targetItem !== item) {
+            var rect = targetItem.getBoundingClientRect();
+            if (e.clientY < rect.top + rect.height / 2) {
+              targetItem.classList.add('drag-over-top');
+              targetItem.classList.remove('drag-over-bottom');
+            } else {
+              targetItem.classList.add('drag-over-bottom');
+              targetItem.classList.remove('drag-over-top');
+            }
+          }
+        });
+        function finalizarPointerDrag(e) {
+          if (!isPointerDragging) return;
+          isPointerDragging = false;
+          item.classList.remove('is-dragging');
+          try { handle.releasePointerCapture(e.pointerId); } catch(err){}
+          var targetEl = document.elementFromPoint(e.clientX, e.clientY);
+          var targetItem = targetEl ? targetEl.closest('.fav-reorder-item') : null;
+          list.querySelectorAll('.fav-reorder-item').forEach(function(el) {
+            el.classList.remove('drag-over-top', 'drag-over-bottom');
+          });
+          if (targetItem && targetItem !== item) {
+            var targetIdx = parseInt(targetItem.dataset.idx, 10);
+            if (!isNaN(targetIdx) && targetIdx !== modalDraggedIdx) {
+              var rect = targetItem.getBoundingClientRect();
+              var insertIdx = targetIdx;
+              if (e.clientY >= rect.top + rect.height / 2) {
+                insertIdx++;
+              }
+              if (modalDraggedIdx < insertIdx) insertIdx--;
+              var moved = favoritos.splice(modalDraggedIdx, 1)[0];
+              favoritos.splice(insertIdx, 0, moved);
+              modalDraggedIdx = null;
+              salvarFavoritos();
+              renderizarBarraFavoritos();
+              renderModalContent();
+              exibirMensagem('⭐ "' + moved.nome + '" reposicionado para #' + (insertIdx + 1) + '!', '#1e6f3f', false);
+            }
+          }
+          modalDraggedIdx = null;
+        }
+        handle.addEventListener('pointerup', finalizarPointerDrag);
+        handle.addEventListener('pointercancel', finalizarPointerDrag);
+
+        // Desktop HTML5 drag and drop
+        item.addEventListener('dragstart', function(e) {
+          modalDraggedIdx = idx;
+          item.classList.add('is-dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          try { e.dataTransfer.setData('text/plain', String(idx)); } catch(err){}
+        });
+        item.addEventListener('dragend', function() {
+          item.classList.remove('is-dragging');
+          list.querySelectorAll('.fav-reorder-item').forEach(function(el) {
+            el.classList.remove('drag-over-top', 'drag-over-bottom');
+          });
+        });
+        item.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          var rect = item.getBoundingClientRect();
+          if (e.clientY < rect.top + rect.height / 2) {
+            item.classList.add('drag-over-top');
+            item.classList.remove('drag-over-bottom');
+          } else {
+            item.classList.add('drag-over-bottom');
+            item.classList.remove('drag-over-top');
+          }
+        });
+        item.addEventListener('dragleave', function() {
+          item.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+        item.addEventListener('drop', function(e) {
+          e.preventDefault();
+          item.classList.remove('drag-over-top', 'drag-over-bottom');
+          if (modalDraggedIdx === null || modalDraggedIdx === undefined || modalDraggedIdx === idx) return;
+          var rect = item.getBoundingClientRect();
+          var insertIdx = idx;
+          if (e.clientY >= rect.top + rect.height / 2) {
+            insertIdx++;
+          }
+          if (modalDraggedIdx < insertIdx) insertIdx--;
+          var moved = favoritos.splice(modalDraggedIdx, 1)[0];
+          favoritos.splice(insertIdx, 0, moved);
+          modalDraggedIdx = null;
+          salvarFavoritos();
+          renderizarBarraFavoritos();
+          renderModalContent();
+          exibirMensagem('⭐ "' + moved.nome + '" reposicionado para #' + (insertIdx + 1) + '!', '#1e6f3f', false);
+        });
 
         var info = document.createElement('div');
         info.className = 'fav-reorder-item-info';
@@ -5523,34 +5701,41 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         var name = document.createElement('span');
         name.className = 'fav-reorder-name';
         name.textContent = f.nome;
-        if (idx === 0) name.innerHTML += ' <span style="font-size:0.65rem;color:#2563eb;font-weight:bold;">(Na Frente)</span>';
+        if (idx === 0) name.innerHTML += ' <span style="font-size:0.65rem;color:#1e40af;font-weight:bold;">(Fixado na Frente)</span>';
 
+        info.appendChild(handle);
         info.appendChild(pos);
         info.appendChild(name);
 
         var actions = document.createElement('div');
         actions.className = 'fav-reorder-actions';
 
-        if (idx > 0) {
+        if (idx === 0) {
+          var frontBadge = document.createElement('span');
+          frontBadge.className = 'fav-reorder-btn front-btn';
+          frontBadge.style.cssText = 'background:#dbeafe;color:#1e40af;border-color:#93c5fd;font-weight:bold;cursor:default;';
+          frontBadge.innerHTML = '📌 1º na Frente';
+          actions.appendChild(frontBadge);
+        } else {
           var frontBtn = document.createElement('button');
           frontBtn.type = 'button';
           frontBtn.className = 'fav-reorder-btn front-btn';
-          frontBtn.title = 'Colocar na frente de todos (posição 1)';
-          frontBtn.textContent = '🔝 1º';
+          frontBtn.title = 'Fixar este aluno em 1º lugar na frente dos favoritos';
+          frontBtn.innerHTML = '📌 Fixar em 1º';
           frontBtn.onclick = function() {
             var moved = favoritos.splice(idx, 1)[0];
             favoritos.unshift(moved);
             salvarFavoritos();
             renderizarBarraFavoritos();
             renderModalContent();
-            exibirMensagem('⭐ "' + moved.nome + '" agora está na frente (#1)!', '#1e6f3f', false);
+            exibirMensagem('⭐ "' + moved.nome + '" agora está fixado na frente (#1)!', '#1e6f3f', false);
           };
           actions.appendChild(frontBtn);
 
           var upBtn = document.createElement('button');
           upBtn.type = 'button';
           upBtn.className = 'fav-reorder-btn';
-          upBtn.title = 'Mover para frente';
+          upBtn.title = 'Mover para cima';
           upBtn.textContent = '▲';
           upBtn.onclick = function() {
             var temp = favoritos[idx];
@@ -5567,7 +5752,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
           var downBtn = document.createElement('button');
           downBtn.type = 'button';
           downBtn.className = 'fav-reorder-btn';
-          downBtn.title = 'Mover para trás';
+          downBtn.title = 'Mover para baixo';
           downBtn.textContent = '▼';
           downBtn.onclick = function() {
             var temp = favoritos[idx];
@@ -5590,7 +5775,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       var closeBtn = document.createElement('button');
       closeBtn.type = 'button';
       closeBtn.className = 'fav-header-btn';
-      closeBtn.style.cssText = 'background:#3b82f6;color:#ffffff;border:none;padding:5px 14px;font-size:0.75rem;border-radius:6px;font-weight:bold;cursor:pointer;';
+      closeBtn.style.cssText = 'background:#3b82f6;color:#ffffff;border:none;padding:6px 16px;font-size:0.75rem;border-radius:6px;font-weight:bold;cursor:pointer;';
       closeBtn.textContent = 'Concluir';
       closeBtn.onclick = function() { modal.remove(); };
       footer.appendChild(closeBtn);
@@ -5726,7 +5911,13 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 
         var icon = document.createElement('span');
         icon.className = 'fav-tab-icon';
-        icon.innerHTML = svgEstrela(true, 12);
+        if (idx === 0) {
+          icon.innerHTML = '<span title="Fixado na frente">📌</span> ' + svgEstrela(true, 11);
+          tab.classList.add('is-first-fixed');
+          tab.setAttribute('title', '📌 [1º na Frente] Abrir treino de ' + f.nome + (isAtivo ? ' (ativo)' : '') + ' · Arraste para mover de posição');
+        } else {
+          icon.innerHTML = svgEstrela(true, 12);
+        }
 
         var title = document.createElement('span');
         title.className = 'fav-tab-title';
@@ -6002,9 +6193,25 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     if (!nome) { exibirMensagem('❌ Digite o nome do aluno a ser apagado.', '#b22222', false); return; }
     var idx = alunos.findIndex(function(a) { return a.nome.toLowerCase() === nome.toLowerCase(); });
     if (idx === -1) { exibirMensagem('❌ Aluno "' + nome + '" não encontrado.', '#b22222', false); return; }
+    
+    var alunoAlvo = alunos[idx];
+    if (!confirm('Deseja realmente apagar o aluno "' + alunoAlvo.nome + '"?\n\nEsta ação apagará todo o treino e histórico deste aluno.')) {
+      return;
+    }
+
+    alunoApagadoRecente = {
+      aluno: JSON.parse(JSON.stringify(alunoAlvo)),
+      indice: idx,
+      eraFavorito: isFavorito(alunoAlvo.nome)
+    };
+
     removerFavorito(nome);
-    alunos.splice(idx, 1); salvarLocalStorage();
-    exibirMensagem('🗑️ Aluno <strong>' + nome + '</strong> removido.', '#b22222', false);
+    alunos.splice(idx, 1);
+    salvarLocalStorage();
+
+    var undoBtnHtml = ' <button id="undoDeleteStudentBtn" type="button" style="margin-left:8px;background:#2563eb;color:#ffffff;border:none;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:bold;cursor:pointer;">↩️ Desfazer</button>';
+    exibirMensagem('🗑️ Aluno <strong>' + escHtml(alunoAlvo.nome) + '</strong> removido.' + undoBtnHtml, '#b22222', false);
+    
     registrarAlunoSelecionado('');
     if (alunos.length > 0) { carregarTreinoAluno(alunos[0]); document.getElementById('searchName').value = alunos[0].nome; }
     else { 
@@ -6248,11 +6455,18 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         if (e.target.closest('.delete-aluno-btn')) {
           concluirAutoSave();
           var nome = item.dataset.nome;
-          if (confirm('Apagar "' + nome + '"?')) {
+          if (confirm('Deseja realmente apagar o aluno "' + nome + '"?\n\nEsta ação apagará todo o treino deste aluno.')) {
             var idx = alunos.findIndex(function(a) { return a.nome === nome; });
             if (idx !== -1) {
+              alunoApagadoRecente = {
+                aluno: JSON.parse(JSON.stringify(alunos[idx])),
+                indice: idx,
+                eraFavorito: isFavorito(alunos[idx].nome)
+              };
+              removerFavorito(nome);
               alunos.splice(idx, 1); salvarLocalStorage();
-              exibirMensagem('🗑️ "' + nome + '" removido.', '#b22222', false);
+              var undoBtnHtml = ' <button id="undoDeleteStudentBtn" type="button" style="margin-left:8px;background:#2563eb;color:#ffffff;border:none;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:bold;cursor:pointer;">↩️ Desfazer</button>';
+              exibirMensagem('🗑️ "' + escHtml(nome) + '" removido.' + undoBtnHtml, '#b22222', false);
               if (alunos.length === 0) {
                 registrarAlunoSelecionado('');
                 SECOES.forEach(function(s) { if (sections[s]) sections[s].innerHTML = '<li><span class="bold">⚠️</span> Nenhum aluno</li>'; });
@@ -6597,6 +6811,12 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     btn.addEventListener('click', function() { copiarTreinoDeOutroAlunoParaSecao(btn.getAttribute('data-section')); });
   });
   document.getElementById('undoBtn').addEventListener('click', undo);
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'undoDeleteStudentBtn') {
+      e.preventDefault();
+      restaurarAlunoApagado();
+    }
+  });
   document.getElementById('redoBtn').addEventListener('click', redo);
   document.addEventListener('keydown', function(e) {
     if(e.target.closest('.app-dialog'))return;
@@ -7565,7 +7785,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       
       if (capaNome !== a.nome || hist.length || isNovo) {
         html += '<div class="name-suggestion-sublist">';
-        html += '<div class="name-suggestion-subitem">' +
+        html += '<div class="name-suggestion-subitem" data-student-id="' + escAttr(a.student_id) + '" data-type="cover" role="button" tabindex="0" title="Carregar Capa de ' + escAttr(a.nome) + '">' +
           '<div class="sub-name">↳ <span class="sub-badge capa">⚡ Capa</span> <strong>' + escHtml(capaNome) + '</strong>' + (isNovo ? ' <small style="color:#2563eb;font-weight:600;">(1º Treino)</small>' : '') + '</div>' +
           '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-type="cover">Carregar</button>' +
         '</div>';
@@ -7573,7 +7793,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         hist.forEach(function(v, idx) {
           var vNome = (v.name && !v.name.toLowerCase().startsWith('treino de ')) ? v.name : (v.treinoNome || ('Anterior ' + (hist.length - idx)));
           var vData = v.archived_at ? new Date(v.archived_at).toLocaleDateString('pt-BR') : '';
-          html += '<div class="name-suggestion-subitem">' +
+          html += '<div class="name-suggestion-subitem" data-student-id="' + escAttr(a.student_id) + '" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history" role="button" tabindex="0" title="Carregar: ' + escAttr(vNome) + '">' +
             '<div class="sub-name">↳ <span class="sub-badge anterior">◷ Ant ' + (hist.length - idx) + '</span> <span>' + escHtml(vNome) + (vData ? ' <small style="color:#94a3b8;">(' + vData + ')</small>' : '') + '</span></div>' +
             '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history">Carregar</button>' +
           '</div>';
@@ -7596,17 +7816,17 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       b.addEventListener('pointerdown', function(e) { e.preventDefault(); });
       b.onclick = function(e) { e.stopPropagation(); salvarDiretoSugestao(b.dataset.nome); };
     });
-    nameSuggestions.querySelectorAll('.sub-load-btn').forEach(function(btn) {
-      btn.addEventListener('pointerdown', function(e) { e.preventDefault(); });
-      btn.onclick = function(e) {
+    nameSuggestions.querySelectorAll('.name-suggestion-subitem').forEach(function(item) {
+      item.addEventListener('pointerdown', function(e) { e.preventDefault(); });
+      item.onclick = function(e) {
         e.stopPropagation();
-        var sId = btn.dataset.studentId;
+        var sId = item.dataset.studentId;
         var a = alunos.find(function(x) { return x.student_id === sId; });
         if (!a) return;
-        if (btn.dataset.type === 'cover') {
+        if (item.dataset.type === 'cover') {
           escolherSugestao(a.nome);
         } else {
-          var wId = btn.dataset.workoutId;
+          var wId = item.dataset.workoutId;
           var v = (a.historicoTreinos || []).find(function(x) { return x.workout_id === wId; });
           if (v) {
             carregarVersaoNaTela(a, v);
