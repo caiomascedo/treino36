@@ -1067,7 +1067,7 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 .exercise-grip:focus-visible { outline: 2px solid #356b86; }
 .exercise-row.drag-origin { border: 2px dashed #356b86; background: #e7f1f7; }
 .exercise-row.drag-origin > * { visibility: hidden; }
-.exercise-ghost { position: fixed; z-index: 10; margin: 0; pointer-events: none; transform: rotate(-1.5deg) scale(1.02); box-shadow: 0 16px 32px #12283e44; border-color: #356b86; opacity: .97; }
+.exercise-ghost { position: fixed; z-index: 10; margin: 0; pointer-events: none; transform: rotate(-1.5deg) scale(.85); transform-origin: top left; box-sizing: border-box; box-shadow: 0 16px 32px #12283e44; border-color: #356b86; opacity: .97; }
 #sectionZoomStatus { flex-shrink: 0; min-height: 38px; margin: 0; padding: 9px 16px; font-size: .8rem; color: #356b86; background: #fff; border-top: 1px solid #e2e6ea; }
 @media print { #sectionZoomDialog, .section-zoom-btn { display: none !important; } }
 
@@ -1293,6 +1293,24 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 #generatorScopeHint,#generatorCoverHint { font-size:.7rem; color:#596b75; }
 #generateWorkoutDialog .dialog-actions { margin-top:7px; }
 
+/* Arraste do treino completo, com controles fora do conteúdo salvo. */
+.workout-grip { flex-shrink: 0; width: 28px; min-height: 30px; padding: 0; border: 0; border-radius: 6px; background: #edf2f5; color: #526675; font-size: .9rem; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.workout-grip:active { cursor: grabbing; }
+.workout-grip:focus-visible { outline: 2px solid #356b86; outline-offset: 2px; }
+.workout-grip:disabled { opacity: .4; cursor: default; }
+.section-header h2, .zoom-section h3 { touch-action: none; -webkit-touch-callout: none; }
+.zoom-section h3 { display: flex; align-items: center; gap: 8px; }
+.workout-drag-origin { opacity: .3; outline: 2px dashed #356b86; outline-offset: -2px; }
+.workout-ghost { position: fixed; z-index: 29; box-sizing: border-box; margin: 0; padding: 10px 12px; border: 1px solid #356b86; border-radius: 12px; background: #fff; pointer-events: none; overflow: hidden; transform: rotate(-1deg) scale(.88); transform-origin: top left; box-shadow: 0 14px 30px #12283e44; opacity: .97; }
+.workout-ghost h2, .workout-ghost h3 { position: static; display: block; margin: 0 0 6px; padding: 0; background: transparent; font-size: .85rem; }
+.workout-ghost ol { padding-left: 20px; margin: 0; }
+.workout-ghost li, .workout-ghost li * { font-size: .72rem !important; line-height: 1.4; }
+.workout-ghost .exercise-row { display: list-item; padding: 4px 0; margin: 0; border: 0; background: transparent; }
+.workout-ghost .exercise-text { padding: 0; }
+.workout-ghost .exercise-number { display: none; }
+.hide-buttons .workout-grip, .temp-hide-buttons .workout-grip { display: none !important; }
+@media print { .workout-grip, .workout-ghost { display: none !important; } .workout-drag-origin { opacity: 1; outline: none; } }
+
 </style>
 </head>
 <body>
@@ -1488,7 +1506,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       <button type="button" id="sectionZoomApply" hidden>✅ Aplicar treino</button>
       <button type="button" id="sectionZoomClose">✕ Fechar</button>
     </div>
-    <p id="sectionZoomHelp" class="section-zoom-help">Toque no texto para editar. Segure ⋮⋮ e arraste para outra posição ou seção, de A a F. A numeração é automática.</p>
+    <p id="sectionZoomHelp" class="section-zoom-help">Toque no texto para editar. Segure o título ou a alça ao lado dele para mover o treino inteiro; as letras se ajustam. Use ⋮⋮ nos exercícios para mudar a posição ou seção.</p>
   </div>
   <div id="sectionZoomList" class="section-zoom-list" aria-label="Seções do treino"></div>
   <p id="sectionZoomStatus" role="status" aria-live="polite"></p>
@@ -4962,6 +4980,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     return state;
   }
   function applyState(state) {
+    finalizarArrasteTreino(false); finalizarArrasteExercicio(false);
     ocultarDesfazerMovimento();
     isUndoRedoAction = true;
     if (state.secaoFAtiva !== undefined && state.secaoFAtiva !== secaoFAtiva) {
@@ -6081,6 +6100,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   /* ===== CARREGAR/SALVAR/APAGAR ALUNO ===== */
   function carregarTreinoAluno(aluno) {
     if (!aluno || !aluno.treino) return false;
+    finalizarArrasteTreino(false); finalizarArrasteExercicio(false);
     garantirHistorico(aluno);
     concluirAutoSave();
     registrarAlunoSelecionado(aluno.nome);
@@ -7080,7 +7100,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   var zoomStatus = document.getElementById('sectionZoomStatus');
   var expandedSectionId = null, zoomOpener = null, zoomBodyOverflow = '';
   var zoomMode = 'live', zoomDraft = null, draftTouched = [], draftHistory = [], draftIndex = 0;
-  var exerciseDrag = null;
+  var exerciseDrag = null, workoutDrag = null;
   var todasSecoes = ['A','B','C','D','E','F'];
 
   function exercicioValido(li) {
@@ -7104,13 +7124,15 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   }
   function renderExpandedSection() {
     if (!expandedSectionId) return;
-    finalizarArrasteExercicio(false);
+    finalizarArrasteExercicio(false); finalizarArrasteTreino(false);
     var data = zoomMode === 'paste' ? zoomDraft : dadosDoEditor();
     zoomList.innerHTML = '';
     todasSecoes.forEach(function(sec) {
       var group = document.createElement('section');
       group.className = 'zoom-section'; group.dataset.section = sec;
-      var title = document.createElement('h3'); title.textContent = data[sec].titulo;
+      var title = document.createElement('h3');
+       var titleText = document.createElement('span'); titleText.textContent = data[sec].titulo;
+       title.append(criarAlcaTreino(sec, false), titleText);
       var list = document.createElement('ol'); list.className = 'zoom-exercises'; list.dataset.section = sec;
       list.setAttribute('aria-label', 'Exercícios da seção ' + sec);
       data[sec].itens.forEach(function(html) {
@@ -7153,7 +7175,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     zoomStatus.textContent = zoomMode === 'paste' ? 'Prévia alterada. Toque em Aplicar treino para confirmar.' : 'Ordem atualizada. A numeração se ajusta automaticamente.';
   }
   function abrirEditorTreino(sec, opener, mode, full) {
-    finalizarArrasteExercicio(false);
+    finalizarArrasteExercicio(false); finalizarArrasteTreino(false);
     if (mode !== 'paste') pushState();
     zoomMode = mode || 'live'; expandedSectionId = sec || 'all'; zoomOpener = opener;
     sectionZoom.classList.toggle('full', !!full);
@@ -7163,7 +7185,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     document.getElementById('sectionZoomClose').textContent = zoomMode === 'paste' ? '✕ Cancelar' : '✕ Fechar';
     document.getElementById('sectionZoomTitle').textContent = zoomMode === 'paste' ? 'Cola Inteligente — organizar treino' : 'Treino completo — A a F';
     document.getElementById('sectionZoomStudent').textContent = document.getElementById('alunoAtualTitulo').textContent;
-    zoomStatus.textContent = zoomMode === 'paste' ? 'Prévia: nada será salvo até você aplicar.' : 'Segure ⋮⋮ e leve o exercício para outra posição ou seção.';
+    zoomStatus.textContent = zoomMode === 'paste' ? 'Prévia: nada será salvo até você aplicar.' : 'Segure o título para mover um treino; use ⋮⋮ nos exercícios para mudar a posição ou seção.';
     renderExpandedSection();
     zoomBodyOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden';
     sectionZoom.showModal();
@@ -7172,7 +7194,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   }
   function fecharSecaoAmpliada() {
     ocultarDesfazerMovimento();
-    finalizarArrasteExercicio(false);
+    finalizarArrasteExercicio(false); finalizarArrasteTreino(false);
     if (zoomMode === 'live') concluirAutoSave();
     expandedSectionId = null; zoomDraft = null;
     document.body.style.overflow = zoomBodyOverflow;
@@ -7187,11 +7209,11 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   });
   document.getElementById('expandTreinoBtn').addEventListener('click',function(){ abrirTextoAmpliado('all',this); });
   document.getElementById('sectionZoomFull').addEventListener('click',function(){
-    finalizarArrasteExercicio(false);
+    finalizarArrasteExercicio(false); finalizarArrasteTreino(false);
     var full = sectionZoom.classList.toggle('full'); this.textContent = full ? '🗗 Reduzir' : '⛶ Tela inteira'; this.setAttribute('aria-pressed',String(full));
   });
   document.getElementById('sectionZoomClose').addEventListener('click',fecharSecaoAmpliada);
-  sectionZoom.addEventListener('cancel',function(e){ e.preventDefault(); if(exerciseDrag) finalizarArrasteExercicio(false); else fecharSecaoAmpliada(); });
+  sectionZoom.addEventListener('cancel',function(e){ e.preventDefault(); if(workoutDrag) finalizarArrasteTreino(false); else if(exerciseDrag) finalizarArrasteExercicio(false); else fecharSecaoAmpliada(); });
   sectionZoom.addEventListener('click',function(e){
     if(e.target !== sectionZoom) return;
     var r=sectionZoom.getBoundingClientRect();
@@ -7199,7 +7221,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   });
   function historicoDoEditor(redoAction) {
     ocultarDesfazerMovimento();
-    finalizarArrasteExercicio(false);
+    finalizarArrasteExercicio(false); finalizarArrasteTreino(false);
     if(zoomMode !== 'paste') { if(redoAction) redo(); else undo(); return; }
     var next=draftIndex+(redoAction?1:-1);
     if(next<0||next>=draftHistory.length) return;
@@ -7362,7 +7384,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
       // No mouse, também é possível segurar o próprio texto. No celular, a
       // alça permite arrastar sem bloquear a rolagem ou a seleção de texto.
       if(!row&&e.pointerType==='mouse')row=e.target.closest(config.main?'.section ol > li':'.exercise-row');
-      if(!row||!e.isPrimary||e.button!==0||exerciseDrag||(config.main&&!exercicioValido(row)))return;
+      if(!row||!e.isPrimary||e.button!==0||exerciseDrag||workoutDrag||(config.main&&!exercicioValido(row)))return;
       if(grip)e.preventDefault();
       var rect=row.getBoundingClientRect();
       var drag={config:config,id:e.pointerId,row:row,grip:grip,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,offsetX:e.clientX-rect.left,offsetY:e.clientY-rect.top,width:rect.width,active:false};
@@ -7375,6 +7397,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
         drag.ghost.querySelectorAll('[contenteditable]').forEach(function(el){el.contentEditable='false';});
         drag.ghost.querySelectorAll('button').forEach(function(b){b.tabIndex=-1;});
         drag.ghost.style.width=rect.width+'px';
+        drag.width=rect.width*.85;drag.offsetX*=.85;drag.offsetY*=.85;
         drag.marker=document.createElement('div');drag.marker.className='exercise-drop-line';drag.marker.appendChild(document.createElement('span'));drag.marker.setAttribute('aria-hidden','true');
         config.host.append(drag.ghost,drag.marker);moverExercicioFlutuante();
       },280);
@@ -7411,6 +7434,197 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   conectarMovimento(configMovimento(true));conectarMovimento(configMovimento(false));
   window.addEventListener('blur',function(){finalizarArrasteExercicio(false);});
   window.addEventListener('resize',function(){finalizarArrasteExercicio(false);});
+
+
+  /* ===== ARRASTAR E REORDENAR TREINOS COMPLETOS ===== */
+  function ordemTreinosMovida(ids, origem, destino) {
+    var ordem = ids.slice(), de = ordem.indexOf(origem), para = ids.indexOf(destino);
+    if (de < 0 || para < 0 || de === para) return ordem;
+    ordem.splice(para, 0, ordem.splice(de, 1)[0]);
+    return ordem;
+  }
+  function prefixoTituloTreino(texto, origem) {
+    return new RegExp('^\\s*(?:(?:treino|se[cç][aã]o)\\s+)?' + origem + '(?:\\s*[.\\-–—:)]\\s*|\\s+|$)', 'i').exec(texto);
+  }
+  function renomearTituloTreino(texto, destino, origem) {
+    var prefixo = prefixoTituloTreino(texto, origem);
+    var nome = (prefixo ? texto.slice(prefixo[0].length) : texto).trim();
+    if (new RegExp('^(?:treino|se[cç][aã]o)\\s+' + origem + '$', 'i').test(nome))
+      nome = nome.replace(new RegExp(origem + '$', 'i'), destino);
+    return destino + '. ' + (nome || 'TREINO');
+  }
+  function renomearTituloTreinoHTML(html, destino, origem) {
+    if (destino === origem) return html;
+    var holder = document.createElement('div'); holder.innerHTML = html;
+    var texto = holder.textContent, prefixo = prefixoTituloTreino(texto, origem);
+    if (new RegExp('^(?:treino|se[cç][aã]o)\\s+' + origem + '$', 'i').test((prefixo ? texto.slice(prefixo[0].length) : texto).trim())) {
+      holder.textContent = renomearTituloTreino(texto, destino, origem);
+      return holder.innerHTML;
+    }
+    var restante = prefixo ? prefixo[0].length : 0;
+    var walker = document.createTreeWalker(holder, NodeFilter.SHOW_TEXT), node;
+    while (restante && (node = walker.nextNode())) {
+      var quantidade = Math.min(restante, node.textContent.length);
+      node.textContent = node.textContent.slice(quantidade); restante -= quantidade;
+    }
+    holder.prepend(document.createTextNode(destino + '. '));
+    if (!(prefixo ? texto.slice(prefixo[0].length) : texto).trim()) holder.appendChild(document.createTextNode('TREINO'));
+    return holder.innerHTML;
+  }
+  function criarAlcaTreino(sec, main) {
+    var grip = document.createElement('button'); grip.type = 'button'; grip.className = 'workout-grip';
+    grip.dataset.section = sec; grip.textContent = '⋮⋮';
+    grip.title = 'Segure e arraste o treino inteiro. Use ↑/↓ pelo teclado para mudar a ordem.';
+    grip.setAttribute('aria-label', 'Mover treino ' + sec + '. Segure e arraste ou use as setas.');
+    grip.disabled = !main && zoomMode !== 'paste' && !SECOES.includes(sec);
+    return grip;
+  }
+  function configTreinos(main) {
+    return { main: main, root: main ? mainContainer : sectionZoom, host: main ? document.body : sectionZoom,
+      scroll: main ? document.scrollingElement : zoomList,
+      ids: function() { return !main && zoomMode === 'paste' ? todasSecoes.slice() : SECOES.slice(); },
+      groups: function() { return this.ids().map(function(sec) {
+        return main ? sections[sec].closest('.section') : zoomList.querySelector('.zoom-section[data-section="' + sec + '"]');
+      }).filter(function(group) { return group && group.getClientRects().length; }); },
+      sec: function(group) { return main ? todasSecoes.find(function(sec) { return sections[sec].closest('.section') === group; }) : group.dataset.section; }
+    };
+  }
+  function moverTreino(config, origem, destino) {
+    var ids = config.ids(), ordem = ordemTreinosMovida(ids, origem, destino);
+    if (ordem.every(function(sec, i) { return sec === ids[i]; })) return false;
+    var draft = !config.main && zoomMode === 'paste';
+    if (draft) {
+      var anteriores = {};
+      ids.forEach(function(sec) { anteriores[sec] = zoomDraft[sec]; });
+      ids.forEach(function(sec, i) {
+        if (sec === ordem[i]) return;
+        var anterior = anteriores[ordem[i]];
+        zoomDraft[sec] = { titulo: renomearTituloTreino(anterior.titulo, sec, ordem[i]), itens: anterior.itens.slice() };
+        if (!draftTouched.includes(sec)) draftTouched.push(sec);
+      });
+      registrarHistoricoRascunho();
+    } else {
+      pushState();
+      var anterior = getCurrentState();
+      ids.forEach(function(sec, i) {
+        if (sec === ordem[i]) return;
+        sections[sec].innerHTML = anterior.sections[ordem[i]];
+        var title = sections[sec].closest('.section').querySelector('h2');
+        title.innerHTML = renomearTituloTreinoHTML(anterior.titles[ordem[i]], sec, ordem[i]);
+      });
+      pushState(); concluirAutoSave(); agendarAlcasPrincipais();
+    }
+    if (expandedSectionId) renderExpandedSection();
+    var mensagem = 'Treino ' + origem + ' movido para ' + destino + '. As letras foram atualizadas.';
+    if (config.main) exibirMensagem(mensagem, '#356b86', false); else zoomStatus.textContent = mensagem;
+    var noticeConfig = configMovimento(config.main); noticeConfig.message = 'Treino movido.';
+    oferecerDesfazerMovimento(noticeConfig);
+    return true;
+  }
+  function destinoArrasteTreino(drag) {
+    var viewport = drag.config.main ? { top: 0, bottom: innerHeight, left: 0, right: innerWidth } : zoomList.getBoundingClientRect();
+    if (drag.x < viewport.left || drag.x > viewport.right || drag.y < viewport.top || drag.y > viewport.bottom) return null;
+    var groups = drag.config.groups(), rects = groups.map(function(group) { return group.getBoundingClientRect(); });
+    if (!groups.length || drag.x < Math.min.apply(null, rects.map(function(r) { return r.left; })) ||
+        drag.x > Math.max.apply(null, rects.map(function(r) { return r.right; })) ||
+        drag.y < rects[0].top - 24 || drag.y > rects[rects.length - 1].bottom + 24) return null;
+    var index = rects.findIndex(function(r) { return drag.y <= r.bottom; });
+    if (index < 0) index = groups.length - 1;
+    var sec = drag.config.sec(groups[index]), rect = rects[index];
+    return { sec: sec, rect: rect, top: index > drag.config.ids().indexOf(drag.sec) ? rect.bottom : rect.top };
+  }
+  function moverTreinoFlutuante() {
+    var drag = workoutDrag; if (!drag || !drag.active) return;
+    drag.ghost.style.left = Math.max(5, Math.min(innerWidth - drag.width - 5, drag.x - drag.offsetX)) + 'px';
+    drag.ghost.style.top = (drag.y - drag.offsetY) + 'px';
+    var viewport = drag.config.main ? { top: 0, bottom: innerHeight, left: 0, right: innerWidth } : zoomList.getBoundingClientRect();
+    if (drag.x >= viewport.left && drag.x <= viewport.right) {
+      if (drag.y >= viewport.top && drag.y < viewport.top + 50) drag.config.scroll.scrollTop -= 10;
+      else if (drag.y <= viewport.bottom && drag.y > viewport.bottom - 50) drag.config.scroll.scrollTop += 10;
+    }
+    var target = destinoArrasteTreino(drag); drag.marker.hidden = !target;
+    if (target) {
+      drag.marker.style.left = target.rect.left + 'px'; drag.marker.style.top = target.top + 'px'; drag.marker.style.width = target.rect.width + 'px';
+      drag.marker.firstChild.textContent = 'Treino ' + target.sec;
+    }
+    drag.frame = requestAnimationFrame(moverTreinoFlutuante);
+  }
+  function finalizarArrasteTreino(confirmar) {
+    var drag = workoutDrag; if (!drag) return;
+    workoutDrag = null; clearTimeout(drag.timer); cancelAnimationFrame(drag.frame);
+    var target = confirmar && drag.active ? destinoArrasteTreino(drag) : null;
+    if (drag.active) { drag.ghost.remove(); drag.marker.remove(); drag.group.classList.remove('workout-drag-origin'); }
+    if (drag.config.root.hasPointerCapture(drag.id)) drag.config.root.releasePointerCapture(drag.id);
+    if (target) moverTreino(drag.config, drag.sec, target.sec);
+  }
+  function conectarMovimentoTreinos(config) {
+    config.root.addEventListener('pointerdown', function(e) {
+      var grip = e.target.closest('.workout-grip');
+      var title = e.target.closest(config.main ? '.section-header h2' : '.zoom-section h3');
+      if ((!grip && !title) || (grip && grip.disabled) || !e.isPrimary || e.button !== 0 || workoutDrag || exerciseDrag) return;
+      if (config.main && (mainContainer.classList.contains('hide-buttons') || mainContainer.classList.contains('temp-hide-buttons'))) return;
+      var group = (grip || title).closest(config.main ? '.section' : '.zoom-section');
+      if (!group || !config.groups().includes(group)) return;
+      if (grip) e.preventDefault();
+      var rect = group.getBoundingClientRect();
+      var drag = { config: config, id: e.pointerId, group: group, sec: config.sec(group),
+        x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, active: false };
+      workoutDrag = drag;
+      if (grip) config.root.setPointerCapture(drag.id);
+      drag.timer = setTimeout(function() {
+        if (workoutDrag !== drag) return;
+        drag.active = true; config.root.setPointerCapture(drag.id);
+        window.getSelection().removeAllRanges(); esconderBarraSelecao();
+        if (document.activeElement && document.activeElement.isContentEditable) document.activeElement.blur();
+        drag.ghost = group.cloneNode(true);
+        drag.ghost.classList.remove('section', 'zoom-section'); drag.ghost.classList.add('workout-ghost');
+        drag.ghost.removeAttribute('id'); drag.ghost.setAttribute('aria-hidden', 'true'); drag.ghost.inert = true;
+        drag.ghost.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
+        drag.ghost.querySelectorAll('.action-buttons,.main-move-layer,.workout-grip,.exercise-grip').forEach(function(el) { el.remove(); });
+        drag.ghost.querySelectorAll('[contenteditable]').forEach(function(el) { el.contentEditable = 'false'; });
+        var width = Math.min(rect.width, 440, innerWidth - 20);
+        drag.ghost.style.width = width + 'px'; drag.ghost.style.maxHeight = Math.min(360, innerHeight * .55) + 'px';
+        drag.width = width * .88;
+        drag.offsetX = Math.max(0, Math.min(width, e.clientX - rect.left)) * .88;
+        drag.offsetY = Math.max(0, Math.min(50, e.clientY - rect.top)) * .88;
+        drag.marker = document.createElement('div'); drag.marker.className = 'exercise-drop-line';
+        drag.marker.appendChild(document.createElement('span')); drag.marker.setAttribute('aria-hidden', 'true');
+        group.classList.add('workout-drag-origin'); config.host.append(drag.ghost, drag.marker);
+        moverTreinoFlutuante();
+      }, 280);
+    });
+    config.root.addEventListener('pointermove', function(e) {
+      var drag = workoutDrag; if (!drag || drag.config !== config || drag.id !== e.pointerId) return;
+      drag.x = e.clientX; drag.y = e.clientY;
+      if (!drag.active && Math.hypot(drag.x - drag.startX, drag.y - drag.startY) > 10) finalizarArrasteTreino(false);
+      else if (drag.active) e.preventDefault();
+    });
+    config.root.addEventListener('pointerup', function(e) {
+      var drag = workoutDrag; if (!drag || drag.config !== config || drag.id !== e.pointerId) return;
+      drag.x = e.clientX; drag.y = e.clientY; finalizarArrasteTreino(true);
+    });
+    ['pointercancel', 'lostpointercapture'].forEach(function(type) {
+      config.root.addEventListener(type, function(e) {
+        if (workoutDrag && workoutDrag.config === config && workoutDrag.id === e.pointerId) finalizarArrasteTreino(false);
+      });
+    });
+    config.root.addEventListener('contextmenu', function(e) {
+      if (e.target.closest(config.main ? '.workout-grip,.section-header h2' : '.workout-grip,.zoom-section h3')) e.preventDefault();
+    });
+    config.root.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && workoutDrag) { e.preventDefault(); e.stopPropagation(); finalizarArrasteTreino(false); return; }
+      var grip = e.target.closest('.workout-grip');
+      if (!grip || grip.disabled || !['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+      e.preventDefault(); finalizarArrasteTreino(false);
+      var ids = config.ids(), sec = grip.dataset.section, next = ids[ids.indexOf(sec) + (e.key === 'ArrowUp' ? -1 : 1)];
+      if (!next || !moverTreino(config, sec, next)) return;
+      var group = config.groups().find(function(g) { return config.sec(g) === next; });
+      if (group) { group.querySelector('.workout-grip').focus({ preventScroll: true }); group.scrollIntoView({ block: 'nearest' }); }
+    });
+  }
+  todasSecoes.forEach(function(sec) { sections[sec].closest('.section').querySelector('.title-group').prepend(criarAlcaTreino(sec, true)); });
+  conectarMovimentoTreinos(configTreinos(true)); conectarMovimentoTreinos(configTreinos(false));
+  ['blur', 'resize', 'pagehide'].forEach(function(type) { window.addEventListener(type, function() { finalizarArrasteTreino(false); }); });
 
   // Ampliar mostra primeiro o texto. Organizar / mover é sempre opcional.
   function abrirTextoAmpliado(sec, opener) {
@@ -7484,7 +7698,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     var history = draft ? draftHistory : historyStack;
     var index = draft ? draftIndex : currentIndex;
     var notice = document.createElement('div'); notice.className = 'move-notice';
-    var label = document.createElement('span'); label.setAttribute('role', 'status'); label.textContent = 'Exercício movido.';
+    var label = document.createElement('span'); label.setAttribute('role', 'status'); label.textContent = config.message || 'Exercício movido.';
     var button = document.createElement('button'); button.type = 'button'; button.textContent = '↩️ Desfazer movimento';
     button.addEventListener('click', function() {
       var valid = nome === document.getElementById('searchName').value && (draft
