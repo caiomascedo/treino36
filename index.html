@@ -8587,7 +8587,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
           '<div class="info-field">'+
             '<label for="infoDataNasc">Data de nasc.:</label>'+
             '<div class="info-input-wrap">'+
-              '<input type="text" id="infoDataNasc" placeholder="Ex: 140396 ou 14031996">'+
+              '<input type="text" id="infoDataNasc" placeholder="Ex: 17/06/1996 ou 17061996">'+
               '<button type="button" class="field-action-btn clear-field-btn" data-target="infoDataNasc" title="Limpar Data de nasc.">✕</button>'+
               '<button type="button" class="field-action-btn copy-field-btn" data-target="infoDataNasc" data-label="Data de nasc." title="Copiar Data de nasc.">📋</button>'+
             '</div>'+
@@ -8663,24 +8663,27 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
   var infoGuiaAtivaIndex = 0;
   var infoNivelTreinoAtual = 'moderado';
 
+  function normalizarDataNasc(dataStr, aceitarAnoCurto) {
+    var texto = String(dataStr || '').trim();
+    var parts = texto.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4}|\d{2})$/)
+      || texto.match(/^(\d{2})(\d{2})(\d{4}|\d{2})$/);
+    if (!parts || (parts[3].length === 2 && !aceitarAnoCurto)) return null;
+    var dia = parseInt(parts[1], 10), mes = parseInt(parts[2], 10), ano = parseInt(parts[3], 10);
+    if (parts[3].length === 2) ano += ano > new Date().getFullYear() % 100 ? 1900 : 2000;
+    var data = new Date(ano, mes - 1, dia);
+    if (data.getFullYear() !== ano || data.getMonth() !== mes - 1 || data.getDate() !== dia) return null;
+    return String(dia).padStart(2, '0') + '/' + String(mes).padStart(2, '0') + '/' + String(ano).padStart(4, '0');
+  }
+
   function calcularIdadePorDataNasc(dataStr) {
-    if (!dataStr) return null;
-    var parts = dataStr.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{2,4})$/);
-    if (!parts) return null;
-    var dia = parseInt(parts[1], 10);
-    var mes = parseInt(parts[2], 10) - 1;
-    var ano = parseInt(parts[3], 10);
-    if (ano < 100) {
-      ano += (ano > 26 ? 1900 : 2000);
-    }
-    var nasc = new Date(ano, mes, dia);
-    if (isNaN(nasc.getTime())) return null;
+    var normalizada = normalizarDataNasc(dataStr, true);
+    if (!normalizada) return null;
+    var parts = normalizada.split('/');
+    var dia = parseInt(parts[0], 10), mes = parseInt(parts[1], 10) - 1, ano = parseInt(parts[2], 10);
     var hoje = new Date();
-    var idade = hoje.getFullYear() - nasc.getFullYear();
-    var m = hoje.getMonth() - nasc.getMonth();
-    if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) {
-      idade--;
-    }
+    var idade = hoje.getFullYear() - ano;
+    var m = hoje.getMonth() - mes;
+    if (m < 0 || (m === 0 && hoje.getDate() < dia)) idade--;
     if (idade < 0 || idade > 125) return null;
     return idade;
   }
@@ -8700,19 +8703,12 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
     atualizarVisualizacaoKcal();
   }
 
-  function formatarCampoDataNasc(input) {
-    var v = input.value.trim();
-    var digits = v.replace(/\D/g, '');
-    if (digits.length === 6) {
-      var dia = digits.slice(0, 2);
-      var mes = digits.slice(2, 4);
-      var ano2 = parseInt(digits.slice(4, 6), 10);
-      var ano = ano2 > 26 ? (1900 + ano2) : (2000 + ano2);
-      input.value = dia + '/' + mes + '/' + ano;
-    } else if (digits.length === 8) {
-      input.value = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
-    }
-    var idadeCalc = calcularIdadePorDataNasc(input.value);
+  function formatarCampoDataNasc(input, finalizar) {
+    // Durante a digitação, o ano fica livre. Atalhos com dois dígitos só
+    // recebem o século quando o usuário termina a edição.
+    var normalizada = normalizarDataNasc(input.value, !!finalizar);
+    if (finalizar && normalizada) input.value = normalizada;
+    var idadeCalc = normalizada ? calcularIdadePorDataNasc(normalizada) : null;
     if (idadeCalc !== null) {
       document.getElementById('infoIdade').value = idadeCalc + ' anos';
     }
@@ -9184,7 +9180,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 
   var dataNascInput = document.getElementById('infoDataNasc');
   dataNascInput.addEventListener('input', function() { formatarCampoDataNasc(dataNascInput); });
-  dataNascInput.addEventListener('blur', function() { formatarCampoDataNasc(dataNascInput); });
+  dataNascInput.addEventListener('blur', function() { formatarCampoDataNasc(dataNascInput, true); });
 
   document.getElementById('infoPeso').addEventListener('input', function() {
     atualizarVisualizacaoImc();
