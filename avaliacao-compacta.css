@@ -94,4 +94,11 @@
 .aluno-card.active .assessment-tab-panel .sec-label small{font-size:9px}
 .aluno-card.active .assessment-tab-panel .badge{font-size:10px;line-height:1.2;padding:2px 5px;margin-left:0}
 .aluno-card.active .btn-add-av{padding:7px 10px;font-size:12px;margin-top:7px}
-@media(max-width:360px){.aluno-card.active .aluno-acoes{flex-wrap:wrap}.aluno-card.active .aluno-acoes button{flex:1 0 auto}.aluno-card.active .av-content>.assessment-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:300px){.aluno-card.active .aluno-acoes{flex-wrap:wrap}.aluno-card.active .aluno-acoes button{flex:1 0 auto}.aluno-card.active .av-content>.assessment-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:380px){
+.aluno-card.active .aluno-acoes .btn-renomear-aluno,.aluno-card.active .aluno-acoes .btn-delete-assessment-client{font-size:0!important;flex:0 0 28px;width:28px;padding:0!important}
+.aluno-card.active .aluno-acoes .btn-renomear-aluno::before{content:'✏️';font-size:13px}
+.aluno-card.active .aluno-acoes .btn-delete-assessment-client::before{content:'🗑️';font-size:13px}
+.aluno-card.active .aluno-acoes .btn-whatsapp-aluno{flex:0 0 28px;width:28px;padding:0!important}
+.aluno-card.active .aluno-acoes .btn-delete-assessment-client{margin-left:auto}
+}
