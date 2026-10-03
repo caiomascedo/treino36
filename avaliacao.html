@@ -208,6 +208,8 @@ window.AvaliacaoTreinoSync = (function () {
 
 </script>
 <script src="avaliacao-import.js"></script>
+<link rel="stylesheet" href="avaliacao-compacta.css">
+<script src="avaliacao-compacta.js"></script>
 </head>
 <body>
 
@@ -889,12 +891,13 @@ function adicionarAvaliacao(alunoId){
     id:Date.now(),
     data:new Date().toLocaleDateString('pt-BR'),
     protocolo:protocoloAnterior,
-    peso:'',imc:'',gordura:'',visceral:'',massamuscular:'',proteina:'',agua:'',tmb:'',
+    peso:aluno.avaliacoes.length ? '' : (aluno.pesoIni || ''),imc:'',gordura:'',visceral:'',massamuscular:'',proteina:'',agua:'',tmb:'',
     peitoral:'',biceps:'',barriga:'',cintura:'',quadril:'',coxa:'',
     triceps:'',axilar:'',torax:'',abdominal:'',suprailiaca:'',subescapular:'',pregaCoxa:'',panturrilha:'',
     resumo:'',motivo:'',fotoF:null,fotoL:null,fotoD:null,_dobras:null
   };
   aluno.avaliacoes.push(novaAvaliacao);
+  calcularIMCeDobras(aluno,novaAvaliacao.id);
   salvarDados();
   filtrarAlunos();
   // Abrir a nova avaliação automaticamente
@@ -1676,10 +1679,11 @@ function renderizarAlunos(alunosParaRenderizar){
           <div class="grid2">
             <div class="field"><label>Nome</label><input type="text" value="${escapeHtml(aluno.nome)}" onchange="atualizarAluno(${aluno.id},'nome',this.value)"></div>
             <div class="field"><label>Nascimento</label><input type="text" id="nasc-${aluno.id}" placeholder="DDMMAAAA" value="${escapeHtml(aluno.nasc||'')}" onblur="if(formatarDataAuto(this)){atualizarAluno(${aluno.id},'nasc',this.value);const idad=calcularIdade(this.value);if(idad){document.getElementById('idade-${aluno.id}').value=idad;atualizarAluno(${aluno.id},'idade',idad)}}"></div>
-            <div class="field"><label>Idade</label><input type="number" id="idade-${aluno.id}" value="${escapeHtml(aluno.idade||'')}" readonly></div>
+            <div class="field"><label>Idade</label><input type="number" id="idade-${aluno.id}" value="${escapeHtml(aluno.idade||'')}" onchange="atualizarAluno(${aluno.id},'idade',this.value)"></div>
             <div class="field"><label>Altura (m)</label><input type="text" id="altura-${aluno.id}" value="${escapeHtml(aluno.altura||'')}" onblur="formatarAltura(this);atualizarAluno(${aluno.id},'altura',this.value)"></div>
             <div class="field"><label>Peso inicial</label><input type="text" value="${escapeHtml(aluno.pesoIni||'')}" onchange="atualizarAluno(${aluno.id},'pesoIni',this.value)"></div>
             <div class="field"><label>Sexo</label><select onchange="atualizarAluno(${aluno.id},'sexo',this.value)"><option ${aluno.sexo==='M'?'selected':''} value="M">Masculino</option><option ${aluno.sexo==='F'?'selected':''} value="F">Feminino</option></select></div>
+            <div class="field"><label>E-mail</label><input type="email" value="${escapeHtml(aluno.email||'')}" onchange="atualizarAluno(${aluno.id},'email',this.value)"></div>
             <div class="field"><label>WhatsApp</label><input type="tel" placeholder="86988776655" value="${escapeHtml(aluno.whatsapp||'')}" onchange="atualizarAluno(${aluno.id},'whatsapp',this.value)"></div>
           </div>
           <div class="sec-label" style="display:flex;align-items:center">Pagamento <button type="button" class="btn-toggle-secao" onclick="toggleSecao(${aluno.id},'pagamento',this)">${aluno.pagamentoMinimizado?'▼':'▲'}</button></div>
@@ -1818,6 +1822,7 @@ function renderizarAlunos(alunosParaRenderizar){
       }
     }
   });
+  compactarAvaliacoes();
 }
 
 
