@@ -13,7 +13,7 @@ with sync_playwright() as p:
             path = ROOT / url.path.strip('/')
             if path.is_dir(): path /= 'index.html'
             if path.is_file():
-                request.fulfill(body=path.read_bytes(), content_type='application/javascript' if path.suffix == '.js' else 'text/html')
+                request.fulfill(body=path.read_bytes(), content_type={'.js':'application/javascript','.css':'text/css'}.get(path.suffix,'text/html'))
                 return
         request.fulfill(status=404, body='')
     context.route('**/*', route)
@@ -53,7 +53,9 @@ with sync_playwright() as p:
     page.locator('#toggleInlineEvaluationBtn').click()
     expect(weight).to_have_value('80')
     # Full circumference and skinfold fields calculate inside the workout ficha.
+    frame.locator('.av-content [data-section="medidas"]').click()
     for key, value in {'cintura':'80','quadril':'100','triceps':'10','axilar':'11','torax':'12','abdominal':'13','suprailiaca':'14','subescapular':'15','pregaCoxa':'16'}.items():
+        if key == 'triceps': frame.locator('.av-content [data-section="dobras"]').click()
         field = frame.locator('input[onchange*="\'' + key + '\'"]')
         field.fill(value)
         field.press('Tab')
@@ -65,6 +67,7 @@ with sync_playwright() as p:
         protocol.select_option(name)
         result = page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0]._dobras")
         assert result['protocolo'] == name and result['soma'] == total, result
+    frame.locator('.av-content [data-section="composicao"]').click()
     # The standalone app reads the same complete assessment.
     standalone = context.new_page()
     standalone.on('pageerror', lambda error: errors.append(str(error)))
