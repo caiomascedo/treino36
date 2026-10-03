@@ -83,7 +83,7 @@ with sync_playwright() as p, tempfile.TemporaryDirectory() as tmp:
     page.locator('#obsIconBtn').click(); page.locator('#toggleInfoRelevanteBtn').click()
     page.locator('#openEvaluationBtn').click(); page.locator('#mergeEvaluationSelect').select_option('100')
     expect(page.locator('#confirmMergeEvaluation')).to_be_disabled()
-    page.locator('#confirmSamePerson').check(); page.locator('#confirmMergeEvaluation').click()
+    page.locator('#confirmMergeEvaluation').click()
     expect(page.locator('#infoPeso')).to_have_value('68')
     assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].nome") == 'Pessoa treino 1'
     # A new standalone import preserves confirmed links and all older evaluations.
