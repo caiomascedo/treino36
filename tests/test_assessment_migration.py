@@ -32,7 +32,7 @@ with sync_playwright() as p, tempfile.TemporaryDirectory() as tmp:
             path = ROOT / parsed.path.strip('/')
             if path.is_dir(): path /= 'index.html'
             if path.is_file():
-                request.fulfill(body=path.read_bytes(), content_type='application/javascript' if path.suffix == '.js' else 'text/html')
+                request.fulfill(body=path.read_bytes(), content_type={'.js':'application/javascript','.css':'text/css'}.get(path.suffix,'text/html'))
                 return
             if parsed.path.startswith('/avaliacao'): external_assessment_reads.append(parsed.path)
         request.fulfill(status=404,body='')
@@ -69,6 +69,7 @@ with sync_playwright() as p, tempfile.TemporaryDirectory() as tmp:
     pdf = Path(tmp) / 'postural.pdf'; download.value.save_as(pdf)
     with fitz.open(pdf) as document: assert len(document) == 2
     # Export contains assessments only; reimporting it does not duplicate records.
+    library.locator('.assessment-more-options > summary').click()
     with page.expect_download() as download: library.locator('.btn-export-all').click()
     exported = Path(tmp) / 'avaliacoes.json'; download.value.save_as(exported)
     backup = json.loads(exported.read_text())
