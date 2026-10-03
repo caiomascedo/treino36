@@ -1,0 +1,19 @@
+.obs-native-assessment{margin:8px 0;padding:10px;border:1px solid #d7e3ed;border-radius:12px;background:#f7fafc;color:#243b53}
+.obs-native-assessment [hidden]{display:none!important}
+.obs-assessment-head,.obs-assessment-history{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.obs-assessment-head strong{font-size:14px;flex:1;overflow-wrap:anywhere}
+.obs-assessment-history select{flex:1;min-width:0}
+.obs-native-assessment input,.obs-native-assessment select,.obs-native-assessment textarea{width:100%;box-sizing:border-box;min-width:0;border:1px solid #cbd5e1;border-radius:8px;background:white;padding:7px 9px;font:inherit;font-size:16px;color:#243b53}
+.obs-native-assessment input[readonly]{background:#edf2f7}
+.obs-assessment-date{max-width:190px;margin-bottom:8px}
+.obs-native-assessment .info-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.obs-native-assessment .info-field{min-width:0}
+.obs-native-assessment .info-field label{font-size:12px;line-height:1.25}
+.obs-native-assessment .obs-metric{border:0;border-radius:6px;padding:3px 6px;font-size:11px;color:white;text-align:left;cursor:pointer;background:#64748b}
+.obs-native-assessment .badge-excelente{background:#23864a}.obs-native-assessment .badge-bom{background:#157ab8}.obs-native-assessment .badge-moderado{background:#c77700}.obs-native-assessment .badge-atencao{background:#c93732}
+.obs-metric-detail{font-size:12px;padding:7px;background:#eaf2fa;border:1px solid #caddec;border-radius:8px;overflow-wrap:anywhere}
+.obs-metric-detail .gauge-title{font-weight:bold}.obs-metric-detail .gauge-labels-row{display:flex;flex-wrap:wrap;gap:6px}.obs-metric-detail .gauge-bar{display:flex;height:7px;border-radius:6px;overflow:hidden;position:relative}.obs-metric-detail p{margin:6px 0}
+.obs-skinfold-results,#obsAssessmentProtocol{grid-column:1/-1}
+.obs-skinfold-results{font-size:13px}.obs-skinfold-results .preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.obs-skinfold-results .preview-item{display:flex;flex-direction:column;padding:7px;border-radius:7px;background:#edf6ee}.obs-skinfold-results .badge{display:none}
+.obs-assessment-photo{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px}.obs-assessment-photo img{width:100%;height:120px;object-fit:contain;border-radius:8px;background:#e8eef4}.obs-assessment-photo input{font-size:11px;padding:5px}.obs-assessment-actions{margin-top:10px}.obs-assessment-status{margin:6px 0 0;font-size:12px;color:#526579}
+#obsAssessmentSections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}#obsAssessmentSections .info-tool-btn{margin:0;font-size:12px;padding:8px}
