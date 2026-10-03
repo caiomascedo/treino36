@@ -24,3 +24,11 @@ assert.throws(()=>api.prepare([{id:200,nome:'Outra',avaliacoes:[{id:101,peso:'65
 assert.equal(JSON.stringify(api.prepare(base,base,false).records),JSON.stringify(base));
 assert.equal(api.isAssessmentPayload({alunos:[{nome:'Treino',treino:{A:[]}}]}),false);
 console.log('PASS: histórico por data, conflitos, vínculos confirmados, IDs, arquivo inválido e reimportação sem duplicatas');
+
+const dated = [{id:300,nome:'Peso da ficha separado',pesoAtual:'75',pesoAtualAvaliacaoId:302,avaliacoes:[{id:301,data:'01/09/2026',peso:'74.5'},{id:302,data:'03/10/2026',peso:'71'}]}];
+const restored = api.prepare(dated,[],true).records[0];
+assert.equal(restored.pesoAtual,'75');
+assert.equal(restored.pesoAtualAvaliacaoId,302);
+assert.equal(restored.avaliacoes[0].peso,'74.5');
+assert.equal(restored.avaliacoes[1].peso,'71');
+console.log('PASS: JSON preserva peso atual da ficha e pesos históricos separados');
