@@ -57,9 +57,9 @@ with sync_playwright() as p:
     }""")
     page.reload(); page.locator('#searchName').fill('Pessoa treino 2'); page.locator('#obsIconBtn').click(); page.locator('#toggleInfoRelevanteBtn').click(); page.locator('#saveObsBtn').click()
     expect(page.locator('#mergeEvaluationDialog')).to_be_visible()
-    expect(page.locator('#confirmMergeEvaluation')).to_be_disabled()
+    expect(page.locator('#confirmMergeEvaluation')).to_be_enabled()
     assert page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0].peso")=='74'
-    page.locator('#confirmSamePerson').check(); page.locator('#confirmMergeEvaluation').click()
+    page.locator('#confirmMergeEvaluation').click()
     expect(page.locator('#workoutObsDialog')).not_to_be_visible()
     records=page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))")
     assert len(records)==1 and records[0]['avaliacoes'][0]['peso']=='76' and set(records[0]['treinoStudentIds'])=={'obs-1','obs-2'},records
