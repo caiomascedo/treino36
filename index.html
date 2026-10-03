@@ -1363,9 +1363,9 @@ window.AvaliacaoTreinoSync = (function () {
       record[map[field]] = value;
     });
     if (!previous || ficha.peso !== previous.peso) {
-      var latest = (record.avaliacoes || []).slice(-1)[0];
-      if (latest) latest.peso = number(ficha.peso);
-      else record.pesoIni = number(ficha.peso);
+      record.pesoAtual = number(ficha.peso);
+      record.pesoAtualAvaliacaoId = (record.avaliacoes || []).slice(-1)[0]?.id || null;
+      if (!(record.avaliacoes || []).length) record.pesoIni = number(ficha.peso);
     }
   }
   function toFicha(student, record) {
@@ -1375,7 +1375,7 @@ window.AvaliacaoTreinoSync = (function () {
     student.infoGuias = guias;
     student.avaliacaoFichaId = ficha.id;
     var latest = (record.avaliacoes || []).slice(-1)[0];
-    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:latest ? (latest.peso || '') : (record.pesoIni || '')});
+    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId) === String(latest.id)) ? record.pesoAtual : (latest ? (latest.peso || '') : (record.pesoIni || ''))});
     student.infoRelevante = Object.assign({}, ficha);
     student.whatsapp = record.whatsapp || '';
     student.avaliacaoId = record.id;
@@ -1398,6 +1398,8 @@ window.AvaliacaoTreinoSync = (function () {
 
 </script>
 <script src="avaliacao-import.js"></script>
+<script src="obs-avaliacao.js"></script>
+<link rel="stylesheet" href="obs-avaliacao.css">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -8646,8 +8648,9 @@ window.AvaliacaoTreinoSync = (function () {
       '</button>'+
       '<div id="infoRelevanteContent" class="info-relevante-content" hidden>'+
         '<div class="info-tools-bar"><button type="button" id="openEvaluationBtn" class="info-tool-btn primary">📊 Fazer / editar avaliação</button><button type="button" id="saveFichaEvaluationBtn" class="info-tool-btn">💾 Salvar ficha na avaliação</button></div>'+
-        '<p>Faça a avaliação aqui ou pelo botão Avaliações. Salvar a ficha cadastra e sincroniza os dados da mesma pessoa.</p>'+
+        '<p>Preencha pelas abas abaixo. Os dados também aparecem em Avaliações.</p>'+
         '<div id="obsAssessmentSections" class="info-tools-bar" aria-label="Editar avaliação pelas Obs"><button type="button" class="info-tool-btn" data-assessment-section="composicao">Composição</button><button type="button" class="info-tool-btn" data-assessment-section="medidas">Medidas (cm)</button><button type="button" class="info-tool-btn" data-assessment-section="dobras">Dobras / resultados</button><button type="button" class="info-tool-btn" data-assessment-section="fotos">Fotos</button></div>'+
+        '<section id="obsNativeAssessment" hidden></section>'+
         '<section id="trainingEvaluationPanel" hidden style="margin:16px 0">'+
           '<div class="obs-header-bar"><strong>📊 Avaliação completa</strong><button type="button" id="toggleInlineEvaluationBtn" aria-expanded="true" aria-controls="trainingEvaluationContent">Minimizar avaliação</button><button type="button" id="saveInlineEvaluationBtn">💾 Salvar avaliação</button><button type="button" id="closeInlineEvaluationBtn">Voltar às observações</button></div>'+
           '<p id="trainingEvaluationStudent"></p><div id="trainingEvaluationContent"><p id="trainingEvaluationStatus" role="status">Carregando avaliação…</p><iframe id="trainingEvaluationFrame" title="Avaliação física completa do aluno" style="display:block;width:100%;height:70dvh;border:0" hidden></iframe></div>'+
@@ -9340,8 +9343,7 @@ window.AvaliacaoTreinoSync = (function () {
       ['nome','nasc','idade','altura','whatsapp','email','pesoIni'].forEach(function (field) {
         if (candidate[field] && (useTraining || !record[field])) record[field] = candidate[field];
       });
-      var latest = (record.avaliacoes || []).slice(-1)[0], candidateLatest = (candidate.avaliacoes || []).slice(-1)[0];
-      if (latest && candidateLatest && candidateLatest.peso && (useTraining || !latest.peso)) latest.peso = candidateLatest.peso;
+      if (candidate.pesoAtual && (useTraining || !record.pesoAtual)) { record.pesoAtual = candidate.pesoAtual; record.pesoAtualAvaliacaoId = candidate.pesoAtualAvaliacaoId; }
       AvaliacaoTreinoSync.link(record, student.student_id);
       student.avaliacaoFichaId = ficha.id;
       // Guarde o estado anterior à união para recuperação sem perder o histórico.
@@ -9403,29 +9405,32 @@ window.AvaliacaoTreinoSync = (function () {
       abrirSecaoObsDiretamente(student);
     };
   });
-  function abrirSecaoObsDiretamente(student) {
-    try {
-      salvarGuiaInfoAtual();
-      student.infoGuias = cloneData(infoGuiasAtuais);
-      student.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]);
-      var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
-      var record = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
-      if (!record && student.avaliacaoId) record = records.find(function (a) { return String(a.id) === String(student.avaliacaoId); });
-      if (!record) {
-        var ficha = student.infoRelevante || {};
-        var matches = records.filter(function (a) {
-          return normalizarNome(a.nome) === normalizarNome(ficha.nomeCompleto || student.nome) && ficha.dataNasc && a.nasc === ficha.dataNasc;
-        });
-        if (matches.length === 1) record = matches[0];
-      }
-      if (record) {
-        AvaliacaoTreinoSync.link(record, student.student_id);
-        localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
-        atualizarFichaDaAvaliacao();
-      }
-      abrirFormularioAvaliacao(student, !record);
-    } catch (e) { exibirMensagem(e.message, '#b22222', false); }
+  function obterCadastroAvaliacaoObs(student, forceNew) {
+    salvarGuiaInfoAtual();
+    student.infoGuias = cloneData(infoGuiasAtuais);
+    student.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]);
+    var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+    var record = forceNew ? null : records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
+    if (!forceNew && !record && student.avaliacaoId) record = records.find(function (a) { return String(a.id) === String(student.avaliacaoId); });
+    if (!forceNew && !record) {
+      var ficha = student.infoRelevante || {};
+      var matches = records.filter(function (a) { return normalizarNome(a.nome) === normalizarNome(ficha.nomeCompleto || student.nome) && ficha.dataNasc && a.nasc === ficha.dataNasc; });
+      if (matches.length === 1) record = matches[0];
+    }
+    if (!record) {
+      record = {id:Date.now(), nome:student.nome, sexo:'M', avaliacoes:[]};
+      while (records.some(function (a) { return a.id === record.id; })) record.id++;
+      AvaliacaoTreinoSync.fromFicha(student, record, student.infoRelevante);
+      records.push(record);
+    }
+    if (!Array.isArray(record.avaliacoes)) record.avaliacoes = [];
+    AvaliacaoTreinoSync.link(record, student.student_id);
+    localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
+    atualizarFichaDaAvaliacao();
+    return record;
   }
+  var obsNativeEditor = ObsAssessmentEditor.mount(document.getElementById('obsNativeAssessment'), {ensure:obterCadastroAvaliacaoObs,changed:atualizarFichaDaAvaliacao});
+  function abrirSecaoObsDiretamente(student) { abrirFormularioAvaliacao(student, false); }
   document.getElementById('openEvaluationBtn').onclick = function (event) {
     if (!event || event.isTrusted) obsAssessmentSection = null;
     var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
@@ -9437,28 +9442,9 @@ window.AvaliacaoTreinoSync = (function () {
     } catch (e) { exibirMensagem(e.message, '#b22222', false); }
   };
   function abrirFormularioAvaliacao(student, separatePerson) {
-    salvarGuiaInfoAtual();
-    student.infoGuias = cloneData(infoGuiasAtuais);
-    student.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]);
-    if (!student.avaliacaoFichaId) student.avaliacaoFichaId = student.infoRelevante.id;
-    if (!salvarLocalStorage()) return;
-    var url = new URL('avaliacao.html', location.href);
-    url.searchParams.set('embed', 'treino36');
-    url.searchParams.set('treinoStudentId', student.student_id);
-    if (obsAssessmentSection && obsAssessmentSection.studentId === student.student_id) url.searchParams.set('secao', obsAssessmentSection.section);
-    if (separatePerson) url.searchParams.set('novoCadastro', '1');
-    document.getElementById('trainingEvaluationStudent').textContent = 'Aluno: ' + student.nome;
-    document.getElementById('trainingEvaluationStatus').textContent = 'Carregando avaliação…';
-    evaluationFrame.hidden = true;
-    evaluationFrame.src = url.href;
-    evaluationPanel.hidden = false;
-    definirAvaliacaoInline(true);
+    evaluationPanel.hidden = true;
     definirPainelInformacoes(true);
-    definirPainelObservacoes(false);
-    obsDialog.classList.add('expanded');
-    document.getElementById('expandObsBtn').textContent = '↙ Minimizar janela';
-    document.getElementById('expandObsBtn').setAttribute('aria-pressed', 'true');
-    evaluationPanel.scrollIntoView({block:'start'});
+    obsNativeEditor.open(student, obsAssessmentSection && obsAssessmentSection.studentId === student.student_id ? obsAssessmentSection.section : 'composicao', separatePerson ? obterCadastroAvaliacaoObs(student, true) : null);
   }
   evaluationFrame.addEventListener('load', function () {
     var status = document.getElementById('trainingEvaluationStatus');
@@ -9493,7 +9479,7 @@ window.AvaliacaoTreinoSync = (function () {
       try { alunos = AvaliacaoTreinoSync.read('treinoAlunos'); alunos.forEach(garantirHistorico); }
       catch (e) { exibirMensagem(e.message, '#b22222', false); return; }
     }
-    if (event.key === AvaliacaoTreinoSync.key || event.key === 'treinoAlunos') atualizarFichaDaAvaliacao();
+    if (event.key === AvaliacaoTreinoSync.key || event.key === 'treinoAlunos') { atualizarFichaDaAvaliacao(); if (obsNativeEditor) obsNativeEditor.refresh(); }
   });
 
   function atualizarWhatsAppDoAluno(student, value) {
@@ -9523,6 +9509,7 @@ window.AvaliacaoTreinoSync = (function () {
 
   function abrirObservacoes() {
     obsAssessmentSection = null;
+    if (obsNativeEditor) obsNativeEditor.reset();
     atualizarFichaDaAvaliacao();
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) {
