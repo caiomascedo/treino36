@@ -173,9 +173,9 @@ window.AvaliacaoTreinoSync = (function () {
       record[map[field]] = value;
     });
     if (!previous || ficha.peso !== previous.peso) {
-      var latest = (record.avaliacoes || []).slice(-1)[0];
-      if (latest) latest.peso = number(ficha.peso);
-      else record.pesoIni = number(ficha.peso);
+      record.pesoAtual = number(ficha.peso);
+      record.pesoAtualAvaliacaoId = (record.avaliacoes || []).slice(-1)[0]?.id || null;
+      if (!(record.avaliacoes || []).length) record.pesoIni = number(ficha.peso);
     }
   }
   function toFicha(student, record) {
@@ -185,7 +185,7 @@ window.AvaliacaoTreinoSync = (function () {
     student.infoGuias = guias;
     student.avaliacaoFichaId = ficha.id;
     var latest = (record.avaliacoes || []).slice(-1)[0];
-    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:latest ? (latest.peso || '') : (record.pesoIni || '')});
+    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId) === String(latest.id)) ? record.pesoAtual : (latest ? (latest.peso || '') : (record.pesoIni || ''))});
     student.infoRelevante = Object.assign({}, ficha);
     student.whatsapp = record.whatsapp || '';
     student.avaliacaoId = record.id;
@@ -937,6 +937,7 @@ function syncAvaliacao(alunoId,avId,campo,valor){
   const av=aluno.avaliacoes.find(a=>a.id===avId);
   if(!av) return;
   av[campo]=valor;
+  if(campo==='peso' && aluno.avaliacoes.slice(-1)[0]===av) {aluno.pesoAtual=valor;aluno.pesoAtualAvaliacaoId=av.id;}
   calcularIMCeDobras(aluno,avId);
   salvarDados();
   if(timeoutDobras) clearTimeout(timeoutDobras);
@@ -1869,6 +1870,7 @@ if (['treino36','treino36-library'].includes(avaliacaoParams.get('embed'))) {
   document.head.appendChild(style);
 }
 window.addEventListener('storage', function (event) {
+  if (avaliacaoParams.get('embed') === 'treino36-engine') return;
   if (event.key !== AvaliacaoTreinoSync.key) return;
   try {
     // Os valores já são persistidos; cancelar apenas a atualização visual pendente.
@@ -1898,9 +1900,16 @@ document.getElementById('ordemAluno').addEventListener('change', function(){
   ordenarAlunos();
 });
 
-carregarDados();
-abrirAlunoDoTreino();
-if(avaliacaoParams.get('embed')==='treino36') abrirSecaoAvaliacaoPelasObs(avaliacaoParams.get('secao'));
+window.TreinoAssessmentEngine = {
+  calculate:calcularIMCeDobras, classify:getClassificacaoTexto, gauge:renderizarGauge,
+  protocol:getProtocoloDef, skinfoldLabel:key=>LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
+  async pdf(records,id,type) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id); else await gerarPDFAluno(id); }
+};
+if(avaliacaoParams.get('embed')!=='treino36-engine') {
+  carregarDados();
+  abrirAlunoDoTreino();
+  if(avaliacaoParams.get('embed')==='treino36') abrirSecaoAvaliacaoPelasObs(avaliacaoParams.get('secao'));
+}
 </script>
 </body>
 </html>
