@@ -1,0 +1,40 @@
+.assessment-tabs{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:#fff;padding:8px 0;border-bottom:1px solid #e2e8f0;margin-bottom:12px}
+.assessment-tabs button{background:#eef3f7;color:#243b53;border:0;border-radius:9px;padding:10px 12px;font-size:13px;cursor:pointer}
+.assessment-tabs button[aria-selected="true"]{background:#203c5b;color:white}
+.assessment-tab-panel[hidden],.training-student-picker [hidden]{display:none!important}
+.assessment-tab-panel .grid3{grid-template-columns:repeat(2,minmax(0,1fr))}
+.assessment-tab-panel .field input,.assessment-tab-panel .field select{border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#243b53;box-sizing:border-box;min-width:0;padding:10px}
+.assessment-tab-panel .field label{color:#475569;font-weight:600}
+.assessment-tab-panel .card{margin-bottom:0}
+.training-student-picker{width:min(520px,calc(100% - 32px));max-height:85dvh;overflow:auto;box-sizing:border-box;border:0;border-radius:16px;padding:20px;color:#243b53}
+.training-student-picker::backdrop{background:rgba(0,0,0,.5)}
+.training-student-picker label{display:block;margin:12px 0;font-weight:600}
+.training-student-picker select,.training-student-picker input[type="search"]{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
+.training-student-picker .picker-actions{display:flex;gap:8px;flex-wrap:wrap}
+.training-student-picker button,#addTrainingStudentBtn{padding:10px 14px;border:0;border-radius:8px;background:#203c5b;color:white;cursor:pointer}
+.training-student-picker .picker-status{color:#b22222}
+.controles-header{gap:8px;margin-bottom:10px;align-items:stretch}
+.controles-header>div:first-child{gap:6px!important}
+.controles-header .busca-input{flex:1;min-width:130px;width:auto;font-size:13px;padding:8px}
+.controles-header .select-ordem{flex:1;min-width:130px;font-size:12px;padding:8px;width:auto}
+.compact-actions{align-items:center;gap:6px!important}
+.compact-actions>button{padding:8px 10px!important;font-size:12px!important}
+.assessment-more-options{position:relative;font-size:12px;color:#243b53}
+.assessment-more-options summary{cursor:pointer;padding:8px 10px;background:#e8eef3;border-radius:8px}
+.assessment-more-menu{position:absolute;right:0;top:100%;z-index:20;min-width:180px;padding:8px;background:#fff;border:1px solid #d8e0e8;border-radius:10px;box-shadow:0 4px 12px #0002;display:grid;gap:6px}
+.assessment-more-menu button{font-size:12px;padding:8px;text-align:left}
+.banner-renovacao{padding:8px 10px;margin-bottom:10px}
+.banner-renovacao h4{font-size:12px;margin-bottom:0}
+.banner-renovacao ul{margin-top:8px}
+.banner-renovacao li{font-size:12px;gap:6px;flex-wrap:wrap}
+.alunos-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.aluno-card:not(.active) .aluno-acoes{display:none}
+.aluno-card:not(.active) .aluno-header{min-height:96px;padding:12px;align-items:flex-start;border-bottom:0}
+.aluno-card:not(.active) .aluno-header>div:first-child{display:grid!important;grid-template-columns:24px minmax(0,1fr);gap:5px!important;width:100%}
+.aluno-card:not(.active) .aluno-nome{font-size:14px;overflow-wrap:anywhere}
+.aluno-card:not(.active) .aluno-info,.aluno-card:not(.active) .badge-renovacao{grid-column:2;font-size:10px;white-space:normal;margin:0}
+.aluno-card.active{grid-column:1/-1}
+.aluno-acoes button{color:#243b53!important}
+@media(max-width:520px){.alunos-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aluno-card:not(.active) .aluno-header{min-height:94px;padding:10px}.aluno-card:not(.active) .aluno-nome{font-size:13px}}
+@media(max-width:520px){.controles-header{flex-direction:column}.compact-actions{display:flex!important;flex-direction:row!important}.assessment-more-options{margin-left:auto}}
+@media(max-width:480px){.assessment-tabs button{padding:9px 10px;font-size:12px}.aluno-content,.av-content{padding:8px!important}.aluno-acoes{flex-wrap:wrap}.assessment-tab-panel .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.assessment-tab-panel .field{min-width:0}.assessment-tab-panel .field label{font-size:12px}}
