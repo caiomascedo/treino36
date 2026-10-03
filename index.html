@@ -9246,8 +9246,8 @@ window.AvaliacaoTreinoSync = (function () {
     '<div id="mergeEvaluationPreview" style="overflow:auto"></div>' +
     '<label for="mergeEvaluationSource">Quando os dados forem diferentes, usar:</label><select id="mergeEvaluationSource"><option value="evaluation">Dados da Avaliação</option><option value="training">Dados da ficha do treino</option></select>' +
     '<p>O nome na pesquisa e os exercícios de cada treino continuam separados. Só os dados da pessoa e suas avaliações serão compartilhados. Campos vazios serão completados com o outro cadastro.</p>' +
-    '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="confirmSamePerson" style="width:auto">Confirmo que este treino é da mesma pessoa selecionada acima.</label>' +
-    '<p id="mergeEvaluationStatus" role="status"></p><button type="button" id="confirmMergeEvaluation" class="primary" disabled>Confirmar e sincronizar</button> <button type="button" id="createSeparateEvaluation">É outra pessoa / criar cadastro</button> <button type="button" data-close>Cancelar</button>');
+    '<p>Ao clicar em “Sim, é a mesma pessoa”, você confirma o vínculo com o cadastro selecionado.</p>' +
+    '<p id="mergeEvaluationStatus" role="status"></p><button type="button" id="confirmMergeEvaluation" class="primary" disabled>Sim, é a mesma pessoa / sincronizar</button> <button type="button" id="createSeparateEvaluation">É outra pessoa / criar cadastro</button> <button type="button" data-close>Cancelar</button>');
   var mergeStudentId = null;
   var mergeOpenAfterConfirm = false;
   var mergeSaveAfterConfirm = false;
@@ -9257,7 +9257,7 @@ window.AvaliacaoTreinoSync = (function () {
     var student = alunos.find(function (a) { return a.student_id === mergeStudentId; });
     var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
     var record = records.find(function (a) { return String(a.id) === document.getElementById('mergeEvaluationSelect').value; });
-    document.getElementById('confirmMergeEvaluation').disabled = !record || !document.getElementById('confirmSamePerson').checked;
+    document.getElementById('confirmMergeEvaluation').disabled = !record;
     if (!student || !record) return;
     var ficha = student.infoRelevante || {}, latest = (record.avaliacoes || []).slice(-1)[0];
     var table = document.createElement('table');
@@ -9304,15 +9304,13 @@ window.AvaliacaoTreinoSync = (function () {
       mergeSaveAfterConfirm = saveAfterConfirm === true;
       document.getElementById('mergeStudentName').textContent = 'Aluno no treino: ' + student.nome;
       document.getElementById('mergeEvaluationSource').value = saveAfterConfirm ? 'training' : 'evaluation';
-      document.getElementById('confirmSamePerson').checked = false;
       document.getElementById('createSeparateEvaluation').hidden = records.some(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
       document.getElementById('mergeEvaluationStatus').textContent = records.length ? '' : 'Nenhum cadastro disponível. Importe o backup JSON da Avaliação para carregar as pessoas já cadastradas.';
       mostrarComparacaoCadastros();
       mergeEvaluationDialog.showModal();
     } catch (e) { exibirMensagem(e.message, '#b22222', false); }
   }
-  document.getElementById('mergeEvaluationSelect').onchange = function () { document.getElementById('confirmSamePerson').checked = false; mostrarComparacaoCadastros(); };
-  document.getElementById('confirmSamePerson').onchange = mostrarComparacaoCadastros;
+  document.getElementById('mergeEvaluationSelect').onchange = mostrarComparacaoCadastros;
   document.getElementById('createSeparateEvaluation').onclick = function () {
     var student = alunos.find(function (a) { return a.student_id === mergeStudentId; });
     if (!student) return;
@@ -9329,7 +9327,6 @@ window.AvaliacaoTreinoSync = (function () {
     try {
       var student = alunos.find(function (a) { return a.student_id === mergeStudentId; });
       if (!student) throw Error('Selecione novamente o aluno no treino.');
-      if (!document.getElementById('confirmSamePerson').checked) throw Error('Confirme que é a mesma pessoa antes de sincronizar.');
       var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
       var record = records.find(function (a) { return String(a.id) === document.getElementById('mergeEvaluationSelect').value; });
       if (!record) throw Error('Este cadastro não está disponível para vincular.');
@@ -9348,10 +9345,11 @@ window.AvaliacaoTreinoSync = (function () {
       AvaliacaoTreinoSync.link(record, student.student_id);
       student.avaliacaoFichaId = ficha.id;
       // Guarde o estado anterior à união para recuperação sem perder o histórico.
-      localStorage.setItem('avaliacao_treino_antes_uniao', JSON.stringify({data:new Date().toISOString(), avaliacoes:AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key), treinos:AvaliacaoTreinoSync.read('treinoAlunos')}));
+      try { localStorage.setItem('avaliacao_treino_antes_uniao', JSON.stringify({data:new Date().toISOString(), avaliacoes:AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key), treinos:AvaliacaoTreinoSync.read('treinoAlunos')})); }
+      catch (backupError) { /* O backup adicional não pode bloquear a confirmação quando o navegador está cheio. */ }
       localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
-      atualizarFichaDaAvaliacao();
       mergeEvaluationDialog.close();
+      atualizarFichaDaAvaliacao();
       exibirMensagem('Pessoa confirmada. Dados sincronizados; nome e exercícios do treino mantidos.', '#1e6f3f', false);
       if (mergeSaveAfterConfirm) { mergeSaveAfterConfirm = false; concluirSalvamentoObservacoes(); }
       if (mergeOpenAfterConfirm) abrirFormularioAvaliacao(student, false);
@@ -9402,9 +9400,32 @@ window.AvaliacaoTreinoSync = (function () {
       var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
       if (!student) { exibirMensagem('Selecione um aluno cadastrado no treino.', '#b22222', false); return; }
       obsAssessmentSection = {studentId:student.student_id, section:button.dataset.assessmentSection};
-      document.getElementById('openEvaluationBtn').click();
+      abrirSecaoObsDiretamente(student);
     };
   });
+  function abrirSecaoObsDiretamente(student) {
+    try {
+      salvarGuiaInfoAtual();
+      student.infoGuias = cloneData(infoGuiasAtuais);
+      student.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]);
+      var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+      var record = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
+      if (!record && student.avaliacaoId) record = records.find(function (a) { return String(a.id) === String(student.avaliacaoId); });
+      if (!record) {
+        var ficha = student.infoRelevante || {};
+        var matches = records.filter(function (a) {
+          return normalizarNome(a.nome) === normalizarNome(ficha.nomeCompleto || student.nome) && ficha.dataNasc && a.nasc === ficha.dataNasc;
+        });
+        if (matches.length === 1) record = matches[0];
+      }
+      if (record) {
+        AvaliacaoTreinoSync.link(record, student.student_id);
+        localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
+        atualizarFichaDaAvaliacao();
+      }
+      abrirFormularioAvaliacao(student, !record);
+    } catch (e) { exibirMensagem(e.message, '#b22222', false); }
+  }
   document.getElementById('openEvaluationBtn').onclick = function (event) {
     if (!event || event.isTrusted) obsAssessmentSection = null;
     var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
