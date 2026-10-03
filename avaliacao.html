@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
+  <title>Avaliação Física - Caio Macêdo</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f2f2f2;color:#1a1a1a;min-height:100vh;padding:20px 15px 30px;position:relative}
+
+    html{scroll-behavior:smooth}
+
+    .btn-topo{position:fixed;bottom:30px;right:30px;width:50px;height:50px;background:#e63939;color:#fff;border:none;border-radius:50%;font-size:24px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.25);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all 0.3s}
+    .btn-topo.show{opacity:1;visibility:visible}
+    .btn-topo:hover{background:#c72a2a;transform:scale(1.05)}
+    @media(max-width:520px){.btn-topo{width:45px;height:45px;font-size:20px;bottom:20px;right:20px}}
+
+    .page-header{text-align:center;margin-bottom:22px}
+    .page-header img{max-width:80px;margin-bottom:8px;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.15));border-radius:12px}
+    .page-header h1{font-size:18pt;color:#e63939;margin-bottom:2px}
+    .page-header p{color:#999;font-size:9pt}
+    .controles-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px}
+    .busca-input{padding:8px 12px;border:1px solid #ddd;border-radius:8px;width:220px;font-size:10pt}
+    .select-ordem{padding:8px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:10pt}
+    .btn-novo-aluno{background:#e63939;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer}
+    .btn-desfazer{background:#ffc107;color:#333;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer}
+    .btn-import-json{background:#17a2b8;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;font-size:9pt}
+    .btn-export-all{background:#28a745;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;font-size:9pt}
+    .alunos-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+    .aluno-card{background:#fff;border-radius:12px;border:1px solid #e0e0e0;overflow:hidden}
+    .aluno-card.active{border-color:#e63939;box-shadow:0 4px 15px rgba(230,57,57,.25)}
+    .aluno-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fafafa;cursor:pointer;border-bottom:1px solid #eee;flex-wrap:wrap;gap:10px}
+    .aluno-header:hover{background:#f5f5f5}
+    .aluno-nome{font-weight:700;font-size:12pt;color:#333}
+    .aluno-info{font-size:9px;color:#999}
+    .aluno-acoes{display:flex;gap:8px;flex-wrap:wrap}
+    .aluno-acoes button{background:none;border:none;cursor:pointer;font-size:13px;padding:4px 8px;border-radius:6px}
+    .aluno-content{display:none;padding:16px;background:#fff}
+    .aluno-card.active .aluno-content{display:block}
+    .card{background:#fff;border-radius:14px;padding:18px 16px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+    .card-title{font-size:11pt;font-weight:700;color:#e63939;margin-bottom:13px;padding-bottom:7px;border-bottom:2px solid #fafafa;display:flex;align-items:center;gap:7px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+    .field{display:flex;flex-direction:column;gap:4px}
+    .field label{font-size:8pt;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.5px}
+    .field input,.field textarea,.field select{padding:9px 12px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:11pt;font-family:inherit;outline:none;background:#fafafa}
+    .field input:focus,.field textarea:focus{border-color:#e63939;background:#fff}
+    .field input[readonly]{background:#f5f5f5;color:#666}
+    .avs-list{display:flex;flex-direction:column;gap:12px}
+    .av-item{background:#fafafa;border:1.5px solid #ebebeb;border-radius:12px;margin-bottom:8px;overflow:hidden}
+    .av-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f0f0f0;cursor:pointer;border-radius:12px 12px 0 0;transition:background 0.2s}
+    .av-header:hover{background:#e8e8e8}
+    .av-num{font-weight:700;color:#e63939;font-size:11pt}
+    .av-toggle{font-size:14px;color:#999;transition:transform 0.2s}
+    .av-content{display:none;padding:14px}
+    .av-item.expanded .av-content{display:block}
+    .av-item.expanded .av-toggle{transform:rotate(180deg)}
+    .av-rem{background:#e63939;color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:13px;cursor:pointer;margin-left:10px}
+    .btn-add-av{background:#e63939;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer;margin-top:10px}
+    .sec-label{font-size:8pt;font-weight:700;color:#bbb;text-transform:uppercase;margin:13px 0 7px;display:flex;align-items:center;gap:6px}
+    .sec-label::before{content:'';display:inline-block;width:3px;height:11px;background:#e63939;border-radius:2px}
+    .foto-box{border:2px dashed #ddd;border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;background:#fafafa;position:relative;min-height:100px;justify-content:center}
+    .foto-box:hover{border-color:#e63939}
+    .foto-box img{width:100%;max-height:130px;object-fit:cover;border-radius:6px;display:none}
+    .foto-box img.has-foto{display:block}
+    .foto-ph{text-align:center;color:#ccc;font-size:9pt}
+    .foto-box input{display:none}
+    .foto-buttons{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;justify-content:center}
+    .btn-salvar-foto{background:#28a745;color:#fff;border:none;border-radius:5px;padding:4px 8px;font-size:8pt;cursor:pointer}
+    .btn-apagar-foto{background:#e63939;color:#fff;border:none;border-radius:5px;padding:4px 8px;font-size:8pt;cursor:pointer}
+    .btn-pdf-aluno{background:#e63939;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:9pt;font-weight:700;cursor:pointer}
+    .btn-postural-aluno{background:#17a2b8;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:9pt;font-weight:700;cursor:pointer}
+    .btn-renomear-aluno{background:#ffc107;color:#333;border:none;border-radius:8px;padding:8px 12px;font-size:9pt;font-weight:700;cursor:pointer}
+    .btn-icone{width:34px;height:34px;padding:0;font-size:14px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:none;cursor:pointer}
+    .notif{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:8px 22px;border-radius:30px;font-size:10pt;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none}
+    .sem-resultados{text-align:center;padding:40px;background:#fff;border-radius:12px;color:#999}
+    .dobras-preview{background:linear-gradient(135deg,#e8f5e9 0%,#c8e6c9 100%);border-radius:10px;padding:12px;margin-top:10px;border-left:4px solid #4CAF50}
+    .dobras-preview h4{font-size:9pt;color:#2e7d32;margin-bottom:8px}
+    .preview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+    .preview-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #a5d6a7;flex-wrap:wrap;gap:5px}
+    .preview-label{font-size:7.5pt;color:#555}
+    .preview-value{font-weight:700;font-size:8.5pt;color:#2e7d32}
+    .preview-ref{font-size:6pt;color:#6b8c6e}
+    .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:7pt;font-weight:700;margin-left:8px;white-space:nowrap}
+    .badge-excelente{background:#4CAF50;color:#fff}
+    .badge-bom{background:#2196F3;color:#fff}
+    .badge-moderado{background:#FF9800;color:#fff}
+    .badge-atencao{background:#F44336;color:#fff}
+    .av-resumo{font-size:9px;color:#666;margin-left:10px;font-weight:400}
+    .badge.clickable{cursor:pointer}
+    .badge.clickable:hover{filter:brightness(0.92)}
+    .gauge-panel{display:none;margin-top:10px}
+    .gauge-panel.show{display:block}
+    .gauge-card{background:#eef5fc;border:1.5px solid #d6e7f7;border-radius:12px;padding:14px}
+    .gauge-title{font-size:9pt;font-weight:700;color:#1a3c5e;margin-bottom:10px}
+    .gauge-bar{display:flex;height:8px;border-radius:6px;overflow:hidden;position:relative;margin-bottom:6px}
+    .gauge-marker{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #333;transform:translateX(-50%);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+    .gauge-labels-row{display:flex;font-size:7pt;color:#5a6b80;text-align:center;margin-bottom:10px}
+    .gauge-desc strong{font-size:8pt;color:#1565c0;display:block;margin-bottom:4px}
+    .gauge-desc p{font-size:8pt;color:#5a6b80;line-height:1.4}
+    .btn-whatsapp-aluno{background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:9pt;font-weight:700;cursor:pointer}
+    .btn-whatsapp-aluno.btn-icone{background:#f0f0f0;color:#333;border:1px solid #ddd}
+    .btn-notif{background:#fff3cd;color:#856404;border:1px solid #ffe8a1;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:9pt}
+    .banner-renovacao{background:#fff3cd;border:1.5px solid #ffe8a1;border-radius:12px;padding:12px 16px;margin-bottom:15px;display:none}
+    .banner-renovacao.show{display:block}
+    .banner-renovacao h4{font-size:10pt;color:#856404;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .banner-renovacao .banner-botoes{display:flex;gap:6px;align-items:center}
+    .banner-renovacao .fechar-banner,.banner-renovacao .minimizar-banner{background:none;border:none;cursor:pointer;font-size:14px;color:#856404}
+    .banner-renovacao ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+    .banner-renovacao.minimized ul{display:none}
+    .banner-renovacao li{font-size:9pt;color:#5a4a1a;display:flex;justify-content:space-between;align-items:center;background:#fffaf0;border-radius:6px;padding:7px 10px;cursor:pointer}
+    .banner-renovacao li:hover{background:#fff2d9}
+    .badge-renovacao{display:inline-block;padding:2px 8px;border-radius:20px;font-size:7pt;font-weight:700;margin-left:6px;white-space:nowrap}
+    .badge-renovacao.vencida{background:#F44336;color:#fff}
+    .badge-renovacao.proxima{background:#FF9800;color:#fff}
+    .badge-renovacao.ok{background:#4CAF50;color:#fff}
+    .pag-dia2-col{flex-direction:column}
+    .btn-toggle-secao{margin-left:auto;background:#f0f0f0;border:1px solid #ddd;border-radius:6px;width:22px;height:22px;font-size:9px;cursor:pointer;color:#666}
+    .btn-limpar-data{background:#fdecea;border:1px solid #f5c6cb;color:#c0392b;border-radius:6px;width:36px;font-size:12px;cursor:pointer;flex-shrink:0}
+    @media(max-width:520px){
+      .grid2,.grid3{grid-template-columns:1fr}
+      .busca-input{width:100%}
+      .controles-header{flex-direction:column;align-items:stretch}
+      .preview-grid{grid-template-columns:1fr}
+      .aluno-acoes button{padding:6px 10px;font-size:11px}
+      .badge{font-size:6pt;padding:2px 5px;margin-left:5px}
+    }
+  </style>
+<script>
+
+/* A mesma avaliação é usada pelo aplicativo e pelo formulário dentro do treino.
+   GitHub Pages do mesmo usuário compartilha a origem e o localStorage. */
+window.AvaliacaoTreinoSync = (function () {
+  var key = 'avaliacao_fisica_alunos';
+  function read(k) {
+    var value = JSON.parse(localStorage.getItem(k) || '[]');
+    if (!Array.isArray(value)) throw Error('Cadastro inválido. Importe um backup válido antes de continuar.');
+    return value;
+  }
+  function normal(name) { return String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLowerCase(); }
+  function isLinked(record, studentId) {
+    return !!studentId && (record.treinoStudentId === studentId || (Array.isArray(record.treinoStudentIds) && record.treinoStudentIds.includes(studentId)));
+  }
+  function link(record, studentId) {
+    var ids = Array.isArray(record.treinoStudentIds) ? record.treinoStudentIds.slice() : [];
+    if (record.treinoStudentId) ids.push(record.treinoStudentId);
+    ids.push(studentId);
+    record.treinoStudentIds = Array.from(new Set(ids));
+    if (!record.treinoStudentId) record.treinoStudentId = ids[0];
+  }
+  function find(records, student) {
+    var linked = records.filter(function (a) { return isLinked(a, student.student_id); });
+    if (linked.length === 1) return linked[0];
+    if (linked.length > 1) throw Error('Há mais de um cadastro vinculado a este aluno. Confira os cadastros na Avaliação.');
+    var matches = records.filter(function (a) { return normal(a.nome) === normal(student.nome); });
+    if (matches.length > 1) throw Error('Há alunos com o mesmo nome na Avaliação. Diferencie os nomes antes de vincular.');
+    return matches[0] || null;
+  }
+  function number(value) {
+    var m = String(value || '').replace(',', '.').match(/\d+(?:\.\d+)?/);
+    return m ? m[0] : '';
+  }
+  function fromFicha(student, record, ficha, previous) {
+    var map = { idade:'idade', altura:'altura', dataNasc:'nasc', nomeCompleto:'nome', whats:'whatsapp', email:'email' };
+    Object.keys(map).forEach(function (field) {
+      if (previous && ficha[field] === previous[field]) return;
+      var value = ficha[field] || '';
+      if (field === 'nomeCompleto' && !value) return;
+      if (field === 'altura') { value = number(value); if (Number(value) > 3) value = String(Number(value) / 100); }
+      if (field === 'idade') value = number(value);
+      record[map[field]] = value;
+    });
+    if (!previous || ficha.peso !== previous.peso) {
+      var latest = (record.avaliacoes || []).slice(-1)[0];
+      if (latest) latest.peso = number(ficha.peso);
+      else record.pesoIni = number(ficha.peso);
+    }
+  }
+  function toFicha(student, record) {
+    var guias = student.infoGuias || [];
+    var ficha = guias.find(function (g) { return g.id === student.avaliacaoFichaId; }) || guias[0];
+    if (!ficha) { ficha = Object.assign({id:'1', titulo:'Ficha 1'}, student.infoRelevante || {}); guias.push(ficha); }
+    student.infoGuias = guias;
+    student.avaliacaoFichaId = ficha.id;
+    var latest = (record.avaliacoes || []).slice(-1)[0];
+    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:latest ? (latest.peso || '') : (record.pesoIni || '')});
+    student.infoRelevante = Object.assign({}, ficha);
+    student.whatsapp = record.whatsapp || '';
+    student.avaliacaoId = record.id;
+    return ficha;
+  }
+  function syncTraining(records) {
+    var students = read('treinoAlunos'), changed = false;
+    students.forEach(function (student) {
+      if (!student.student_id) return;
+      var record = records.find(function (a) { return isLinked(a, student.student_id); });
+      if (!record) return;
+      var before = JSON.stringify(student);
+      toFicha(student, record);
+      if (before !== JSON.stringify(student)) changed = true;
+    });
+    if (changed) localStorage.setItem('treinoAlunos', JSON.stringify(students));
+  }
+  return {key:key, read:read, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, syncTraining:syncTraining};
+})();
+
+</script>
+<script src="avaliacao-import.js"></script>
+</head>
+<body>
+
+<button class="btn-topo" id="btnTopo" title="Subir ao topo">↑</button>
+
+<div class="page-header">
+  <img src="https://i.postimg.cc/Td71K1rH/caio-macedo-logo.png" alt="Logo">
+  <h1>📋 AVALIAÇÃO FÍSICA</h1>
+  <p>Caio Macêdo • CREF 007854-G/PI</p>
+</div>
+
+<div class="controles-header">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
+    <input type="text" id="buscaAluno" class="busca-input" placeholder="🔍 Buscar aluno..." oninput="filtrarAlunos()">
+    <select id="ordemAluno" class="select-ordem" onchange="ordenarAlunos()">
+      <option value="nome">Ordenar por Nome (A-Z)</option>
+      <option value="nome_desc">Ordenar por Nome (Z-A)</option>
+      <option value="data_avaliacao">Ordenar por Última Avaliação</option>
+    </select>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn-novo-aluno" id="btnNovoAluno">+ Novo Aluno</button>
+    <button class="btn-notif" id="btnAtivarNotif" onclick="pedirPermissaoNotificacao()">🔔 Ativar Notificações</button>
+    <button class="btn-desfazer" onclick="desfazer()">↩️ Desfazer</button>
+    <button class="btn-export-all" onclick="exportarTodosAlunos()">💾 Salvar Todos</button>
+    <button class="btn-import-json" onclick="importarJSON()">📂 Importar</button>
+    <input type="file" id="importFile" style="display:none" accept=".json" onchange="carregarJSONArquivo(this)">
+  </div>
+</div>
+
+<div class="banner-renovacao" id="bannerRenovacao"></div>
+
+<div id="alunosList" class="alunos-grid"></div>
+<div class="notif" id="notif"></div>
+
+<script>
+/* SCROLL AUTOMÁTICO PARA O CAMPO ATIVO (iPhone friendly) */
+(function(){
+  let scrollTimeout = null;
+
+  function scrollCampoParaVisivel(el){
+    if(!el) return;
+    // Espera o teclado abrir/animar antes de calcular posições
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function(){
+      const rect = el.getBoundingClientRect();
+      const viewportH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const margemSuperior = 90;  // espaço para não ficar colado no topo
+      const margemInferior = 40;  // espaço para não ficar colado no teclado
+
+      // Se o campo está abaixo da área visível (considerando teclado)
+      if(rect.bottom > viewportH - margemInferior){
+        const delta = rect.bottom - (viewportH - margemInferior);
+        window.scrollBy({top: delta, behavior: 'smooth'});
+      }
+      // Se o campo está acima da área visível
+      else if(rect.top < margemSuperior){
+        const delta = rect.top - margemSuperior;
+        window.scrollBy({top: delta, behavior: 'smooth'});
+      }
+    }, 300);
+  }
+
+  document.addEventListener('focusin', function(e){
+    const tag = e.target.tagName;
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'){
+      scrollCampoParaVisivel(e.target);
+    }
+  }, true);
+
+  // Reagir também quando o teclado muda o tamanho do viewport (iOS)
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', function(){
+      const ativo = document.activeElement;
+      if(ativo && (ativo.tagName === 'INPUT' || ativo.tagName === 'TEXTAREA' || ativo.tagName === 'SELECT')){
+        scrollCampoParaVisivel(ativo);
+      }
+    });
+  }
+})();
+
+/* BOTÃO SUBIR AO TOPO */
+window.addEventListener('scroll', function() {
+  const btn = document.getElementById('btnTopo');
+  if(window.scrollY > 300) {
+    btn.classList.add('show');
+  } else {
+    btn.classList.remove('show');
+  }
+});
+document.getElementById('btnTopo').addEventListener('click', function() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/* ESTADO GLOBAL */
+let alunos = [];
+let alunoAtivoId = null;
+let ultimoEstado = null;
+let timeoutDobras = null;
+let currentBusca = '';
+let currentOrdem = 'nome';
+
+/* UTILITÁRIOS */
+function escapeHtml(str){
+  if(!str) return '';
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function pf(v){
+  if(v===undefined||v===null||v==='') return NaN;
+  return parseFloat(String(v).replace(',','.'));
+}
+
+function formatDelta(atual, anterior) {
+  if(anterior === undefined || anterior === null || anterior === '' || atual === undefined || atual === null || atual === '') return '';
+  const a = pf(atual);
+  const b = pf(anterior);
+  if(isNaN(a) || isNaN(b)) return '';
+  const diff = a - b;
+  if(Math.abs(diff) < 0.01) return '';
+  if(diff > 0) return ` (+${diff.toFixed(1).replace('.',',')})`;
+  if(diff < 0) return ` (${diff.toFixed(1).replace('.',',')})`;
+  return '';
+}
+
+function formatDeltaCoxaBiceps(atual, anterior) {
+  if(!atual || !anterior) return '';
+  const partesAtual = atual.split('/');
+  const partesAnterior = anterior.split('/');
+  if(partesAtual.length !== 2 || partesAnterior.length !== 2) return '';
+  const delta1 = formatDelta(partesAtual[0].trim(), partesAnterior[0].trim());
+  const delta2 = formatDelta(partesAtual[1].trim(), partesAnterior[1].trim());
+  if(!delta1 && !delta2) return '';
+  return `${delta1}${delta2}`;
+}
+
+function formatarBicepsCoxa(input){
+  let valor = input.value.trim();
+  if(valor.includes('/')) return;
+  let partes = valor.split(/\s+/);
+  if(partes.length === 2){
+    input.value = `${partes[0]} / ${partes[1]}`;
+    return true;
+  }
+  return false;
+}
+
+function formatarDataAuto(input){
+  let valor = input.value.replace(/\D/g,'');
+  if(valor.length === 8){
+    let dia=valor.substring(0,2), mes=valor.substring(2,4), ano=valor.substring(4,8);
+    if(parseInt(dia)<=31&&parseInt(mes)<=12&&parseInt(ano)>1900&&parseInt(ano)<2100){
+      input.value=`${dia}/${mes}/${ano}`;
+      return true;
+    }
+  }
+  return false;
+}
+
+function formatarAltura(input) {
+  let valor = input.value.replace(/\D/g, '');
+  if(valor.length === 3) {
+    let metros = valor.substring(0,1);
+    let centimetros = valor.substring(1,3);
+    input.value = `${metros},${centimetros}`;
+    return true;
+  }
+  if(valor.length === 2) {
+    input.value = `0,${valor}`;
+    return true;
+  }
+  return false;
+}
+
+function calcularIdade(dataNasc){
+  if(!dataNasc||dataNasc.length!==10) return '';
+  const partes=dataNasc.split('/');
+  if(partes.length!==3) return '';
+  const dia=parseInt(partes[0]),mes=parseInt(partes[1])-1,ano=parseInt(partes[2]);
+  if(isNaN(dia)||isNaN(mes)||isNaN(ano)) return '';
+  const nasc=new Date(ano,mes,dia), hoje=new Date();
+  let idade=hoje.getFullYear()-nasc.getFullYear();
+  if(hoje.getMonth()<nasc.getMonth()||(hoje.getMonth()===nasc.getMonth()&&hoje.getDate()<nasc.getDate())) idade--;
+  return (idade>0&&idade<120)?idade:'';
+}
+
+function getClassificacaoTexto(nome,valor,sexo){
+  const v=parseFloat(String(valor).replace(',','.'));
+  if(isNaN(v)) return {texto:'—',classe:'badge-excelente'};
+  if(nome==='IMC'){
+    if(v<18.5) return {texto:'Abaixo peso',classe:'badge-moderado'};
+    if(v<25) return {texto:'Saudável',classe:'badge-excelente'};
+    if(v<30) return {texto:'Sobrepeso',classe:'badge-moderado'};
+    return {texto:'Obesidade',classe:'badge-atencao'};
+  }
+  if(nome==='% Gordura'){
+    if(sexo==='F'){
+      if(v<21) return {texto:'Baixo',classe:'badge-bom'};
+      if(v<33) return {texto:'Saudável',classe:'badge-excelente'};
+      if(v<39) return {texto:'Moderado',classe:'badge-moderado'};
+      return {texto:'Elevado',classe:'badge-atencao'};
+    }
+    if(v<6) return {texto:'Baixo',classe:'badge-bom'};
+    if(v<24) return {texto:'Saudável',classe:'badge-excelente'};
+    if(v<30) return {texto:'Moderado',classe:'badge-moderado'};
+    return {texto:'Elevado',classe:'badge-atencao'};
+  }
+  if(nome==='Gordura Visceral'){
+    if(v<9) return {texto:'Baixo risco',classe:'badge-excelente'};
+    if(v<14) return {texto:'Risco moderado',classe:'badge-moderado'};
+    return {texto:'Alto risco',classe:'badge-atencao'};
+  }
+  if(nome==='Massa Muscular'){
+    if(sexo==='F'){
+      if(v>=35) return {texto:'Alto',classe:'badge-excelente'};
+      if(v>=28) return {texto:'Bom',classe:'badge-excelente'};
+      return {texto:'Abaixo',classe:'badge-atencao'};
+    }
+    if(v>=45) return {texto:'Alto',classe:'badge-excelente'};
+    if(v>=35) return {texto:'Bom',classe:'badge-excelente'};
+    return {texto:'Abaixo',classe:'badge-atencao'};
+  }
+  if(nome==='% Proteína'){
+    if(v>=18) return {texto:'Excelente',classe:'badge-excelente'};
+    if(v>=14) return {texto:'Bom',classe:'badge-excelente'};
+    return {texto:'Atenção',classe:'badge-atencao'};
+  }
+  if(nome==='% Água'){
+    if(sexo==='F'){
+      if(v>=50) return {texto:'Hidratado',classe:'badge-excelente'};
+      if(v>=45) return {texto:'Regular',classe:'badge-moderado'};
+      return {texto:'Desidratado',classe:'badge-atencao'};
+    }
+    if(v>=55) return {texto:'Hidratado',classe:'badge-excelente'};
+    if(v>=50) return {texto:'Regular',classe:'badge-moderado'};
+    return {texto:'Desidratado',classe:'badge-atencao'};
+  }
+  if(nome==='TMB'){
+    if(v>=1700) return {texto:'Alto',classe:'badge-excelente'};
+    if(v>=1300) return {texto:'Moderado',classe:'badge-moderado'};
+    return {texto:'Baixo',classe:'badge-atencao'};
+  }
+  if(nome==='Peso'){
+    if(v<60) return {texto:'Abaixo',classe:'badge-atencao'};
+    if(v<=85) return {texto:'Normal',classe:'badge-excelente'};
+    return {texto:'Alto',classe:'badge-moderado'};
+  }
+  if(nome==='Idade Metabólica'){
+    return {texto:'Ver detalhe',classe:'badge-bom'};
+  }
+  return {texto:'Normal',classe:'badge-excelente'};
+}
+
+function calcularIdadeMetabolica(sexo,idade,gordura){
+  const g=pf(gordura);
+  if(isNaN(g)||g<=0) return '';
+  const idadeReal = pf(idade)||30;
+  // Ponto médio da faixa "saudável" de % gordura por sexo (referência interna do app)
+  const idealMid = sexo==='F' ? 27 : 15;
+  const k = 0.7; // quanto cada ponto percentual acima/abaixo do ideal pesa em "anos"
+  let diff = (g-idealMid)*k;
+  diff = Math.max(-25, Math.min(25, diff));
+  const idadeMet = Math.round(idadeReal + diff);
+  return Math.max(16, Math.min(85, idadeMet));
+}
+
+function calcularTMB(sexo,idade,peso,altura){
+  if(isNaN(peso)||isNaN(altura)||isNaN(idade)||idade<=0||peso<=0||altura<=0) return '';
+  if(sexo==='M') return Math.round(66.47+(13.75*peso)+(5.003*(altura*100))-(6.755*idade));
+  return Math.round(655.1+(9.563*peso)+(1.85*(altura*100))-(4.676*idade));
+}
+
+function calcularAMB(biceps,triceps){
+  // Fórmula de Frisancho: AMB = (Circunferência - π × Dobra_tríceps_cm)² / (4π)
+  const b=parseFloat(String(biceps).replace(',','.')), t=parseFloat(String(triceps).replace(',','.'));
+  if(isNaN(b)||isNaN(t)||b<=0) return '';
+  const tricepsCm = t/10; // dobra vem em mm, converte pra cm
+  return (Math.pow(b - (Math.PI*tricepsCm), 2) / (4*Math.PI)).toFixed(2);
+}
+
+function calcularAGB(biceps,triceps){
+  // AGB = Área total do braço - AMB
+  const b=parseFloat(String(biceps).replace(',','.')), t=parseFloat(String(triceps).replace(',','.'));
+  if(isNaN(b)||isNaN(t)||b<=0) return '';
+  const areaTotal = Math.pow(b,2) / (4*Math.PI);
+  const amb = parseFloat(calcularAMB(biceps,triceps));
+  if(isNaN(amb)) return '';
+  return (areaTotal - amb).toFixed(2);
+}
+
+function comprimirImagem(file, maxWidth = 800, maxHeight = 800, qualidade = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
+        } else {
+          if (height > maxHeight) { width = (width * maxHeight) / height; height = maxHeight; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', qualidade));
+      };
+      img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/* PERSISTÊNCIA COM TRY/CATCH */
+function carregarDados(){
+  const saved=localStorage.getItem('avaliacao_fisica_alunos');
+  if(saved){
+    try{ alunos=JSON.parse(saved); }catch(e){ alunos=[]; notifMsg('⚠️ Erro ao carregar dados'); }
+  }
+  if(!alunos.length && !new URLSearchParams(location.search).get('embed')){
+    alunos=[{id:Date.now(),nome:'João Silva',nasc:'',idade:'',altura:'',pesoIni:'',sexo:'M',whatsapp:'',valorPago:'',renovacaoDias:'',pagamentoTipo:'',pagamentoData1:'',pagamentoData2:'',avaliacoes:[]}];
+  }
+  alunoAtivoId=null;
+  alunos.forEach(a => (a.avaliacoes || []).forEach(av => calcularIMCeDobras(a, av.id)));
+  salvarDados();
+  filtrarAlunos();
+  if('Notification' in window){
+    const btn=document.getElementById('btnAtivarNotif');
+    if(btn && Notification.permission==='granted'){ btn.textContent='🔔 Notificações ativas'; }
+    verificarRenovacoesEnviarNotificacao(false);
+  }
+}
+
+function salvarDados(){
+  try {
+    const serialized = JSON.stringify(alunos);
+    if (localStorage.getItem('avaliacao_fisica_alunos') !== serialized) localStorage.setItem('avaliacao_fisica_alunos', serialized);
+    AvaliacaoTreinoSync.syncTraining(alunos);
+  } catch(e) {
+    if(e.name === 'QuotaExceededError') {
+      notifMsg('⚠️ Espaço insuficiente no armazenamento. Fotos muito grandes?');
+    } else {
+      notifMsg('⚠️ Erro ao salvar dados');
+    }
+  }
+}
+
+// Salvar estado ANTES de modificar (para desfazer)
+function backupEstado() {
+  ultimoEstado = JSON.parse(JSON.stringify(alunos));
+}
+
+function desfazer(){
+  if(ultimoEstado){
+    alunos = JSON.parse(JSON.stringify(ultimoEstado));
+    salvarDados();
+    filtrarAlunos();
+    notifMsg('↩️ Alteração desfeita!');
+  } else { notifMsg('⚠️ Nada para desfazer'); }
+}
+
+function exportarTodosAlunos(){ AvaliacoesJSON.download(); }
+
+function importarJSON(){ document.getElementById('importFile').click(); }
+
+function aplicarAvaliacoesImportadas() {
+  alunos = AvaliacoesJSON.read();
+  alunos.forEach(a => (a.avaliacoes || []).forEach(av => calcularIMCeDobras(a, av.id)));
+  salvarDados();
+  filtrarAlunos();
+  notifMsg('✅ Avaliações importadas. Treinos e histórico mantidos!');
+}
+function carregarJSONArquivo(input){
+  const file = input.files[0];
+  if (!file) return;
+  file.text().then(text => AvaliacoesJSON.preview(JSON.parse(text), aplicarAvaliacoesImportadas)).catch(err => notifMsg('❌ ' + err.message));
+  input.value = '';
+}
+
+function notifMsg(msg){
+  const el=document.getElementById('notif');
+  el.textContent=msg; el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',2000);
+}
+
+/* GESTÃO DE ALUNOS */
+function getUltimaDataAvaliacao(aluno){
+  if(!aluno.avaliacoes||!aluno.avaliacoes.length) return '';
+  const datas=aluno.avaliacoes.map(av=>av.data).filter(d=>d);
+  if(!datas.length) return '';
+  return datas.sort((a,b)=>new Date(b.split('/').reverse().join('-'))-new Date(a.split('/').reverse().join('-')))[0];
+}
+
+function getResumoAvaliacao(av){
+  if(!av) return '';
+  const peso = av.peso ? `${av.peso}kg` : '';
+  const data = av.data || '';
+  return `${data} ${peso}`.trim();
+}
+
+function novoAluno(){
+  backupEstado();
+  const buscaInput=document.getElementById('buscaAluno');
+  let nomeAluno=buscaInput.value.trim()||'Novo Aluno';
+  const novoId=Date.now();
+  alunos.push({id:novoId,nome:nomeAluno,nasc:'',idade:'',altura:'',pesoIni:'',sexo:'M',whatsapp:'',valorPago:'',renovacaoDias:'',pagamentoTipo:'',pagamentoData1:'',pagamentoData2:'',avaliacoes:[]});
+  salvarDados();
+  alunoAtivoId=novoId;
+  filtrarAlunos();
+  notifMsg(`✅ Aluno "${nomeAluno}" criado!`);
+}
+
+function toggleSecao(alunoId, secao, btn){
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno) return;
+  const campo=secao==='pagamento'?'pagamentoMinimizado':'renovacaoMinimizado';
+  aluno[campo]=!aluno[campo];
+  salvarDados();
+  const el=document.getElementById(`${secao}-content-${alunoId}`);
+  if(el) el.style.display=aluno[campo]?'none':'grid';
+  if(btn) btn.textContent=aluno[campo]?'▼':'▲';
+}
+
+function onChangeRenovacaoTipo(alunoId, valor){
+  const customInput=document.getElementById(`renovacaoCustom-${alunoId}`);
+  if(valor==='outro'){
+    if(customInput){ customInput.style.display='block'; customInput.focus(); }
+  } else {
+    if(customInput) customInput.style.display='none';
+    atualizarAluno(alunoId,'renovacaoDias',valor);
+  }
+}
+
+/* WHATSAPP */
+function linkWhatsApp(numero){
+  let digits=String(numero||'').replace(/\D/g,'');
+  if(!digits) return '';
+  if(digits.length<=11) digits='55'+digits; // assume Brasil se não vier com código do país
+  return `https://wa.me/${digits}`;
+}
+function abrirWhatsApp(alunoId){
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno||!aluno.whatsapp){ notifMsg('⚠️ Cadastre o WhatsApp do aluno primeiro'); return; }
+  const link=linkWhatsApp(aluno.whatsapp);
+  if(link) window.open(link,'_blank');
+}
+
+/* RENOVAÇÃO DE AVALIAÇÃO */
+function parseDataBR(str){
+  if(!str||str.length!==10) return null;
+  const p=str.split('/');
+  if(p.length!==3) return null;
+  const d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+  return isNaN(d.getTime())?null:d;
+}
+function formatarDataBR(date){
+  return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}`;
+}
+function isoFromBR(dataBR){
+  const d=parseDataBR(dataBR);
+  if(!d) return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function brFromISO(iso){
+  if(!iso) return '';
+  const [ano,mes,dia]=iso.split('-');
+  if(!ano||!mes||!dia) return '';
+  return `${dia}/${mes}/${ano}`;
+}
+function calcularProximaRenovacao(aluno){
+  if(!aluno.renovacaoDias) return null; // não configurado = não acompanha
+  if(aluno.renovacaoDataManual){
+    const dManual=parseDataBR(aluno.renovacaoDataManual);
+    if(dManual) return dManual;
+  }
+  const ultimaData=getUltimaDataAvaliacao(aluno);
+  if(!ultimaData) return null;
+  const dataBase=parseDataBR(ultimaData);
+  if(!dataBase) return null;
+  const dias=parseInt(aluno.renovacaoDias);
+  const prox=new Date(dataBase);
+  prox.setDate(prox.getDate()+dias);
+  return prox;
+}
+function getStatusRenovacao(aluno){
+  const prox=calcularProximaRenovacao(aluno);
+  if(!prox) return null;
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const proxZero=new Date(prox); proxZero.setHours(0,0,0,0);
+  const diffDias=Math.round((proxZero-hoje)/(1000*60*60*24));
+  let texto, classe;
+  if(diffDias<0){ texto=`Vencida há ${Math.abs(diffDias)}d`; classe='vencida'; }
+  else if(diffDias<=7){ texto=diffDias===0?'Vence hoje':`Vence em ${diffDias}d`; classe='proxima'; }
+  else { texto=`Renova ${formatarDataBR(prox)}`; classe='ok'; }
+  return {texto,classe,diffDias,data:prox};
+}
+
+/* PAGAMENTO (data exata digitada por parcela, individual por aluno — o professor atualiza
+   manualmente quando recebe, podendo inclusive jogar a data lá na frente se o aluno pagou adiantado) */
+/* Pega o dia-do-mês da data escolhida no calendário e calcula a próxima ocorrência (recorrência
+   mensal automática). Depois de 5 dias de atraso, considera pago e já pula pro mês seguinte —
+   assim não fica "devendo" pra sempre. Pra parar de acompanhar de vez, é só limpar a data (✕). */
+function getProximaOcorrenciaMensal(dataBR){
+  const base=parseDataBR(dataBR);
+  if(!base) return null;
+  const dia=base.getDate();
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const ano=hoje.getFullYear(), mes=hoje.getMonth();
+  function dataDoMes(a,m,d){
+    const ultimoDia=new Date(a,m+1,0).getDate();
+    return new Date(a,m,Math.min(d,ultimoDia));
+  }
+  let candidato=dataDoMes(ano,mes,dia);
+  let diff=Math.round((candidato-hoje)/(1000*60*60*24));
+  if(diff<-5){
+    candidato=dataDoMes(ano,mes+1,dia);
+    diff=Math.round((candidato-hoje)/(1000*60*60*24));
+  }
+  return {data:candidato,diffDias:diff};
+}
+
+function getStatusPagamentos(aluno){
+  const parcelas=[];
+  if(aluno.pagamentoData1) parcelas.push({label:aluno.pagamentoTipo==='2x'?'Parcela 1':'Mensalidade',dataStr:aluno.pagamentoData1});
+  if(aluno.pagamentoTipo==='2x' && aluno.pagamentoData2) parcelas.push({label:'Parcela 2',dataStr:aluno.pagamentoData2});
+  return parcelas.map(p=>{
+    const oc=getProximaOcorrenciaMensal(p.dataStr);
+    if(!oc) return null;
+    const {data,diffDias}=oc;
+    let texto,classe;
+    if(diffDias<0){ texto=`${p.label}: venceu há ${Math.abs(diffDias)}d`; classe='vencida'; }
+    else if(diffDias<=3){ texto=`${p.label}: ${diffDias===0?'vence hoje':`vence em ${diffDias}d`}`; classe='proxima'; }
+    else { texto=`${p.label}: dia ${data.getDate()}`; classe='ok'; }
+    return {label:p.label,texto,classe,diffDias,data};
+  }).filter(Boolean);
+}
+
+/* Junta pendências de renovação de avaliação + pagamento de um aluno, só o que é vencido/próximo */
+function getPendenciasAluno(aluno){
+  const pend=[];
+  const stRenov=getStatusRenovacao(aluno);
+  if(stRenov && stRenov.diffDias<=3) pend.push({tipo:'📋 Avaliação',texto:stRenov.texto,classe:stRenov.classe,diffDias:stRenov.diffDias});
+  getStatusPagamentos(aluno).forEach(p=>{
+    if(p.diffDias<=3) pend.push({tipo:'💰 '+p.label,texto:p.texto.split(': ')[1]||p.texto,classe:p.classe,diffDias:p.diffDias});
+  });
+  return pend;
+}
+
+/* NOTIFICAÇÕES (funcionam com o app aberto/instalado na tela de início do iPhone; iOS Safari
+   não entrega notificações em segundo plano sem um servidor de push próprio) */
+function pedirPermissaoNotificacao(){
+  if(!('Notification' in window)){ notifMsg('⚠️ Este navegador não suporta notificações'); return; }
+  Notification.requestPermission().then(perm=>{
+    if(perm==='granted'){ notifMsg('🔔 Notificações ativadas!'); verificarRenovacoesEnviarNotificacao(true); }
+    else if(perm==='denied'){ notifMsg('⚠️ Notificações bloqueadas nas permissões do navegador'); }
+  });
+}
+function getAlunosComPendencias(){
+  return alunos.map(a=>({aluno:a,pendencias:getPendenciasAluno(a)})).filter(x=>x.pendencias.length);
+}
+
+function renderizarBannerRenovacoes(itens){
+  const banner=document.getElementById('bannerRenovacao');
+  if(!banner) return;
+  if(!itens.length){ banner.classList.remove('show'); banner.innerHTML=''; return; }
+  const estavaMinimizado=banner.classList.contains('minimized');
+  banner.innerHTML=`
+    <h4>🔔 ${itens.length} aluno(s) com pendência (avaliação ou pagamento)
+      <span class="banner-botoes">
+        <button class="minimizar-banner" title="Minimizar/expandir" onclick="document.getElementById('bannerRenovacao').classList.toggle('minimized')">${estavaMinimizado?'▼':'▲'}</button>
+        <button class="fechar-banner" title="Fechar" onclick="document.getElementById('bannerRenovacao').classList.remove('show')">✕</button>
+      </span>
+    </h4>
+    <ul>${itens.map(({aluno,pendencias})=>{
+      const badges=pendencias.map(p=>`<span class="badge-renovacao ${p.classe}" title="${p.tipo}">${p.tipo} ${p.texto}</span>`).join(' ');
+      return `<li onclick="irParaAvaliacaoAluno(${aluno.id})"><span>${escapeHtml(aluno.nome)}</span><span style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">${badges}</span></li>`;
+    }).join('')}</ul>`;
+  banner.classList.add('show');
+  if(estavaMinimizado) banner.classList.add('minimized');
+}
+
+/* Ao clicar num aluno vencido no banner, abre o card dele direto na avaliação mais recente */
+function irParaAvaliacaoAluno(alunoId){
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno) return;
+  alunoAtivoId=alunoId;
+  document.getElementById('buscaAluno').value='';
+  filtrarAlunos();
+  setTimeout(()=>{
+    const cardEl=document.querySelector(`[data-aluno-card="${alunoId}"]`);
+    if(cardEl) cardEl.scrollIntoView({behavior:'smooth',block:'start'});
+    if(aluno.avaliacoes && aluno.avaliacoes.length){
+      const ultimaAv=aluno.avaliacoes[aluno.avaliacoes.length-1];
+      const avEl=document.getElementById(`av-item-${ultimaAv.id}`);
+      if(avEl){
+        avEl.classList.add('expanded');
+        setTimeout(()=>avEl.scrollIntoView({behavior:'smooth',block:'start'}),200);
+      }
+    }
+  },100);
+}
+function verificarRenovacoesEnviarNotificacao(forcar){
+  const itens=getAlunosComPendencias();
+  renderizarBannerRenovacoes(itens);
+  if(!itens.length) return;
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  const hojeStr=new Date().toDateString();
+  const ultimoEnvio=localStorage.getItem('notifRenovacaoData');
+  if(!forcar && ultimoEnvio===hojeStr) return; // já notificou hoje
+  itens.forEach(({aluno,pendencias})=>{
+    const resumo=pendencias.map(p=>`${p.tipo} ${p.texto}`).join(' • ');
+    try{
+      new Notification('🔔 Pendência — Caio Macêdo',{
+        body:`${aluno.nome}: ${resumo}`,
+        icon:'https://i.postimg.cc/Td71K1rH/caio-macedo-logo.png'
+      });
+    }catch(e){}
+  });
+  localStorage.setItem('notifRenovacaoData',hojeStr);
+}
+
+function apagarAluno(id){
+  if(confirm('Tem certeza que deseja apagar este aluno?')){
+    backupEstado();
+    alunos=alunos.filter(a=>a.id!==id);
+    if(alunoAtivoId===id) alunoAtivoId=null;
+    salvarDados(); filtrarAlunos();
+    notifMsg('🗑️ Aluno removido!');
+  }
+}
+
+function renomearAluno(id){
+  const aluno=alunos.find(a=>a.id===id);
+  if(aluno){
+    const novoNome=prompt('Digite o novo nome do aluno:',aluno.nome);
+    if(novoNome&&novoNome.trim()){
+      backupEstado();
+      aluno.nome=novoNome.trim(); salvarDados(); filtrarAlunos();
+      notifMsg('✏️ Nome alterado!');
+    }
+  }
+}
+
+function selecionarAluno(id){
+  alunoAtivoId=(alunoAtivoId===id)?null:id;
+  filtrarAlunos();
+}
+
+function atualizarAluno(id,campo,valor){
+  const aluno=alunos.find(a=>a.id===id);
+  if(!aluno) return;
+  backupEstado();
+  aluno[campo]=valor;
+  if(campo==='nasc'){
+    const idadeCalc=calcularIdade(valor);
+    if(idadeCalc){
+      aluno.idade=idadeCalc;
+      const el=document.getElementById(`idade-${id}`);
+      if(el) el.value=idadeCalc;
+    }
+  }
+  if (['altura','idade','nasc','sexo'].includes(campo)) (aluno.avaliacoes || []).forEach(av => calcularIMCeDobras(aluno, av.id));
+  salvarDados();
+  if(campo!=='nasc') filtrarAlunos();
+}
+
+/* AVALIAÇÕES */
+function adicionarAvaliacao(alunoId){
+  backupEstado();
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno) return;
+  if(!aluno.avaliacoes) aluno.avaliacoes=[];
+  const protocoloAnterior = aluno.avaliacoes.length ? (aluno.avaliacoes[aluno.avaliacoes.length-1].protocolo || 'jp7') : 'jp7';
+  const novaAvaliacao = {
+    id:Date.now(),
+    data:new Date().toLocaleDateString('pt-BR'),
+    protocolo:protocoloAnterior,
+    peso:'',imc:'',gordura:'',visceral:'',massamuscular:'',proteina:'',agua:'',tmb:'',
+    peitoral:'',biceps:'',barriga:'',cintura:'',quadril:'',coxa:'',
+    triceps:'',axilar:'',torax:'',abdominal:'',suprailiaca:'',subescapular:'',pregaCoxa:'',panturrilha:'',
+    resumo:'',motivo:'',fotoF:null,fotoL:null,fotoD:null,_dobras:null
+  };
+  aluno.avaliacoes.push(novaAvaliacao);
+  salvarDados();
+  filtrarAlunos();
+  // Abrir a nova avaliação automaticamente
+  setTimeout(() => {
+    const newAvEl = document.getElementById(`av-item-${novaAvaliacao.id}`);
+    if(newAvEl){
+      newAvEl.classList.add('expanded');
+      newAvEl.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  }, 100);
+  notifMsg('📋 Avaliação adicionada!');
+}
+
+function removerAvaliacao(alunoId,avId){
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno||aluno.avaliacoes.length<=1){ notifMsg('⚠️ Mantenha ao menos uma avaliação.'); return; }
+  if(!confirm('Remover avaliação?')) return;
+  backupEstado();
+  aluno.avaliacoes=aluno.avaliacoes.filter(a=>a.id!==avId);
+  salvarDados();
+  filtrarAlunos();
+  notifMsg('🗑️ Avaliação removida!');
+}
+
+function toggleAvaliacao(avId, event){
+  if(event) event.stopPropagation();
+  const el = document.getElementById(`av-item-${avId}`);
+  if(el){
+    el.classList.toggle('expanded');
+  }
+}
+
+function syncAvaliacao(alunoId,avId,campo,valor){
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno) return;
+  const av=aluno.avaliacoes.find(a=>a.id===avId);
+  if(!av) return;
+  av[campo]=valor;
+  calcularIMCeDobras(aluno,avId);
+  salvarDados();
+  if(timeoutDobras) clearTimeout(timeoutDobras);
+  timeoutDobras=setTimeout(()=>{
+    calcularIMCeDobras(aluno,avId);
+    salvarDados();
+    atualizarCamposCalculados(aluno, avId);
+    // Atualizar resumo no header
+    const headerResumo = document.getElementById(`av-resumo-${avId}`);
+    if(headerResumo) headerResumo.innerText = getResumoAvaliacao(av) ? ` — ${getResumoAvaliacao(av)}` : '';
+  },500);
+}
+
+/* METADADOS DOS PROTOCOLOS DE DOBRAS CUTÂNEAS */
+const PROTOCOLOS_DOBRAS = {
+  pollock3:{
+    nome:'Jackson-Pollock (3 Dobras)',
+    nomeCurto:'3 Dobras',
+    campos:(sexo)=> sexo==='F' ? ['triceps','suprailiaca','pregaCoxa'] : ['torax','abdominal','pregaCoxa']
+  },
+  yuhasz6:{
+    nome:'Yuhasz (6 Dobras)',
+    nomeCurto:'6 Dobras',
+    campos:()=>['triceps','torax','subescapular','suprailiaca','abdominal','pregaCoxa']
+  },
+  jp7:{
+    nome:'Jackson-Pollock (7 Dobras)',
+    nomeCurto:'7 Dobras',
+    campos:()=>['triceps','axilar','torax','abdominal','suprailiaca','subescapular','pregaCoxa']
+  }
+};
+function getProtocoloDef(protocolo){
+  return PROTOCOLOS_DOBRAS[protocolo] || PROTOCOLOS_DOBRAS.jp7;
+}
+const LABELS_DOBRAS = {
+  triceps:'Tríceps', axilar:'Axilar Média', torax:'Tórax', abdominal:'Abdominal',
+  suprailiaca:'Suprailíaca', subescapular:'Subescapular', pregaCoxa:'Coxa', panturrilha:'Panturrilha Medial'
+};
+
+function calcularIMCeDobras(aluno,avId){
+  const av=aluno.avaliacoes.find(a=>a.id===avId);
+  if(!av) return;
+  const altura=pf(aluno.altura), peso=pf(av.peso);
+  av.imc = !isNaN(altura)&&!isNaN(peso)&&altura>0 ? (peso/(altura*altura)).toFixed(1) : '';
+  const idade=pf(aluno.idade);
+  av.tmb=calcularTMB(aluno.sexo,idade,peso,altura);
+  // fallback: idade metabólica pelo % gordura manual (balança) — sobrescrita abaixo se as dobras forem calculadas
+  av.idadeMetabolica = av.gordura ? calcularIdadeMetabolica(aluno.sexo, aluno.idade, av.gordura) : '';
+
+  // protocolos antigos (ex.: Petroski 4 dobras, removido) caem automaticamente no padrão de 7 dobras
+  if(!PROTOCOLOS_DOBRAS[av.protocolo]) av.protocolo='jp7';
+  const protocolo = av.protocolo || 'jp7';
+  const def = getProtocoloDef(protocolo);
+  const campos = def.campos(aluno.sexo);
+  const vals = campos.map(k=>pf(av[k]));
+  if(vals.some(isNaN) || vals.every(v=>v===0)){ av._dobras=null; return; }
+  const soma=vals.reduce((a,b)=>a+b,0);
+
+  let dens=null, pctG;
+  if(protocolo==='pollock3'){
+    if(aluno.sexo==='F'){
+      // Jackson, Pollock & Ward (1980) - mulheres: tríceps + suprailíaca + coxa
+      dens = 1.0994921 - (0.0009929*soma) + (0.0000023*(soma*soma)) - (0.0001392*(idade||30));
+    } else {
+      // Jackson & Pollock (1978) - homens: peitoral + abdominal + coxa
+      dens = 1.10938 - (0.0008267*soma) + (0.0000016*(soma*soma)) - (0.0002574*(idade||30));
+    }
+    pctG=Math.max(3,Math.min(50,(495/dens)-450));
+  } else if(protocolo==='yuhasz6'){
+    pctG = aluno.sexo==='F' ? (4.56+0.143*soma) : (3.64+0.097*soma);
+    pctG=Math.max(3,Math.min(50,pctG));
+  } else {
+    dens = aluno.sexo === 'F'
+      ? 1.097 - (0.00046971*soma) + (0.00000056*soma*soma) - (0.00012828*(idade||30))
+      : 1.112 - (0.00043499*soma) + (0.00000055*soma*soma) - (0.00028826*(idade||30));
+    pctG=Math.max(5,Math.min(50,((4.95/dens)-4.5)*100));
+  }
+  const pesoNum=pf(av.peso);
+  const mG=(pctG/100)*pesoNum, mM=pesoNum-mG;
+  const cintura=pf(av.cintura), quadril=pf(av.quadril);
+  const rcq=(cintura&&quadril)?(cintura/quadril).toFixed(2):'—';
+  av._dobras={soma,dens,pctG,mG,mM,rcq,protocolo};
+  if(!av.agua) av.agua=(mM*0.73).toFixed(1);
+  const gorduraRef = av.gordura || pctG.toFixed(1);
+  av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef);
+}
+
+const LABELS_DOBRAS_EXTRA = {pregaCoxa:'Coxa (prega)'};
+function renderizarCamposDobras(aluno, av){
+  const campos = getProtocoloDef(av.protocolo).campos(aluno.sexo);
+  return campos.map(k=>{
+    const label = LABELS_DOBRAS_EXTRA[k] || LABELS_DOBRAS[k];
+    return `<div class="field"><label>${label}</label><input type="text" value="${escapeHtml(av[k]||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'${k}',this.value)"></div>`;
+  }).join('');
+}
+
+function trocarProtocoloDobras(alunoId, avId, valor){
+  backupEstado();
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno) return;
+  const av=aluno.avaliacoes.find(a=>a.id===avId);
+  if(!av) return;
+  av.protocolo=valor;
+  calcularIMCeDobras(aluno,avId);
+  salvarDados();
+  filtrarAlunos();
+  setTimeout(()=>{
+    const el=document.getElementById(`av-item-${avId}`);
+    if(el) el.classList.add('expanded');
+  },100);
+}
+
+function atualizarCamposCalculados(aluno, avId){
+  const av=aluno.avaliacoes.find(a=>a.id===avId);
+  if(!av) return;
+  const aId=aluno.id;
+  const imcEl=document.getElementById(`imc-${aId}-${avId}`);
+  if(imcEl){ imcEl.value=av.imc||''; }
+  const tmbEl=document.getElementById(`tmb-${aId}-${avId}`);
+  if(tmbEl){ tmbEl.value=av.tmb||''; }
+  const aguaEl=document.getElementById(`agua-${aId}-${avId}`);
+  if(aguaEl && av.agua) { aguaEl.value=av.agua; }
+  const gorduraRef = av.gordura || (av._dobras ? av._dobras.pctG.toFixed(1) : '');
+  av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef);
+  const idadeMetEl=document.getElementById(`idademet-${aId}-${avId}`);
+  if(idadeMetEl){ idadeMetEl.value=av.idadeMetabolica||''; }
+  const previewEl=document.getElementById(`dobras-preview-${aId}-${avId}`);
+  if(previewEl){ previewEl.innerHTML=renderizarPreviewDobras(av,aluno); }
+  const badges=[{id:`peso-badge-${aId}-${avId}`,nome:'Peso',valor:av.peso},
+                {id:`imc-badge-${aId}-${avId}`,nome:'IMC',valor:av.imc},
+                {id:`gordura-badge-${aId}-${avId}`,nome:'% Gordura',valor:av.gordura},
+                {id:`visceral-badge-${aId}-${avId}`,nome:'Gordura Visceral',valor:av.visceral},
+                {id:`massa-badge-${aId}-${avId}`,nome:'Massa Muscular',valor:av.massamuscular},
+                {id:`proteina-badge-${aId}-${avId}`,nome:'% Proteína',valor:av.proteina},
+                {id:`agua-badge-${aId}-${avId}`,nome:'% Água',valor:av.agua},
+                {id:`tmb-badge-${aId}-${avId}`,nome:'TMB',valor:av.tmb},
+                {id:`idademet-badge-${aId}-${avId}`,nome:'Idade Metabólica',valor:av.idadeMetabolica}];
+  badges.forEach(b=>{
+    const el=document.getElementById(b.id);
+    if(el){
+      const cls=getClassificacaoTexto(b.nome,b.valor,aluno.sexo);
+      el.className=`badge ${cls.classe}`;
+      el.innerText=cls.texto;
+    }
+  });
+}
+
+/* FOTOS COM COMPRESSÃO */
+function salvarFoto(tipo,src,nomeAluno,dataAval){
+  if(!src){ notifMsg('⚠️ Nenhuma foto para salvar!'); return; }
+  const a=document.createElement('a');
+  a.href=src; a.download=`${nomeAluno}_${dataAval}_${tipo}.jpg`; a.click();
+  notifMsg(`📸 Foto ${tipo} salva!`);
+}
+
+function apagarFoto(alunoId,avId,tipo){
+  backupEstado();
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno) return;
+  const av=aluno.avaliacoes.find(a=>a.id===avId);
+  if(!av) return;
+  const campo=`foto${tipo.toUpperCase()}`;
+  av[campo]=null;
+  salvarDados();
+  atualizarFotoBox(alunoId,avId,tipo);
+  notifMsg(`🗑️ Foto ${tipo==='f'?'Frontal':tipo==='l'?'Lateral':'Dorsal'} apagada!`);
+}
+
+async function carregarFoto(alunoId,avId,tipo,input){
+  const file=input.files[0];
+  if(!file){ notifMsg('⚠️ Nenhum arquivo selecionado'); return; }
+  if(!file.type.startsWith('image/')){ notifMsg('❌ Selecione uma imagem válida'); return; }
+  notifMsg('📸 Comprimindo e carregando foto...');
+  try {
+    const imagemComprimida = await comprimirImagem(file, 800, 800, 0.7);
+    backupEstado();
+    const aluno=alunos.find(a=>a.id===alunoId);
+    if(!aluno) return;
+    const av=aluno.avaliacoes.find(a=>a.id===avId);
+    if(!av) return;
+    av[`foto${tipo.toUpperCase()}`]=imagemComprimida;
+    salvarDados();
+    atualizarFotoBox(alunoId,avId,tipo);
+    notifMsg(`✅ Foto ${tipo==='f'?'Frontal':tipo==='l'?'Lateral':'Dorsal'} carregada!`);
+  } catch(erro) {
+    notifMsg('❌ Erro ao processar a imagem. Tente novamente.');
+  }
+}
+
+function atualizarFotoBox(alunoId,avId,tipo){
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno) return;
+  const av=aluno.avaliacoes.find(a=>a.id===avId);
+  if(!av) return;
+  const boxId=`fotobox-${alunoId}-${tipo}-${avId}`;
+  const box=document.getElementById(boxId);
+  if(!box) return;
+  const src=av[`foto${tipo.toUpperCase()}`];
+  const imgEl=box.querySelector('img');
+  const btnArea=box.querySelector('.foto-buttons');
+  const label=tipo==='f'?'Frontal':tipo==='l'?'Lateral':'Dorsal';
+  const nomeAluno=aluno.nome;
+  const dataAval=av.data||'';
+  if(src){
+    imgEl.src=src; imgEl.style.display='block';
+    btnArea.innerHTML=`
+      <button class="btn-salvar-foto" onclick="event.stopPropagation();salvarFoto('${label}',alunos.find(a=>a.id===${alunoId}).avaliacoes.find(v=>v.id===${avId}).foto${tipo.toUpperCase()},'${escapeHtml(nomeAluno)}','${escapeHtml(dataAval)}')">💾 Salvar</button>
+      <button class="btn-apagar-foto" onclick="event.stopPropagation();apagarFoto(${alunoId},${avId},'${tipo}')">🗑️ Apagar</button>`;
+  } else {
+    imgEl.src=''; imgEl.style.display='none';
+    btnArea.innerHTML='';
+  }
+}
+
+/* DADOS DE REFERÊNCIA POR INDICADOR (faixas variam por sexo quando aplicável) */
+const REF_DATA = {
+  peso:{
+    zonas:()=>[
+      {label:'Abaixo',color:'#FF9800',min:30,max:60},
+      {label:'Normal',color:'#4CAF50',min:60,max:85},
+      {label:'Alto',color:'#FF9800',min:85,max:150}
+    ],
+    texto:'O peso corporal isolado não indica composição corporal — é preciso considerar altura, idade, sexo e percentual de gordura/músculo.'
+  },
+  imc:{
+    zonas:()=>[
+      {label:'Abaixo do peso',color:'#FF9800',min:12,max:18.5},
+      {label:'Saudável',color:'#4CAF50',min:18.5,max:25},
+      {label:'Sobrepeso',color:'#FF9800',min:25,max:30},
+      {label:'Obesidade',color:'#F44336',min:30,max:45}
+    ],
+    texto:'O IMC relaciona peso e altura para estimar se o peso está numa faixa saudável. Não diferencia massa gorda de massa magra, por isso pode não refletir bem quem tem muita massa muscular.'
+  },
+  gordura:{
+    zonas:(sexo)=> sexo==='F' ? [
+      {label:'Baixo',color:'#2196F3',min:10,max:21},
+      {label:'Saudável',color:'#4CAF50',min:21,max:33},
+      {label:'Moderado',color:'#FF9800',min:33,max:39},
+      {label:'Alto',color:'#F44336',min:39,max:50}
+    ] : [
+      {label:'Baixo',color:'#2196F3',min:2,max:6},
+      {label:'Saudável',color:'#4CAF50',min:6,max:24},
+      {label:'Moderado',color:'#FF9800',min:24,max:30},
+      {label:'Alto',color:'#F44336',min:30,max:45}
+    ],
+    texto:'O percentual de gordura corporal indica quanto do peso total é gordura. As faixas saudáveis são diferentes entre homens e mulheres, pois o corpo feminino naturalmente armazena mais gordura essencial.'
+  },
+  visceral:{
+    zonas:()=>[
+      {label:'Baixo risco',color:'#4CAF50',min:1,max:9},
+      {label:'Médio risco',color:'#FF9800',min:9,max:14},
+      {label:'Alto risco',color:'#F44336',min:14,max:30}
+    ],
+    texto:'A gordura visceral é um tipo de gordura corporal. Diferente da gordura subcutânea, ela envolve os órgãos e é armazenada na cavidade abdominal.'
+  },
+  massamuscular:{
+    zonas:(sexo)=> sexo==='F' ? [
+      {label:'Abaixo',color:'#F44336',min:15,max:28},
+      {label:'Bom',color:'#4CAF50',min:28,max:35},
+      {label:'Alto',color:'#2196F3',min:35,max:45}
+    ] : [
+      {label:'Abaixo',color:'#F44336',min:20,max:35},
+      {label:'Bom',color:'#4CAF50',min:35,max:45},
+      {label:'Alto',color:'#2196F3',min:45,max:60}
+    ],
+    texto:'A massa muscular representa o peso de músculos no corpo. Homens costumam ter mais massa muscular naturalmente devido a diferenças hormonais, por isso a faixa saudável é diferente entre os sexos.'
+  },
+  proteina:{
+    zonas:()=>[
+      {label:'Atenção',color:'#F44336',min:8,max:14},
+      {label:'Bom',color:'#2196F3',min:14,max:18},
+      {label:'Excelente',color:'#4CAF50',min:18,max:25}
+    ],
+    texto:'A proteína corporal representa o percentual de proteínas nos tecidos, incluindo músculos, órgãos e pele — importante para recuperação e manutenção muscular.'
+  },
+  agua:{
+    zonas:(sexo)=> sexo==='F' ? [
+      {label:'Desidratado',color:'#F44336',min:35,max:45},
+      {label:'Regular',color:'#FF9800',min:45,max:50},
+      {label:'Hidratado',color:'#2196F3',min:50,max:60}
+    ] : [
+      {label:'Desidratado',color:'#F44336',min:35,max:50},
+      {label:'Regular',color:'#FF9800',min:50,max:55},
+      {label:'Hidratado',color:'#2196F3',min:55,max:65}
+    ],
+    texto:'A água corporal total reflete o percentual de água no corpo. Homens costumam ter percentuais um pouco mais altos, pois o tecido muscular retém mais água que o tecido adiposo.'
+  },
+  tmb:{
+    zonas:()=>[
+      {label:'Baixo',color:'#F44336',min:800,max:1300},
+      {label:'Moderado',color:'#FF9800',min:1300,max:1700},
+      {label:'Alto',color:'#4CAF50',min:1700,max:2600}
+    ],
+    texto:'A Taxa Metabólica Basal (TMB) é a energia que o corpo gasta em repouso para manter suas funções vitais.'
+  },
+  idademetabolica:{
+    texto:'A idade metabólica compara o percentual de gordura corporal com a média de outras idades. Se for menor que a idade real, indica uma composição corporal mais jovem que a média — e o contrário se for maior.'
+  },
+  massagorda:{
+    zonas:()=>[
+      {label:'Abaixo',color:'#2196F3',min:3,max:6.71},
+      {label:'Saudável',color:'#4CAF50',min:6.71,max:12.9},
+      {label:'Elevado',color:'#F44336',min:12.9,max:30}
+    ],
+    texto:'É o peso total de gordura corporal calculado a partir das 7 dobras cutâneas.'
+  },
+  massagordapct:{
+    zonas:()=>[
+      {label:'Abaixo',color:'#2196F3',min:3,max:13},
+      {label:'Saudável',color:'#4CAF50',min:13,max:25},
+      {label:'Elevado',color:'#F44336',min:25,max:45}
+    ],
+    texto:'É o percentual de gordura corporal calculado a partir das 7 dobras cutâneas.'
+  },
+  massamagra:{
+    zonas:()=>[
+      {label:'Abaixo',color:'#F44336',min:20,max:38.7},
+      {label:'Saudável',color:'#4CAF50',min:38.7,max:44.89},
+      {label:'Alto',color:'#2196F3',min:44.89,max:70}
+    ],
+    texto:'É o peso de tudo que não é gordura (músculos, ossos, órgãos, água), calculado a partir das 7 dobras cutâneas.'
+  },
+  rcq:{
+    zonas:(sexo)=> sexo==='F' ? [
+      {label:'Baixo risco',color:'#4CAF50',min:0.5,max:0.80},
+      {label:'Risco moderado',color:'#FF9800',min:0.80,max:0.85},
+      {label:'Alto risco',color:'#F44336',min:0.85,max:1.2}
+    ] : [
+      {label:'Baixo risco',color:'#4CAF50',min:0.5,max:0.90},
+      {label:'Risco moderado',color:'#FF9800',min:0.90,max:1.0},
+      {label:'Alto risco',color:'#F44336',min:1.0,max:1.3}
+    ],
+    texto:'A Razão Cintura/Quadril indica risco cardiometabólico pelo acúmulo de gordura na região abdominal. Homens e mulheres têm limites diferentes.'
+  },
+  amb:{
+    zonas:()=>[
+      {label:'Abaixo',color:'#F44336',min:15,max:30},
+      {label:'Bom',color:'#4CAF50',min:30,max:55},
+      {label:'Alto',color:'#2196F3',min:55,max:80}
+    ],
+    texto:'A Área Muscular do Braço estima a quantidade de músculo no braço a partir da circunferência e da dobra do tríceps.'
+  },
+  agb:{
+    zonas:()=>[
+      {label:'Baixo',color:'#4CAF50',min:5,max:25},
+      {label:'Moderado',color:'#FF9800',min:25,max:45},
+      {label:'Alto',color:'#F44336',min:45,max:90}
+    ],
+    texto:'A Área de Gordura do Braço indica quanto de gordura existe ao redor do músculo no braço — quanto menor, mais magro o braço.'
+  }
+};
+
+/* RENDERIZA O GAUGE NO ESTILO "APP DE BALANÇA" (barra colorida + marcador + análise) */
+function renderizarGauge(metricKey, valor, sexo, idadeReal, label){
+  const v=pf(valor);
+  if(isNaN(v)||valor===''||valor===undefined||valor===null){
+    return `<div class="gauge-card"><small>⚠️ Preencha o campo "${label}" para ver a análise.</small></div>`;
+  }
+  if(metricKey==='idademetabolica'){
+    const idadeR=pf(idadeReal);
+    let msg='Idade metabólica calculada a partir do seu percentual de gordura corporal.', cor='#2196F3';
+    if(!isNaN(idadeR)){
+      if(v<idadeR-1){ msg='Sua composição corporal indica uma idade metabólica menor que a idade real 🎉'; cor='#4CAF50'; }
+      else if(v>idadeR+1){ msg='Sua composição corporal indica uma idade metabólica maior que a idade real. Há espaço pra evoluir!'; cor='#F44336'; }
+      else { msg='Sua idade metabólica está bem próxima da idade real.'; cor='#2196F3'; }
+    }
+    return `<div class="gauge-card">
+      <div class="gauge-title">Idade Metabólica: <strong>${v} anos</strong>${!isNaN(idadeR)?` (idade real: ${idadeR} anos)`:''}</div>
+      <div style="background:${cor};color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;font-size:9pt;margin:8px 0">${msg}</div>
+      <div class="gauge-desc"><strong>Análise de indicadores</strong><p>${REF_DATA.idademetabolica.texto}</p></div>
+    </div>`;
+  }
+  const def=REF_DATA[metricKey];
+  if(!def) return '';
+  const zonas=def.zonas(sexo);
+  const totalMin=zonas[0].min, totalMax=zonas[zonas.length-1].max;
+  const pos=Math.max(0,Math.min(100,((v-totalMin)/(totalMax-totalMin))*100));
+  const barras=zonas.map(z=>`<div style="flex:${z.max-z.min};background:${z.color}"></div>`).join('');
+  const labels=zonas.map(z=>`<span style="flex:${z.max-z.min}">${z.label}</span>`).join('');
+  return `<div class="gauge-card">
+    <div class="gauge-title">${label}: <strong>${valor}</strong></div>
+    <div class="gauge-bar">${barras}<div class="gauge-marker" style="left:${pos}%"></div></div>
+    <div class="gauge-labels-row">${labels}</div>
+    <div class="gauge-desc"><strong>Análise de indicadores</strong><p>${def.texto}</p></div>
+  </div>`;
+}
+
+function toggleMetricGauge(panelId, metricKey, valor, sexo, idadeReal, label){
+  const panel=document.getElementById(panelId);
+  if(!panel) return;
+  if(panel.classList.contains('show') && panel.dataset.metric===metricKey){
+    panel.classList.remove('show');
+    panel.dataset.metric='';
+    return;
+  }
+  panel.innerHTML=renderizarGauge(metricKey,valor,sexo,idadeReal,label);
+  panel.dataset.metric=metricKey;
+  panel.classList.add('show');
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+/* Igual ao toggleMetricGauge, mas lê o valor e a idade direto dos campos no momento do clique
+   (evita mostrar dados desatualizados quando o campo foi editado sem reabrir o card do aluno) */
+function toggleMetricGaugeLive(panelId, metricKey, valorInputId, sexo, idadeInputId, label){
+  const valorEl=document.getElementById(valorInputId);
+  const idadeEl=document.getElementById(idadeInputId);
+  const valor=valorEl?valorEl.value:'';
+  const idadeReal=idadeEl?idadeEl.value:'';
+  toggleMetricGauge(panelId, metricKey, valor, sexo, idadeReal, label);
+}
+
+/* PREVIEW DOBRAS */
+function renderizarPreviewDobras(av,aluno){
+  if(!av._dobras) return `<div class="dobras-preview"><small>⚠️ Preencha as dobras do protocolo "${getProtocoloDef(av.protocolo).nome}" acima para ver os resultados</small></div>`;
+  const db=av._dobras;
+  const nomeProtocolo=getProtocoloDef(db.protocolo).nome;
+  const rcqRef=aluno.sexo==='M'?'abaixo de 0,90':'abaixo de 0,80';
+  const bicepsVal=(av.biceps||'').split('/')[0].trim();
+  const amb=calcularAMB(bicepsVal,av.triceps);
+  const agb=calcularAGB(bicepsVal,av.triceps);
+  const panelId=`metric-panel-dobras-${aluno.id}-${av.id}`;
+  const idadeArg=aluno.idade||'null';
+  return `<div class="dobras-preview">
+    <h4>📊 RESULTADOS — ${nomeProtocolo.toUpperCase()} <small style="font-weight:400;color:#6b8c6e">(toque num item para ver a análise)</small></h4>
+    <div class="preview-grid">
+      <div class="preview-item"><span class="preview-label">📊 IMC</span><span class="preview-value">${av.imc||'—'}</span><span class="preview-ref">(18,50-25,00)</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagordapct','${db.pctG.toFixed(2)}','${aluno.sexo}',${idadeArg},'% Massa Gorda')"><span class="preview-label">💧 % Massa Gorda</span><span class="preview-value">${db.pctG.toFixed(2)}%</span><span class="preview-ref">(13,0%-25,0%)</span></div>
+      <div class="preview-item"><span class="preview-label">💪 % Massa Magra</span><span class="preview-value">${(100-db.pctG).toFixed(2)}%</span><span class="preview-ref">(75,0%-87,0%)</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagorda','${db.mG.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Gorda (kg)')"><span class="preview-label">⚖️ Massa Gorda</span><span class="preview-value">${db.mG.toFixed(2)} kg</span><span class="preview-ref">(6,71-12,90 kg)</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massamagra','${db.mM.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Magra (kg)')"><span class="preview-label">🏋️ Massa Magra</span><span class="preview-value">${db.mM.toFixed(2)} kg</span><span class="preview-ref">(38,70-44,89 kg)</span></div>
+      ${db.dens!==null?`<div class="preview-item"><span class="preview-label">📐 Densidade</span><span class="preview-value">${db.dens.toFixed(5)}</span></div>`:''}
+      <div class="preview-item"><span class="preview-label">📏 Soma Dobras</span><span class="preview-value">${db.soma.toFixed(2)} mm</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','rcq','${db.rcq}','${aluno.sexo}',${idadeArg},'RCQ (Cintura/Quadril)')"><span class="preview-label">📐 RCQ</span><span class="preview-value">${db.rcq}</span><span class="preview-ref">(${rcqRef})</span></div>
+      <div class="preview-item" ${amb?`style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','amb','${amb}','${aluno.sexo}',${idadeArg},'AMB (Área Muscular do Braço)')"`:''}><span class="preview-label">💪 AMB</span><span class="preview-value">${amb||'—'} cm²</span></div>
+      <div class="preview-item" ${agb?`style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','agb','${agb}','${aluno.sexo}',${idadeArg},'AGB (Área de Gordura do Braço)')"`:''}><span class="preview-label">🍔 AGB</span><span class="preview-value">${agb||'—'} cm²</span></div>
+    </div>
+  </div>`;
+}
+
+/* LINHAS EM NEGRITO NO PDF (gordura corporal, na balança e nas dobras) */
+const LINHAS_NEGRITO_PDF = ['% Gordura', '% Massa Gorda'];
+
+/* GERAÇÃO DE PDF — AVALIAÇÃO FÍSICA COM DELTA */
+async function gerarPDFAluno(alunoId){
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno||!aluno.avaliacoes?.length){ notifMsg('⚠️ Nenhuma avaliação!'); return; }
+  notifMsg('📄 Gerando PDF...');
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const altura=aluno.altura||'—';
+  const headers=['Indicador',...aluno.avaliacoes.map(av=>av.data||'—')];
+
+  doc.setFillColor(18,18,26); doc.rect(0,0,210,38,'F');
+  doc.setFillColor(230,57,57); doc.rect(0,0,6,38,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(255,255,255);
+  doc.text(aluno.nome,16,16);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(200,200,210);
+  doc.text(`Nasc: ${aluno.nasc||'—'}  •  ${aluno.idade||'—'} anos  •  Altura: ${altura} m`,16,27);
+  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(230,57,57);
+  doc.text('AVALIAÇÃO FÍSICA',195,18,{align:'right'});
+  doc.setFontSize(8); doc.setTextColor(180,180,190);
+  doc.text(new Date().toLocaleDateString('pt-BR'),195,28,{align:'right'});
+
+  doc.setFillColor(230,57,57); doc.rect(10,42,3,5,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
+  doc.text('COMPOSIÇÃO CORPORAL',16,48);
+  
+  const avs = aluno.avaliacoes;
+  avs.forEach(av=>{
+    const gorduraRef = av.gordura || (av._dobras ? av._dobras.pctG.toFixed(1) : '');
+    if(gorduraRef) av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef);
+  });
+  const compRows = [
+    ['Altura (m)', ...avs.map(() => altura)],
+    ['Peso (kg)', ...avs.map((av, idx) => `${av.peso||'—'}${idx===0 ? '' : formatDelta(av.peso, avs[idx-1].peso)}`)],
+    ['IMC', ...avs.map((av, idx) => `${av.imc||'—'}${idx===0 ? '' : formatDelta(av.imc, avs[idx-1].imc)}`)],
+    ['% Gordura', ...avs.map((av, idx) => `${av.gordura||'—'}${idx===0 ? '' : formatDelta(av.gordura, avs[idx-1].gordura)}`)],
+    ['Gordura Visceral', ...avs.map((av, idx) => `${av.visceral||'—'}${idx===0 ? '' : formatDelta(av.visceral, avs[idx-1].visceral)}`)],
+    ['Massa Muscular (kg)', ...avs.map((av, idx) => `${av.massamuscular||'—'}${idx===0 ? '' : formatDelta(av.massamuscular, avs[idx-1].massamuscular)}`)],
+    ['% Proteína', ...avs.map((av, idx) => `${av.proteina||'—'}${idx===0 ? '' : formatDelta(av.proteina, avs[idx-1].proteina)}`)],
+    ['% Água', ...avs.map((av, idx) => `${av.agua||'—'}${idx===0 ? '' : formatDelta(av.agua, avs[idx-1].agua)}`)],
+    ['TMB (kcal)', ...avs.map((av, idx) => `${av.tmb||'—'}${idx===0 ? '' : formatDelta(av.tmb, avs[idx-1].tmb)}`)],
+    ['Idade Metabólica', ...avs.map((av, idx) => `${av.idadeMetabolica||'—'}${idx===0 ? '' : formatDelta(av.idadeMetabolica, avs[idx-1].idadeMetabolica)}`)]
+  ];
+  doc.autoTable({startY:53,head:[headers],body:compRows,theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
+    didParseCell:function(data){
+      if(data.section==='body' && LINHAS_NEGRITO_PDF.includes(data.row.raw[0])){
+        data.cell.styles.fontStyle='bold';
+        data.cell.styles.fillColor=[255,235,235];
+      }
+    }
+  });
+  let yPos=doc.lastAutoTable.finalY+8;
+
+  doc.setFillColor(230,57,57); doc.rect(10,yPos-3,3,5,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
+  doc.text('MEDIDAS CORPORAIS (cm)',16,yPos); yPos+=5;
+  
+  const medidasRows = [
+    ['Peitoral', ...avs.map((av, idx) => `${av.peitoral||'—'}${idx===0 ? '' : formatDelta(av.peitoral, avs[idx-1].peitoral)}`)],
+    ['Bíceps D/E', ...avs.map((av, idx) => {
+      const valor = av.biceps||'—';
+      if(idx===0) return valor;
+      const delta = formatDeltaCoxaBiceps(av.biceps, avs[idx-1].biceps).trim();
+      return delta ? `${valor}\n${delta}` : valor;
+    })],
+    ['Cintura', ...avs.map((av, idx) => `${av.cintura||'—'}${idx===0 ? '' : formatDelta(av.cintura, avs[idx-1].cintura)}`)],
+    ['Abdômen', ...avs.map((av, idx) => `${av.barriga||'—'}${idx===0 ? '' : formatDelta(av.barriga, avs[idx-1].barriga)}`)],
+    ['Quadril', ...avs.map((av, idx) => `${av.quadril||'—'}${idx===0 ? '' : formatDelta(av.quadril, avs[idx-1].quadril)}`)],
+    ['Coxa D/E', ...avs.map((av, idx) => {
+      const valor = av.coxa||'—';
+      if(idx===0) return valor;
+      const delta = formatDeltaCoxaBiceps(av.coxa, avs[idx-1].coxa).trim();
+      return delta ? `${valor}\n${delta}` : valor;
+    })]
+  ];
+  doc.autoTable({startY:yPos,head:[headers],body:medidasRows,theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10}});
+  yPos=doc.lastAutoTable.finalY+8;
+
+  doc.setFillColor(230,57,57); doc.rect(10,yPos-3,3,5,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
+  doc.text('DOBRAS CUTÂNEAS (mm)',16,yPos); yPos+=5;
+  
+  const dobrasRows = [
+    ['Protocolo', ...avs.map(av => getProtocoloDef(av.protocolo).nomeCurto)],
+    ['Tríceps', ...avs.map((av, idx) => `${av.triceps||'—'}${idx===0 ? '' : formatDelta(av.triceps, avs[idx-1].triceps)}`)],
+    ['Axilar Média', ...avs.map((av, idx) => `${av.axilar||'—'}${idx===0 ? '' : formatDelta(av.axilar, avs[idx-1].axilar)}`)],
+    ['Tórax', ...avs.map((av, idx) => `${av.torax||'—'}${idx===0 ? '' : formatDelta(av.torax, avs[idx-1].torax)}`)],
+    ['Abdominal', ...avs.map((av, idx) => `${av.abdominal||'—'}${idx===0 ? '' : formatDelta(av.abdominal, avs[idx-1].abdominal)}`)],
+    ['Suprailíaca', ...avs.map((av, idx) => `${av.suprailiaca||'—'}${idx===0 ? '' : formatDelta(av.suprailiaca, avs[idx-1].suprailiaca)}`)],
+    ['Subescapular', ...avs.map((av, idx) => `${av.subescapular||'—'}${idx===0 ? '' : formatDelta(av.subescapular, avs[idx-1].subescapular)}`)],
+    ['Coxa', ...avs.map((av, idx) => `${av.pregaCoxa||'—'}${idx===0 ? '' : formatDelta(av.pregaCoxa, avs[idx-1].pregaCoxa)}`)],
+    ['Soma das Dobras', ...avs.map((av, idx) => av._dobras ? `${av._dobras.soma.toFixed(2)} mm${idx===0 ? '' : formatDelta(av._dobras.soma, avs[idx-1]._dobras?.soma)}` : '—')],
+    ['% Massa Gorda', ...avs.map((av, idx) => av._dobras ? `${av._dobras.pctG.toFixed(2)}%${idx===0 ? '' : formatDelta(av._dobras.pctG, avs[idx-1]._dobras?.pctG)}` : '—')],
+    ['% Massa Magra', ...avs.map((av, idx) => av._dobras ? `${(100-av._dobras.pctG).toFixed(2)}%${idx===0 ? '' : formatDelta(100-av._dobras.pctG, avs[idx-1]._dobras ? 100-avs[idx-1]._dobras.pctG : undefined)}` : '—')],
+    ['Massa Gorda (kg)', ...avs.map((av, idx) => av._dobras ? `${av._dobras.mG.toFixed(2)}${idx===0 ? '' : formatDelta(av._dobras.mG, avs[idx-1]._dobras?.mG)}` : '—')],
+    ['Massa Magra (kg)', ...avs.map((av, idx) => av._dobras ? `${av._dobras.mM.toFixed(2)}${idx===0 ? '' : formatDelta(av._dobras.mM, avs[idx-1]._dobras?.mM)}` : '—')],
+    ['Densidade Corporal', ...avs.map((av, idx) => (av._dobras && av._dobras.dens!==null) ? `${av._dobras.dens.toFixed(5)}${idx===0 ? '' : formatDelta(av._dobras.dens, (avs[idx-1]._dobras&&avs[idx-1]._dobras.dens!==null)?avs[idx-1]._dobras.dens:undefined)}` : '—')],
+    ['Razão Cintura/Quadril', ...avs.map(av => av._dobras ? av._dobras.rcq : '—')],
+    ['AMB (cm²)', ...avs.map((av, idx) => {
+      const bicepsVal=(av.biceps||'').split('/')[0].trim();
+      const amb=calcularAMB(bicepsVal,av.triceps);
+      if(!amb) return '—';
+      if(idx===0) return `${amb}`;
+      const bicepsAnt=(avs[idx-1].biceps||'').split('/')[0].trim();
+      const ambAnt=calcularAMB(bicepsAnt,avs[idx-1].triceps);
+      return `${amb}${formatDelta(amb, ambAnt)}`;
+    })],
+    ['AGB (cm²)', ...avs.map((av, idx) => {
+      const bicepsVal=(av.biceps||'').split('/')[0].trim();
+      const agb=calcularAGB(bicepsVal,av.triceps);
+      if(!agb) return '—';
+      if(idx===0) return `${agb}`;
+      const bicepsAnt=(avs[idx-1].biceps||'').split('/')[0].trim();
+      const agbAnt=calcularAGB(bicepsAnt,avs[idx-1].triceps);
+      return `${agb}${formatDelta(agb, agbAnt)}`;
+    })]
+  ];
+  doc.autoTable({startY:yPos,head:[headers],body:dobrasRows,theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
+    didParseCell:function(data){
+      if(data.section==='body' && LINHAS_NEGRITO_PDF.includes(data.row.raw[0])){
+        data.cell.styles.fontStyle='bold';
+        data.cell.styles.fillColor=[255,235,235];
+      }
+      if(data.section==='body' && data.row.raw[0]==='Soma das Dobras'){
+        data.cell.styles.cellPadding={top:2.6,right:1.2,bottom:1.2,left:1.2};
+      }
+    }
+  });
+
+  const pH=297;
+  doc.setFillColor(18,18,26); doc.rect(0,pH-16,210,16,'F');
+  doc.setFillColor(230,57,57); doc.rect(0,pH-16,4,16,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(255,255,255);
+  doc.text('Caio Macêdo',12,pH-8);
+  doc.setFontSize(5.5); doc.setTextColor(170,170,180);
+  doc.text('CREF 007854-G/PI • @caiomacedo.personal • (86) 98879-6410',12,pH-3.5);
+  doc.save(`Avaliacao_${aluno.nome.replace(/\s+/g,'_')}.pdf`);
+  notifMsg('✅ PDF gerado!');
+}
+
+/* GERAÇÃO DE PDF — POSTURAL */
+async function gerarPDFPosturalAluno(alunoId){
+  const aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno||!aluno.avaliacoes?.length){ notifMsg('⚠️ Nenhuma avaliação!'); return; }
+  notifMsg('📸 Gerando PDF Postural...');
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+
+  for(let i=0;i<aluno.avaliacoes.length;i++){
+    if(i>0) doc.addPage();
+    const av=aluno.avaliacoes[i];
+
+    doc.setFillColor(18,18,26); doc.rect(0,0,210,45,'F');
+    doc.setFillColor(230,57,57); doc.rect(0,0,8,45,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(255,255,255);
+    doc.text(aluno.nome,18,20);
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(200,200,200);
+    doc.text(`Nasc: ${aluno.nasc||'—'}  •  ${aluno.idade||'—'} anos  •  Altura: ${aluno.altura||'—'} m`,18,32);
+    doc.text(`Avaliação: ${av.data||new Date().toLocaleDateString('pt-BR')}`,18,40);
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(230,57,57);
+    doc.text('RELATÓRIO POSTURAL',195,25,{align:'right'});
+
+    let y=58;
+    const temF=!!av.fotoF, temL=!!av.fotoL, temD=!!av.fotoD;
+    if(temF||temL||temD){
+      doc.setFillColor(230,57,57); doc.rect(14,y-3,3,5,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
+      doc.text('REGISTRO FOTOGRÁFICO',20,y);
+      y+=8;
+      const fW=56,fH=74,gap=5;
+      const qtd=(temF?1:0)+(temL?1:0)+(temD?1:0);
+      let fx=(210-(qtd*(fW+gap)-gap))/2;
+      const drawF=async(src,label)=>{
+        doc.setFillColor(245,245,245); doc.roundedRect(fx,y,fW,fH+9,3,3,'F');
+        doc.setDrawColor(200,200,200); doc.setLineWidth(0.5); doc.roundedRect(fx,y,fW,fH+9,3,3,'S');
+        try{
+          const d=await getImgDataURL(src);
+          if(d) doc.addImage(d,'JPEG',fx+1.5,y+1.5,fW-3,fH-3,undefined,'FAST');
+        }catch(e){}
+        doc.setFillColor(26,26,26); doc.rect(fx,y+fH,fW,9,'F');
+        doc.setFillColor(230,57,57); doc.rect(fx,y+fH,4,9,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(255,255,255);
+        doc.text(label,fx+fW/2,y+fH+6,{align:'center'});
+        fx+=fW+gap;
+      };
+      if(temF) await drawF(av.fotoF,'FRONTAL');
+      if(temL) await drawF(av.fotoL,'LATERAL');
+      if(temD) await drawF(av.fotoD,'DORSAL');
+      y+=fH+9+12;
+    }
+
+    if(av.resumo&&av.resumo.trim()){
+      doc.setFillColor(230,57,57); doc.rect(14,y-3,3,5,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
+      doc.text('ANÁLISE POSTURAL',20,y); y+=8;
+      const resumoLines=doc.splitTextToSize(av.resumo,170);
+      const boxH=resumoLines.length*5+10;
+      doc.setFillColor(255,248,248); doc.roundedRect(14,y-2,182,boxH,3,3,'F');
+      doc.setDrawColor(230,57,57); doc.setLineWidth(0.5); doc.roundedRect(14,y-2,182,boxH,3,3,'S');
+      doc.setFillColor(230,57,57); doc.rect(14,y-2,4,boxH,'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,60,70);
+      doc.text(resumoLines,22,y+4);
+    }
+
+    const pH=297;
+    doc.setFillColor(18,18,26); doc.rect(0,pH-16,210,16,'F');
+    doc.setFillColor(230,57,57); doc.rect(0,pH-16,4,16,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(255,255,255);
+    doc.text('Caio Macêdo',12,pH-8);
+    doc.setFontSize(5.5); doc.setTextColor(170,170,180);
+    doc.text('CREF 007854-G/PI • @caiomacedo.personal • (86) 98879-6410',12,pH-3.5);
+    doc.setTextColor(130,130,140);
+    doc.text(`Pág. ${i+1} de ${aluno.avaliacoes.length}`,200,pH-8,{align:'right'});
+  }
+  doc.save(`Postural_${aluno.nome.replace(/\s+/g,'_')}.pdf`);
+  notifMsg('✅ PDF Postural gerado!');
+}
+
+function getImgDataURL(src){
+  return new Promise((resolve)=>{
+    if(!src){ resolve(null); return; }
+    const img=new Image();
+    img.crossOrigin='Anonymous';
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=img.width; canvas.height=img.height;
+      canvas.getContext('2d').drawImage(img,0,0);
+      resolve(canvas.toDataURL('image/jpeg',0.8));
+    };
+    img.onerror=()=>resolve(null);
+    img.src=src;
+  });
+}
+
+/* ORDENAÇÃO E FILTRAGEM */
+function ordenarAlunos(){
+  if (avaliacaoEmbedId !== null) {
+    renderizarAlunos(alunos.filter(a => a.id === avaliacaoEmbedId));
+    return;
+  }
+  currentOrdem = document.getElementById('ordemAluno').value;
+  currentBusca = document.getElementById('buscaAluno').value.toLowerCase();
+  let alunosFiltrados = alunos.filter(a => a.nome.toLowerCase().includes(currentBusca));
+  switch(currentOrdem){
+    case 'nome': alunosFiltrados.sort((a,b)=>a.nome.localeCompare(b.nome)); break;
+    case 'nome_desc': alunosFiltrados.sort((a,b)=>b.nome.localeCompare(a.nome)); break;
+    case 'data_avaliacao':
+      alunosFiltrados.sort((a,b)=>{
+        const dA=getUltimaDataAvaliacao(a), dB=getUltimaDataAvaliacao(b);
+        if(!dA&&!dB) return 0; if(!dA) return 1; if(!dB) return -1;
+        return new Date(dB.split('/').reverse().join('-'))-new Date(dA.split('/').reverse().join('-'));
+      }); break;
+  }
+  renderizarAlunos(alunosFiltrados);
+  const bannerEl=document.getElementById('bannerRenovacao');
+  if(bannerEl){
+    const itens=getAlunosComPendencias();
+    renderizarBannerRenovacoes(itens);
+  }
+}
+
+function filtrarAlunos(){ ordenarAlunos(); }
+
+/* RENDERIZAÇÃO */
+function renderizarAlunos(alunosParaRenderizar){
+  const container=document.getElementById('alunosList');
+  if(!container) return;
+  if(!alunosParaRenderizar||!alunosParaRenderizar.length){
+    container.innerHTML='<div class="sem-resultados">🔍 Nenhum aluno encontrado</div>';
+    return;
+  }
+  container.innerHTML='';
+  alunosParaRenderizar.forEach(aluno=>{
+    const isActive=(alunoAtivoId===aluno.id);
+    const card=document.createElement('div');
+    card.className=`aluno-card ${isActive?'active':''}`;
+    card.setAttribute('data-aluno-card', aluno.id);
+    const statusRenov=getStatusRenovacao(aluno);
+    const statusPagtos=getStatusPagamentos(aluno);
+    card.innerHTML=`
+      <div class="aluno-header" onclick="selecionarAluno(${aluno.id})">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span>📌</span>
+          <span class="aluno-nome">${escapeHtml(aluno.nome)}</span>
+          <span class="aluno-info">📅 ${getUltimaDataAvaliacao(aluno)||'Sem avaliações'} | ${aluno.avaliacoes?.length||0} avals</span>
+          ${statusRenov?`<span class="badge-renovacao ${statusRenov.classe}" title="Renovação de avaliação">📋 ${statusRenov.texto}</span>`:''}
+          ${statusPagtos.map(p=>`<span class="badge-renovacao ${p.classe}" title="Pagamento">💰 ${p.texto}</span>`).join('')}
+        </div>
+        <div class="aluno-acoes" onclick="event.stopPropagation()">
+          ${aluno.whatsapp?`<button class="btn-whatsapp-aluno btn-icone" title="WhatsApp" onclick="abrirWhatsApp(${aluno.id})">💬</button>`:''}
+          <button class="btn-renomear-aluno btn-icone" title="Renomear" onclick="renomearAluno(${aluno.id})">✏️</button>
+          <button class="btn-pdf-aluno" onclick="gerarPDFAluno(${aluno.id})">📄 PDF</button>
+          <button class="btn-postural-aluno" onclick="gerarPDFPosturalAluno(${aluno.id})">📸 Postural</button>
+          <button onclick="apagarAluno(${aluno.id})">🗑️</button>
+        </div>
+      </div>
+      <div class="aluno-content">
+        <div class="card">
+          <div class="card-title">👤 Dados do Cliente</div>
+          <div class="grid2">
+            <div class="field"><label>Nome</label><input type="text" value="${escapeHtml(aluno.nome)}" onchange="atualizarAluno(${aluno.id},'nome',this.value)"></div>
+            <div class="field"><label>Nascimento</label><input type="text" id="nasc-${aluno.id}" placeholder="DDMMAAAA" value="${escapeHtml(aluno.nasc||'')}" onblur="if(formatarDataAuto(this)){atualizarAluno(${aluno.id},'nasc',this.value);const idad=calcularIdade(this.value);if(idad){document.getElementById('idade-${aluno.id}').value=idad;atualizarAluno(${aluno.id},'idade',idad)}}"></div>
+            <div class="field"><label>Idade</label><input type="number" id="idade-${aluno.id}" value="${escapeHtml(aluno.idade||'')}" readonly></div>
+            <div class="field"><label>Altura (m)</label><input type="text" id="altura-${aluno.id}" value="${escapeHtml(aluno.altura||'')}" onblur="formatarAltura(this);atualizarAluno(${aluno.id},'altura',this.value)"></div>
+            <div class="field"><label>Peso inicial</label><input type="text" value="${escapeHtml(aluno.pesoIni||'')}" onchange="atualizarAluno(${aluno.id},'pesoIni',this.value)"></div>
+            <div class="field"><label>Sexo</label><select onchange="atualizarAluno(${aluno.id},'sexo',this.value)"><option ${aluno.sexo==='M'?'selected':''} value="M">Masculino</option><option ${aluno.sexo==='F'?'selected':''} value="F">Feminino</option></select></div>
+            <div class="field"><label>WhatsApp</label><input type="tel" placeholder="86988776655" value="${escapeHtml(aluno.whatsapp||'')}" onchange="atualizarAluno(${aluno.id},'whatsapp',this.value)"></div>
+          </div>
+          <div class="sec-label" style="display:flex;align-items:center">Pagamento <button type="button" class="btn-toggle-secao" onclick="toggleSecao(${aluno.id},'pagamento',this)">${aluno.pagamentoMinimizado?'▼':'▲'}</button></div>
+          <div class="grid2" id="pagamento-content-${aluno.id}" style="display:${aluno.pagamentoMinimizado?'none':'grid'}">
+            <div class="field"><label>Valor Pago (R$)</label><input type="text" placeholder="150,00" value="${escapeHtml(aluno.valorPago||'')}" onchange="atualizarAluno(${aluno.id},'valorPago',this.value)"></div>
+            <div class="field"><label>Cobrança</label>
+              <select onchange="atualizarAluno(${aluno.id},'pagamentoTipo',this.value);document.getElementById('pagDia2Wrap-${aluno.id}').style.display=this.value==='2x'?'block':'none'">
+                <option value="" ${!aluno.pagamentoTipo?'selected':''}>Nenhum</option>
+                <option value="1x" ${aluno.pagamentoTipo==='1x'?'selected':''}>Mensal (1x no mês)</option>
+                <option value="2x" ${aluno.pagamentoTipo==='2x'?'selected':''}>Quinzenal (2x no mês)</option>
+              </select>
+              <label style="margin-top:6px">Vencimento 1</label>
+              <div style="display:flex;gap:6px">
+                <input type="date" style="flex:1" value="${isoFromBR(aluno.pagamentoData1)}" onchange="atualizarAluno(${aluno.id},'pagamentoData1',brFromISO(this.value))">
+                <button type="button" class="btn-limpar-data" title="Limpar data" onclick="atualizarAluno(${aluno.id},'pagamentoData1','')">✕</button>
+              </div>
+              <div id="pagDia2Wrap-${aluno.id}" style="display:${aluno.pagamentoTipo==='2x'?'block':'none'}">
+                <label style="margin-top:6px">Vencimento 2</label>
+                <div style="display:flex;gap:6px">
+                  <input type="date" style="flex:1" value="${isoFromBR(aluno.pagamentoData2)}" onchange="atualizarAluno(${aluno.id},'pagamentoData2',brFromISO(this.value))">
+                  <button type="button" class="btn-limpar-data" title="Limpar data" onclick="atualizarAluno(${aluno.id},'pagamentoData2','')">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="sec-label" style="display:flex;align-items:center">Renovação de Avaliação <button type="button" class="btn-toggle-secao" onclick="toggleSecao(${aluno.id},'renovacao',this)">${aluno.renovacaoMinimizado?'▼':'▲'}</button></div>
+          <div class="grid2" id="renovacao-content-${aluno.id}" style="display:${aluno.renovacaoMinimizado?'none':'grid'}">
+            <div class="field"><label>Renovar a cada</label>
+              <select id="renovacaoSel-${aluno.id}" onchange="onChangeRenovacaoTipo(${aluno.id},this.value)">
+                <option value="" ${!aluno.renovacaoDias?'selected':''}>Nenhum</option>
+                <option value="30" ${String(aluno.renovacaoDias)==='30'?'selected':''}>30 dias</option>
+                <option value="45" ${String(aluno.renovacaoDias)==='45'?'selected':''}>45 dias</option>
+                <option value="60" ${String(aluno.renovacaoDias)==='60'?'selected':''}>60 dias</option>
+                <option value="90" ${String(aluno.renovacaoDias)==='90'?'selected':''}>90 dias</option>
+                <option value="outro" ${(aluno.renovacaoDias&&!['30','45','60','90'].includes(String(aluno.renovacaoDias)))?'selected':''}>Outro...</option>
+              </select>
+              <input type="number" id="renovacaoCustom-${aluno.id}" placeholder="nº de dias" style="margin-top:6px;display:${(aluno.renovacaoDias&&!['30','45','60','90'].includes(String(aluno.renovacaoDias)))?'block':'none'}" value="${(aluno.renovacaoDias&&!['30','45','60','90'].includes(String(aluno.renovacaoDias)))?aluno.renovacaoDias:''}" onchange="atualizarAluno(${aluno.id},'renovacaoDias',this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Avaliações</div>
+          <div class="avs-list" id="avaliacoesList-${aluno.id}"></div>
+          <button class="btn-add-av" onclick="adicionarAvaliacao(${aluno.id})">➕ Adicionar Avaliação</button>
+        </div>
+      </div>`;
+    container.appendChild(card);
+
+    if(isActive&&aluno.avaliacoes){
+      const avContainer=document.getElementById(`avaliacoesList-${aluno.id}`);
+      if(avContainer){
+        avContainer.innerHTML=aluno.avaliacoes.map((av,idx)=>{
+          const clsPeso=getClassificacaoTexto('Peso',av.peso,aluno.sexo);
+          const clsIMC=getClassificacaoTexto('IMC',av.imc,aluno.sexo);
+          const clsGordura=getClassificacaoTexto('% Gordura',av.gordura,aluno.sexo);
+          const clsVisceral=getClassificacaoTexto('Gordura Visceral',av.visceral,aluno.sexo);
+          const clsMassa=getClassificacaoTexto('Massa Muscular',av.massamuscular,aluno.sexo);
+          const clsProteina=getClassificacaoTexto('% Proteína',av.proteina,aluno.sexo);
+          const clsAgua=getClassificacaoTexto('% Água',av.agua,aluno.sexo);
+          const clsTMB=getClassificacaoTexto('TMB',av.tmb,aluno.sexo);
+          const clsIdadeMet=getClassificacaoTexto('Idade Metabólica',av.idadeMetabolica,aluno.sexo);
+          const resumo = getResumoAvaliacao(av);
+          return `
+          <div class="av-item" id="av-item-${av.id}">
+            <div class="av-header" onclick="toggleAvaliacao(${av.id}, event)">
+              <div>
+                <span class="av-num">Avaliação ${idx+1}</span>
+                <span class="av-resumo" id="av-resumo-${av.id}">${resumo ? ` — ${resumo}` : ''}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="av-toggle">▼</span>
+                ${aluno.avaliacoes.length>1?`<button class="av-rem" onclick="event.stopPropagation();removerAvaliacao(${aluno.id},${av.id})">✕</button>`:''}
+              </div>
+            </div>
+            <div class="av-content">
+              <div class="grid2">
+                <div class="field"><label>Data</label><input type="text" value="${escapeHtml(av.data||'')}" placeholder="DD/MM/AAAA" onchange="syncAvaliacao(${aluno.id},${av.id},'data',this.value)"></div>
+              </div>
+              <div class="sec-label">Composição Corporal <small style="text-transform:none;font-weight:400;color:#bbb">(toque no rótulo abaixo do valor para ver a análise)</small></div>
+              <div class="grid3">
+                <div class="field"><label>Peso (kg)</label><input type="text" id="peso-input-${aluno.id}-${av.id}" value="${escapeHtml(av.peso||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'peso',this.value)"><span class="badge clickable ${clsPeso.classe}" id="peso-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','peso','peso-input-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','Peso (kg)')">${clsPeso.texto}</span></div>
+                <div class="field"><label>IMC</label><input type="text" id="imc-${aluno.id}-${av.id}" readonly value="${escapeHtml(av.imc||'')}"><span class="badge clickable ${clsIMC.classe}" id="imc-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','imc','imc-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','IMC')">${clsIMC.texto}</span></div>
+                <div class="field"><label>% Gordura</label><input type="text" id="gordura-input-${aluno.id}-${av.id}" value="${escapeHtml(av.gordura||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'gordura',this.value)"><span class="badge clickable ${clsGordura.classe}" id="gordura-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','gordura','gordura-input-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','% Gordura')">${clsGordura.texto}</span></div>
+                <div class="field"><label>Gordura Visceral</label><input type="text" id="visceral-input-${aluno.id}-${av.id}" value="${escapeHtml(av.visceral||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'visceral',this.value)"><span class="badge clickable ${clsVisceral.classe}" id="visceral-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','visceral','visceral-input-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','Gordura Visceral')">${clsVisceral.texto}</span></div>
+                <div class="field"><label>Massa Muscular (kg)</label><input type="text" id="massa-input-${aluno.id}-${av.id}" value="${escapeHtml(av.massamuscular||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'massamuscular',this.value)"><span class="badge clickable ${clsMassa.classe}" id="massa-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','massamuscular','massa-input-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','Massa Muscular (kg)')">${clsMassa.texto}</span></div>
+                <div class="field"><label>% Proteína</label><input type="text" id="proteina-input-${aluno.id}-${av.id}" value="${escapeHtml(av.proteina||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'proteina',this.value)"><span class="badge clickable ${clsProteina.classe}" id="proteina-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','proteina','proteina-input-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','% Proteína')">${clsProteina.texto}</span></div>
+                <div class="field"><label>% Água</label><input type="text" id="agua-${aluno.id}-${av.id}" value="${escapeHtml(av.agua||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'agua',this.value)"><span class="badge clickable ${clsAgua.classe}" id="agua-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','agua','agua-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','% Água')">${clsAgua.texto}</span></div>
+                <div class="field"><label>TMB (kcal)</label><input type="text" id="tmb-${aluno.id}-${av.id}" readonly value="${escapeHtml(av.tmb||'')}"><span class="badge clickable ${clsTMB.classe}" id="tmb-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','tmb','tmb-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','TMB (kcal)')">${clsTMB.texto}</span></div>
+                <div class="field"><label>Idade Metabólica</label><input type="text" id="idademet-${aluno.id}-${av.id}" readonly value="${escapeHtml(av.idadeMetabolica||'')}"><span class="badge clickable ${clsIdadeMet.classe}" id="idademet-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','idademetabolica','idademet-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','Idade Metabólica')">${clsIdadeMet.texto}</span></div>
+              </div>
+              <div class="gauge-panel" id="metric-panel-comp-${aluno.id}-${av.id}"></div>
+              <div class="sec-label">Medidas (cm)</div>
+              <div class="grid3">
+                <div class="field"><label>Peitoral</label><input type="text" value="${escapeHtml(av.peitoral||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'peitoral',this.value)"></div>
+                <div class="field"><label>Bíceps D/E</label><input type="text" id="biceps-${aluno.id}-${av.id}" value="${escapeHtml(av.biceps||'')}" onblur="formatarBicepsCoxa(this);syncAvaliacao(${aluno.id},${av.id},'biceps',this.value)"></div>
+                <div class="field"><label>Barriga</label><input type="text" value="${escapeHtml(av.barriga||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'barriga',this.value)"></div>
+                <div class="field"><label>Cintura</label><input type="text" value="${escapeHtml(av.cintura||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'cintura',this.value)"></div>
+                <div class="field"><label>Quadril</label><input type="text" value="${escapeHtml(av.quadril||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'quadril',this.value)"></div>
+                <div class="field"><label>Coxa D/E</label><input type="text" id="coxa-${aluno.id}-${av.id}" value="${escapeHtml(av.coxa||'')}" onblur="formatarBicepsCoxa(this);syncAvaliacao(${aluno.id},${av.id},'coxa',this.value)"></div>
+              </div>
+              <div class="sec-label">Protocolo de Dobras Cutâneas</div>
+              <div class="grid2">
+                <div class="field">
+                  <label>Protocolo</label>
+                  <select onchange="trocarProtocoloDobras(${aluno.id},${av.id},this.value)">
+                    <option value="jp7" ${(av.protocolo||'jp7')==='jp7'?'selected':''}>Jackson-Pollock (7 Dobras) — principal</option>
+                    <option value="pollock3" ${av.protocolo==='pollock3'?'selected':''}>Jackson-Pollock (3 Dobras)</option>
+                    <option value="yuhasz6" ${av.protocolo==='yuhasz6'?'selected':''}>Yuhasz (6 Dobras)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="sec-label">${getProtocoloDef(av.protocolo).nome} (mm)</div>
+              <div class="grid3">${renderizarCamposDobras(aluno,av)}</div>
+              <div id="dobras-preview-${aluno.id}-${av.id}">${renderizarPreviewDobras(av,aluno)}</div>
+              <div class="gauge-panel" id="metric-panel-dobras-${aluno.id}-${av.id}"></div>
+              <div class="sec-label">Fotos</div>
+              <div class="grid3">
+                ${[['f','Frontal'],['l','Lateral'],['d','Dorsal']].map(([t,l])=>{
+                  const src=av[`foto${t.toUpperCase()}`];
+                  return `<div class="foto-box" id="fotobox-${aluno.id}-${t}-${av.id}" onclick="document.getElementById('file-${aluno.id}-${t}-${av.id}').click()">
+                    <img src="${escapeHtml(src||'')}" style="${src?'display:block':'display:none'}">
+                    <div class="foto-ph">📷<br>${l}</div>
+                    <input type="file" id="file-${aluno.id}-${t}-${av.id}" accept="image/*" onchange="carregarFoto(${aluno.id},${av.id},'${t}',this)">
+                    <div class="foto-buttons">${src?`<button class="btn-salvar-foto" onclick="event.stopPropagation();salvarFoto('${l}',alunos.find(a=>a.id===${aluno.id}).avaliacoes.find(v=>v.id===${av.id}).foto${t.toUpperCase()},'${escapeHtml(aluno.nome)}','${escapeHtml(av.data||'')}')">💾 Salvar</button><button class="btn-apagar-foto" onclick="event.stopPropagation();apagarFoto(${aluno.id},${av.id},'${t}')">🗑️ Apagar</button>`:''}</div>
+                  </div>`;
+                }).join('')}
+              </div>
+              <div class="sec-label">Observações</div>
+              <div class="grid2">
+                <div class="field"><label>Objetivos</label><textarea onchange="syncAvaliacao(${aluno.id},${av.id},'motivo',this.value)">${escapeHtml(av.motivo||'')}</textarea></div>
+                <div class="field"><label>Análise Postural</label><textarea onchange="syncAvaliacao(${aluno.id},${av.id},'resumo',this.value)">${escapeHtml(av.resumo||'')}</textarea></div>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+  });
+}
+
+
+/* Integração com o Treino36; IDs persistentes evitam vínculos trocados ao renomear. */
+let avaliacaoEmbedId = null;
+const avaliacaoParams = new URLSearchParams(location.search);
+function abrirAlunoDoTreino() {
+  const studentId = avaliacaoParams.get('treinoStudentId');
+  if (!studentId) return;
+  try {
+    const student = AvaliacaoTreinoSync.read('treinoAlunos').find(a => a.student_id === studentId);
+    if (!student) throw Error('Aluno não encontrado neste navegador. Abra a avaliação pelo Treino36.');
+    let record = alunos.find(a => AvaliacaoTreinoSync.isLinked(a, studentId));
+    if (!record && alunos.length && avaliacaoParams.get('novoCadastro') !== '1') throw Error('Confirme no Treino36 qual pessoa corresponde a este treino antes de sincronizar.');
+    if (!record) {
+      record = {id:Date.now(), nome:student.nome, sexo:'M', avaliacoes:[]};
+      AvaliacaoTreinoSync.fromFicha(student, record, student.infoRelevante || (student.infoGuias || [])[0] || {});
+      alunos.push(record);
+    }
+    AvaliacaoTreinoSync.link(record, studentId);
+    avaliacaoEmbedId = record.id;
+    alunoAtivoId = record.id;
+    salvarDados();
+    filtrarAlunos();
+    const latest = (record.avaliacoes || []).slice(-1)[0];
+    if (latest) document.getElementById(`av-item-${latest.id}`)?.classList.add('expanded');
+  } catch (e) {
+    document.getElementById('alunosList').textContent = e.message;
+  }
+}
+if (['treino36','treino36-library'].includes(avaliacaoParams.get('embed'))) {
+  document.documentElement.classList.add('avaliacao-embed');
+  const style = document.createElement('style');
+  style.textContent = '.avaliacao-embed .page-header,.avaliacao-embed .controles-header,.avaliacao-embed #bannerRenovacao,.avaliacao-embed .btn-topo{display:none}.avaliacao-embed body{padding:8px}.avaliacao-embed .alunos-grid{display:block}';
+  if (avaliacaoParams.get('embed') === 'treino36-library') style.textContent = '.avaliacao-embed .page-header,.avaliacao-embed .btn-topo{display:none}.avaliacao-embed body{padding:8px}';
+  document.head.appendChild(style);
+}
+window.addEventListener('storage', function (event) {
+  if (event.key !== AvaliacaoTreinoSync.key) return;
+  try {
+    // Os valores já são persistidos; cancelar apenas a atualização visual pendente.
+    if (timeoutDobras) { clearTimeout(timeoutDobras); timeoutDobras = null; }
+    alunos = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+    alunos.forEach(a => (a.avaliacoes || []).forEach(av => calcularIMCeDobras(a, av.id)));
+    salvarDados();
+    filtrarAlunos();
+  } catch (e) { notifMsg('⚠️ ' + e.message); }
+});
+window.addEventListener('pagehide', function () {
+  if (timeoutDobras) { clearTimeout(timeoutDobras); timeoutDobras = null; salvarDados(); }
+});
+
+/* INICIALIZAÇÃO */
+document.getElementById('btnNovoAluno').addEventListener('click',function(e){
+  e.preventDefault();
+  novoAluno();
+});
+
+document.getElementById('buscaAluno').addEventListener('input', function(){
+  currentBusca = this.value;
+  ordenarAlunos();
+});
+document.getElementById('ordemAluno').addEventListener('change', function(){
+  currentOrdem = this.value;
+  ordenarAlunos();
+});
+
+carregarDados();
+abrirAlunoDoTreino();
+</script>
+</body>
+</html>

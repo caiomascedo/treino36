@@ -13,7 +13,7 @@ with sync_playwright() as p:
             path = ROOT / url.path.strip('/')
             if path.is_dir(): path /= 'index.html'
             if path.is_file():
-                request.fulfill(body=path.read_bytes(), content_type='text/html')
+                request.fulfill(body=path.read_bytes(), content_type='application/javascript' if path.suffix == '.js' else 'text/html')
                 return
         request.fulfill(status=404, body='')
     context.route('**/*', route)

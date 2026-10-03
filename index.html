@@ -1391,6 +1391,7 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
+<script src="avaliacao-import.js"></script>
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -8630,7 +8631,8 @@ window.AvaliacaoTreinoSync = (function () {
       '</button>'+
       '<div id="infoRelevanteContent" class="info-relevante-content" hidden>'+
         '<div class="info-tools-bar"><button type="button" id="openEvaluationBtn" class="info-tool-btn primary">📊 Fazer / editar avaliação</button><button type="button" id="mergeEvaluationBtn" class="info-tool-btn">🔗 Sincronizar com pessoa cadastrada</button></div>'+
-        '<p>Abra a avaliação completa deste aluno. Os dados são compartilhados com o aplicativo Avaliação neste navegador.</p>'+
+        '<p>Abra a avaliação completa deste aluno. O cadastro completo de avaliações está dentro do Treino36. Você também pode importar apenas as avaliações por JSON.</p>'+
+        '<div class="info-tools-bar"><button type="button" id="importAssessmentsBtn" class="info-tool-btn">📂 Importar avaliações (JSON)</button><button type="button" id="exportAssessmentsBtn" class="info-tool-btn">💾 Exportar somente avaliações</button></div>'+
         '<div class="info-tabs-container">'+
           '<div id="infoTabsList" class="info-tabs-list"></div>'+
           '<button type="button" id="addInfoTabBtn" class="add-obs-tab-btn">＋ Nova guia da ficha</button>'+
@@ -9192,6 +9194,26 @@ window.AvaliacaoTreinoSync = (function () {
     '<iframe id="trainingEvaluationFrame" title="Avaliação física do aluno" style="display:block;width:100%;height:65dvh;border:0" hidden></iframe>');
   evaluationDialog.style.maxWidth = '1100px';
   var evaluationFrame = document.getElementById('trainingEvaluationFrame');
+  var assessmentLibraryDialog = criarDialogo('assessmentLibraryDialog', '📋 Avaliações',
+    '<button type="button" data-close>Voltar ao treino</button><p>Cadastros, avaliações, fotos e PDFs. Importar avaliações não cria nem substitui treinos.</p>' +
+    '<iframe id="assessmentLibraryFrame" title="Cadastros e avaliações físicas" style="display:block;width:100%;height:68dvh;border:0"></iframe>');
+  assessmentLibraryDialog.style.maxWidth = '1100px';
+  function abrirBibliotecaAvaliacoes() {
+    document.getElementById('assessmentLibraryFrame').src = new URL('avaliacao.html?embed=treino36-library', location.href).href;
+    assessmentLibraryDialog.showModal();
+  }
+  var assessmentsButton = document.createElement('button'); assessmentsButton.type = 'button'; assessmentsButton.id = 'assessmentsLibraryBtn'; assessmentsButton.textContent = '📋 Avaliações'; assessmentsButton.onclick = abrirBibliotecaAvaliacoes;
+  document.querySelector('.workout-tools').appendChild(assessmentsButton);
+  var assessmentsMenuButton = document.createElement('button'); assessmentsMenuButton.type = 'button'; assessmentsMenuButton.textContent = '📋 Avaliações / importar JSON'; assessmentsMenuButton.onclick = function () { moreOptions.open = false; abrirBibliotecaAvaliacoes(); };
+  document.querySelector('.more-options-menu').prepend(assessmentsMenuButton);
+  function importarSomenteAvaliacoes() {
+    AvaliacoesJSON.choose(function () { atualizarFichaDaAvaliacao(); exibirMensagem('Avaliações importadas. Confirme a pessoa correspondente ao treino para sincronizar.', '#1e6f3f', false); }, function (message) { exibirMensagem(message, '#b22222', false); });
+  }
+  document.getElementById('importAssessmentsBtn').onclick = importarSomenteAvaliacoes;
+  document.getElementById('exportAssessmentsBtn').onclick = function () { try { AvaliacoesJSON.download(); } catch(e) { exibirMensagem(e.message, '#b22222', false); } };
+  window.addEventListener('avaliacoes-importadas', atualizarFichaDaAvaliacao);
+  assessmentLibraryDialog.addEventListener('close', atualizarFichaDaAvaliacao);
+
   var mergeEvaluationDialog = criarDialogo('mergeEvaluationDialog', '🔗 Este treino é da mesma pessoa?',
     '<p id="mergeStudentName"></p><p>Escolha a pessoa já cadastrada na Avaliação e confira os dados. Você pode vincular Treino 1, Treino 2 e outros treinos à mesma pessoa.</p>' +
     '<label for="mergeEvaluationSelect">Cadastro na Avaliação</label><select id="mergeEvaluationSelect"></select>' +
@@ -9252,7 +9274,7 @@ window.AvaliacaoTreinoSync = (function () {
       document.getElementById('mergeEvaluationSource').value = 'evaluation';
       document.getElementById('confirmSamePerson').checked = false;
       document.getElementById('createSeparateEvaluation').hidden = records.some(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
-      document.getElementById('mergeEvaluationStatus').textContent = records.length ? '' : 'Nenhum cadastro disponível. Abra a Avaliação no mesmo navegador e domínio para acessar os alunos já salvos.';
+      document.getElementById('mergeEvaluationStatus').textContent = records.length ? '' : 'Nenhum cadastro disponível. Importe o backup JSON da Avaliação para carregar as pessoas já cadastradas.';
       mostrarComparacaoCadastros();
       mergeEvaluationDialog.showModal();
     } catch (e) { exibirMensagem(e.message, '#b22222', false); }
@@ -9348,7 +9370,7 @@ window.AvaliacaoTreinoSync = (function () {
     student.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]);
     if (!student.avaliacaoFichaId) student.avaliacaoFichaId = student.infoRelevante.id;
     if (!salvarLocalStorage()) return;
-    var url = new URL('../avaliacao/', location.href);
+    var url = new URL('avaliacao.html', location.href);
     url.searchParams.set('embed', 'treino36');
     url.searchParams.set('treinoStudentId', student.student_id);
     if (separatePerson) url.searchParams.set('novoCadastro', '1');
@@ -9362,10 +9384,10 @@ window.AvaliacaoTreinoSync = (function () {
     var status = document.getElementById('trainingEvaluationStatus');
     try {
       if (!evaluationFrame.contentWindow.AvaliacaoTreinoSync) throw Error('Formulário indisponível');
-      status.textContent = 'Alterações salvas automaticamente. Compartilhadas com a Avaliação neste navegador.';
+      status.textContent = 'Alterações salvas automaticamente. Guardadas no cadastro de avaliações deste navegador.';
       evaluationFrame.hidden = false;
       atualizarFichaDaAvaliacao();
-    } catch (e) { status.textContent = 'Não foi possível carregar a avaliação. Publique também a atualização do aplicativo Avaliação no mesmo domínio.'; }
+    } catch (e) { status.textContent = 'Não foi possível carregar a avaliação. Atualize a página e tente novamente.'; }
   });
   evaluationDialog.addEventListener('close', atualizarFichaDaAvaliacao);
   window.addEventListener('storage', function (event) {
@@ -10324,7 +10346,9 @@ window.AvaliacaoTreinoSync = (function () {
     var input=document.createElement('input');input.type='file';input.accept='.json,application/json';
     input.onchange=function(){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(){
       try{
-        var raw=JSON.parse(reader.result),data=Array.isArray(raw)?raw:raw.alunos,library=Array.isArray(raw)?mobilidades:(raw.mobilidades||[]);
+        var raw=JSON.parse(reader.result);
+        if (AvaliacoesJSON.isAssessmentPayload(raw)) { AvaliacoesJSON.preview(raw, function () { atualizarFichaDaAvaliacao(); exibirMensagem('Somente avaliações importadas. Treinos mantidos.', '#1e6f3f', false); }); return; }
+        var data=Array.isArray(raw)?raw:raw.alunos,library=Array.isArray(raw)?mobilidades:(raw.mobilidades||[]);
         if(!Array.isArray(data)||!Array.isArray(library))throw Error('Formato de backup inválido.');
         var names=new Set(),ids=new Set();
         data.forEach(function(a){if(!a||typeof a.nome!=='string'||!a.nome.trim())throw Error('Nome de aluno inválido.');validarTreinoImportado(a);if(a.historicoTreinos!==undefined&&!Array.isArray(a.historicoTreinos))throw Error('Histórico inválido.');
