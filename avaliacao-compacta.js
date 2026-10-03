@@ -61,6 +61,18 @@ function compactarAvaliacoes() {
     });
   });
 }
+function abrirSecaoAvaliacaoPelasObs(section) {
+  if(!['composicao','medidas','dobras','fotos'].includes(section)) return;
+  const person=alunos.find(a=>a.id===alunoAtivoId);
+  if(!person) return;
+  if(!person.avaliacoes.length) adicionarAvaliacao(person.id);
+  const latest=person.avaliacoes.slice(-1)[0];
+  const item=document.getElementById('av-item-'+latest.id);
+  if(!item) return;
+  item.closest('.aluno-content').querySelector(':scope > .assessment-tabs [data-section="avaliacoes"]').click();
+  item.closest('.avs-list').querySelectorAll('.av-item').forEach(other=>other.classList.toggle('expanded',other===item));
+  item.querySelector('.av-content > .assessment-tabs [data-section="'+section+'"]').click();
+}
 function adicionarAvaliacaoAoTreino(recordId) {
   const initialRecord=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).find(a=>a.id===recordId);
   if(!initialRecord) return;
