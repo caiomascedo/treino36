@@ -6,6 +6,9 @@
 .assessment-tab-panel .field input,.assessment-tab-panel .field select{border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#243b53;box-sizing:border-box;min-width:0;padding:10px}
 .assessment-tab-panel .field label{color:#475569;font-weight:600}
 .assessment-tab-panel .card{margin-bottom:0}
+.metric-detail-inline{width:100%;min-width:0;margin-top:8px;text-align:left;cursor:default}
+.metric-detail-inline .gauge-card{padding:10px;overflow-wrap:anywhere}
+.metric-detail-inline .gauge-labels-row{flex-wrap:wrap;gap:2px}
 .training-student-picker{width:min(520px,calc(100% - 32px));max-height:85dvh;overflow:auto;box-sizing:border-box;border:0;border-radius:16px;padding:20px;color:#243b53}
 .training-student-picker::backdrop{background:rgba(0,0,0,.5)}
 .training-student-picker label{display:block;margin:12px 0;font-weight:600}
@@ -13,16 +16,31 @@
 .training-student-picker .picker-actions{display:flex;gap:8px;flex-wrap:wrap}
 .training-student-picker button,#addTrainingStudentBtn{padding:10px 14px;border:0;border-radius:8px;background:#203c5b;color:white;cursor:pointer}
 .training-student-picker .picker-status{color:#b22222}
+.training-picker-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.training-picker-controls label{min-width:0;margin:4px 0}
+.training-registration-status{font-size:13px;border-radius:8px;padding:8px;background:#edf2f7;color:#243b53}
+.training-registration-status:empty{display:none}
+.training-registration-status[data-status="cadastrado"]{background:#e7f6ed;color:#17663c}
+.training-registration-status[data-status="confirmar"]{background:#fff3cd;color:#856404}
 .controles-header{gap:8px;margin-bottom:10px;align-items:stretch}
 .controles-header>div:first-child{gap:6px!important}
 .controles-header .busca-input{flex:1;min-width:130px;width:auto;font-size:13px;padding:8px}
 .controles-header .select-ordem{flex:1;min-width:130px;font-size:12px;padding:8px;width:auto}
-.compact-actions{align-items:center;gap:6px!important}
+.compact-actions{align-items:center;gap:6px!important;flex-wrap:nowrap!important}
 .compact-actions>button{padding:8px 10px!important;font-size:12px!important}
 .assessment-more-options{position:relative;font-size:12px;color:#243b53}
 .assessment-more-options summary{cursor:pointer;padding:8px 10px;background:#e8eef3;border-radius:8px}
 .assessment-more-menu{position:absolute;right:0;top:100%;z-index:20;min-width:180px;padding:8px;background:#fff;border:1px solid #d8e0e8;border-radius:10px;box-shadow:0 4px 12px #0002;display:grid;gap:6px}
 .assessment-more-menu button{font-size:12px;padding:8px;text-align:left}
+.assessment-notification-setting{padding:6px;border-bottom:1px solid #e2e8f0}
+.assessment-notification-setting small{font-size:11px;color:#64748b}
+.assessment-switch{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;position:relative;margin-bottom:4px}
+.assessment-switch input{position:absolute;right:0;width:36px;height:22px;opacity:0}
+.assessment-switch-track{margin-left:auto;display:inline-block;width:36px;height:22px;border-radius:12px;background:#a0aec0;padding:3px;flex-shrink:0;pointer-events:none}
+.assessment-switch-track::after{content:'';display:block;width:16px;height:16px;background:white;border-radius:50%;transition:transform .15s}
+.assessment-switch input:checked+.assessment-switch-track{background:#23824c}
+.assessment-switch input:checked+.assessment-switch-track::after{transform:translateX(14px)}
+.assessment-switch input:focus-visible+.assessment-switch-track{outline:2px solid #203c5b;outline-offset:2px}
 .banner-renovacao{padding:8px 10px;margin-bottom:10px}
 .banner-renovacao h4{font-size:12px;margin-bottom:0}
 .banner-renovacao ul{margin-top:8px}
@@ -35,6 +53,12 @@
 .aluno-card:not(.active) .aluno-info,.aluno-card:not(.active) .badge-renovacao{grid-column:2;font-size:10px;white-space:normal;margin:0}
 .aluno-card.active{grid-column:1/-1}
 .aluno-acoes button{color:#243b53!important}
+.aluno-acoes{gap:4px!important}
+.aluno-acoes button{background:#edf2f7!important;font-size:12px!important;padding:6px 8px!important;min-height:30px;opacity:1!important;white-space:normal;font-weight:600}
+.aluno-nome{overflow-wrap:anywhere;color:#243b53!important}
+.assessment-tab-panel .field label,.assessment-tab-panel .sec-label{white-space:normal;overflow-wrap:anywhere}
+.training-student-preview,.assessment-training-person{overflow-wrap:anywhere}
+.training-student-picker input[type="text"]{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
 @media(max-width:520px){.alunos-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aluno-card:not(.active) .aluno-header{min-height:94px;padding:10px}.aluno-card:not(.active) .aluno-nome{font-size:13px}}
 @media(max-width:520px){.controles-header{flex-direction:column}.compact-actions{display:flex!important;flex-direction:row!important}.assessment-more-options{margin-left:auto}}
 @media(max-width:480px){.assessment-tabs button{padding:9px 10px;font-size:12px}.aluno-content,.av-content{padding:8px!important}.aluno-acoes{flex-wrap:wrap}.assessment-tab-panel .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.assessment-tab-panel .field{min-width:0}.assessment-tab-panel .field label{font-size:12px}}
