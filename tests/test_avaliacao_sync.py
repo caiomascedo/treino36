@@ -61,7 +61,7 @@ with sync_playwright() as p:
     page.locator('#openEvaluationBtn').click()
     expect(frame.locator('.av-item')).to_have_count(1)
     assert len(page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))")) == 1
-    page.screenshot(path='/workspace/tests/evaluation.png', full_page=True)
+    page.screenshot(path=str(Path(__file__).parent / 'evaluation.png'), full_page=True)
     # Ambiguous names are rejected, without silently choosing another person.
     assert standalone.evaluate("""() => {
       try { AvaliacaoTreinoSync.find([{nome:'Duplicado'},{nome:'Duplicado'}], {student_id:'new',nome:'Duplicado'}); return false; }
@@ -79,7 +79,10 @@ with sync_playwright() as p:
     page.locator('#obsIconBtn').click()
     page.locator('#toggleInfoRelevanteBtn').click()
     page.locator('#mergeEvaluationBtn').click()
+    page.locator('#mergeEvaluationSelect').select_option('100')
     expect(page.locator('#mergeEvaluationPreview')).to_contain_text('Maria Completa')
+    expect(page.locator('#confirmMergeEvaluation')).to_be_disabled()
+    page.locator('#confirmSamePerson').check()
     page.locator('#confirmMergeEvaluation').click()
     expect(page.locator('#infoWhats')).to_have_value('999999999')
     expect(page.locator('#infoPeso')).to_have_value('65')
@@ -99,10 +102,46 @@ with sync_playwright() as p:
     page.locator('#infoPeso').fill('63')
     page.locator('#infoPeso').press('Tab')
     page.locator('#mergeEvaluationBtn').click()
+    page.locator('#confirmSamePerson').check()
     page.locator('#mergeEvaluationSource').select_option('training')
     page.locator('#confirmMergeEvaluation').click()
     assert page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0].peso") == '63'
     assert page.evaluate("Boolean(localStorage.getItem('avaliacao_treino_antes_uniao'))")
     assert not errors, errors
     print('PASS: explicit merge with different names, conflicts, missing fields, WhatsApp, preserved photos/history, source choice and post-merge sync')
+    # A second separate workout may refer to the same confirmed person.
+    page.evaluate("""() => {
+      const students = JSON.parse(localStorage.getItem('treinoAlunos'));
+      const second = JSON.parse(JSON.stringify(students[0]));
+      second.student_id = 'student-merge-2'; second.nome = 'Maria treino 2';
+      second.treino = {A:['Remada 3x12']};
+      delete second.avaliacaoId; delete second.avaliacaoFichaId;
+      students.push(second); localStorage.setItem('treinoAlunos', JSON.stringify(students));
+    }""")
+    page.reload()
+    page.locator('#searchName').fill('Maria treino 2')
+    page.locator('#obsIconBtn').click()
+    page.locator('#toggleInfoRelevanteBtn').click()
+    page.locator('#openEvaluationBtn').click()
+    expect(page.locator('#mergeEvaluationDialog')).to_be_visible()
+    page.locator('#mergeEvaluationSelect').select_option('100')
+    expect(page.locator('#confirmMergeEvaluation')).to_be_disabled()
+    record_before = page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0]")
+    assert 'student-merge-2' not in record_before['treinoStudentIds']
+    page.locator('#confirmSamePerson').check()
+    page.locator('#confirmMergeEvaluation').click()
+    expect(frame.locator('[id^="peso-input-"]')).to_have_value('63')
+    frame.locator('[id^="peso-input-"]').fill('64')
+    frame.locator('[id^="peso-input-"]').press('Tab')
+    expect(page.locator('#infoPeso')).to_have_value('64')
+    students = page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))")
+    assert [s['nome'] for s in students] == ['Maria do treino','Maria treino 2']
+    assert students[0]['treino']['A'] == ['Supino 4x8']
+    assert students[1]['treino']['A'] == ['Remada 3x12']
+    assert all(s['infoRelevante']['peso'] == '64' for s in students)
+    record = page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0]")
+    assert set(record['treinoStudentIds']) == {'student-merge','student-merge-2'}
+    assert len(page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))")) == 1
+    assert not errors, errors
+    print('PASS: explicit identity confirmation, no automatic link, two workouts for one person, separate names and exercises, shared assessment and ficha')
     browser.close()
