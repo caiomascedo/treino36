@@ -8647,6 +8647,7 @@ window.AvaliacaoTreinoSync = (function () {
       '<div id="infoRelevanteContent" class="info-relevante-content" hidden>'+
         '<div class="info-tools-bar"><button type="button" id="openEvaluationBtn" class="info-tool-btn primary">📊 Fazer / editar avaliação</button><button type="button" id="saveFichaEvaluationBtn" class="info-tool-btn">💾 Salvar ficha na avaliação</button></div>'+
         '<p>Faça a avaliação aqui ou pelo botão Avaliações. Salvar a ficha cadastra e sincroniza os dados da mesma pessoa.</p>'+
+        '<div id="obsAssessmentSections" class="info-tools-bar" aria-label="Editar avaliação pelas Obs"><button type="button" class="info-tool-btn" data-assessment-section="composicao">Composição</button><button type="button" class="info-tool-btn" data-assessment-section="medidas">Medidas (cm)</button><button type="button" class="info-tool-btn" data-assessment-section="dobras">Dobras / resultados</button><button type="button" class="info-tool-btn" data-assessment-section="fotos">Fotos</button></div>'+
         '<section id="trainingEvaluationPanel" hidden style="margin:16px 0">'+
           '<div class="obs-header-bar"><strong>📊 Avaliação completa</strong><button type="button" id="toggleInlineEvaluationBtn" aria-expanded="true" aria-controls="trainingEvaluationContent">Minimizar avaliação</button><button type="button" id="saveInlineEvaluationBtn">💾 Salvar avaliação</button><button type="button" id="closeInlineEvaluationBtn">Voltar às observações</button></div>'+
           '<p id="trainingEvaluationStudent"></p><div id="trainingEvaluationContent"><p id="trainingEvaluationStatus" role="status">Carregando avaliação…</p><iframe id="trainingEvaluationFrame" title="Avaliação física completa do aluno" style="display:block;width:100%;height:70dvh;border:0" hidden></iframe></div>'+
@@ -9395,7 +9396,17 @@ window.AvaliacaoTreinoSync = (function () {
       salvarLocalStorage();
     } catch (e) { exibirMensagem('Não foi possível sincronizar: ' + e.message, '#b22222', false); }
   }
-  document.getElementById('openEvaluationBtn').onclick = function () {
+  var obsAssessmentSection = null;
+  document.querySelectorAll('#obsAssessmentSections [data-assessment-section]').forEach(function (button) {
+    button.onclick = function () {
+      var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+      if (!student) { exibirMensagem('Selecione um aluno cadastrado no treino.', '#b22222', false); return; }
+      obsAssessmentSection = {studentId:student.student_id, section:button.dataset.assessmentSection};
+      document.getElementById('openEvaluationBtn').click();
+    };
+  });
+  document.getElementById('openEvaluationBtn').onclick = function (event) {
+    if (!event || event.isTrusted) obsAssessmentSection = null;
     var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
     if (!student) { exibirMensagem('Salve o aluno no treino antes de criar a avaliação.', '#b22222', false); return; }
     try {
@@ -9413,6 +9424,7 @@ window.AvaliacaoTreinoSync = (function () {
     var url = new URL('avaliacao.html', location.href);
     url.searchParams.set('embed', 'treino36');
     url.searchParams.set('treinoStudentId', student.student_id);
+    if (obsAssessmentSection && obsAssessmentSection.studentId === student.student_id) url.searchParams.set('secao', obsAssessmentSection.section);
     if (separatePerson) url.searchParams.set('novoCadastro', '1');
     document.getElementById('trainingEvaluationStudent').textContent = 'Aluno: ' + student.nome;
     document.getElementById('trainingEvaluationStatus').textContent = 'Carregando avaliação…';
@@ -9489,6 +9501,7 @@ window.AvaliacaoTreinoSync = (function () {
   };
 
   function abrirObservacoes() {
+    obsAssessmentSection = null;
     atualizarFichaDaAvaliacao();
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) {
