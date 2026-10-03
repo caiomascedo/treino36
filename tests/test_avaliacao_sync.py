@@ -28,6 +28,11 @@ with sync_playwright() as p:
     page.reload()
     page.locator('#searchName').fill('Aluno Teste')
     page.locator('#obsIconBtn').click()
+    expect(page.locator('#obsContent')).to_be_visible()
+    expect(page.locator('#infoRelevanteContent')).to_be_hidden()
+    page.locator('#toggleObsContentBtn').click()
+    expect(page.locator('#obsContent')).to_be_hidden()
+    page.locator('#toggleObsContentBtn').click()
     page.locator('#toggleInfoRelevanteBtn').click()
     page.locator('#openEvaluationBtn').click()
     frame = page.frame_locator('#trainingEvaluationFrame')
@@ -35,12 +40,31 @@ with sync_playwright() as p:
     frame.locator('.btn-add-av').click()
     weight = frame.locator('[id^="peso-input-"]')
     expect(weight).to_be_visible()
+    expect(page.locator('#workoutObsDialog')).to_be_visible()
+    expect(page.locator('#trainingEvaluationPanel')).to_be_visible()
     weight.fill('80')
     weight.press('Tab')
     expect(page.locator('#infoPeso')).to_have_value('80')
     data = page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))")
     assert len(data) == 1 and data[0]['treinoStudentId'] == 'student-1'
     assert data[0]['avaliacoes'][0]['imc'] == '24.7', data
+    page.locator('#toggleInlineEvaluationBtn').click()
+    expect(page.locator('#trainingEvaluationContent')).to_be_hidden()
+    page.locator('#toggleInlineEvaluationBtn').click()
+    expect(weight).to_have_value('80')
+    # Full circumference and skinfold fields calculate inside the workout ficha.
+    for key, value in {'cintura':'80','quadril':'100','triceps':'10','axilar':'11','torax':'12','abdominal':'13','suprailiaca':'14','subescapular':'15','pregaCoxa':'16'}.items():
+        field = frame.locator('input[onchange*="\'' + key + '\'"]')
+        field.fill(value)
+        field.press('Tab')
+    calculated = page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0]._dobras")
+    assert calculated['soma'] == 91 and calculated['rcq'] == '0.80', calculated
+    assert abs(calculated['pctG'] - ((4.95 / (1.112 - 0.00043499*91 + 0.00000055*91*91 - 0.00028826*30))-4.5)*100) < 0.001
+    protocol = frame.locator('select[onchange^="trocarProtocoloDobras"]')
+    for name, total in [('pollock3',41),('yuhasz6',80),('jp7',91)]:
+        protocol.select_option(name)
+        result = page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0]._dobras")
+        assert result['protocolo'] == name and result['soma'] == total, result
     # The standalone app reads the same complete assessment.
     standalone = context.new_page()
     standalone.on('pageerror', lambda error: errors.append(str(error)))
@@ -52,7 +76,7 @@ with sync_playwright() as p:
     standalone.locator('[id^="gordura-input-"]').press('Tab')
     expect(frame.locator('[id^="gordura-input-"]')).to_have_value('18')
     # Close embedded assessment, then edit the linked workout ficha.
-    page.locator('#trainingEvaluationDialog [data-close]').click()
+    page.locator('#closeInlineEvaluationBtn').click()
     page.locator('#infoPeso').fill('82')
     page.locator('#infoPeso').press('Tab')
     expect(standalone.locator('[id^="peso-input-"]')).to_have_value('82')
@@ -97,7 +121,7 @@ with sync_playwright() as p:
     frame.locator('[id^="peso-input-"]').fill('66')
     frame.locator('[id^="peso-input-"]').press('Tab')
     expect(page.locator('#infoPeso')).to_have_value('66')
-    page.locator('#trainingEvaluationDialog [data-close]').click()
+    page.locator('#closeInlineEvaluationBtn').click()
     # Prefer workout values on a second merge without deleting the assessment.
     page.locator('#infoPeso').fill('63')
     page.locator('#infoPeso').press('Tab')
