@@ -17,3 +17,30 @@
 .obs-skinfold-results{font-size:13px}.obs-skinfold-results .preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.obs-skinfold-results .preview-item{display:flex;flex-direction:column;padding:7px;border-radius:7px;background:#edf6ee}.obs-skinfold-results .badge{display:none}
 .obs-assessment-photo{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px}.obs-assessment-photo img{width:100%;height:120px;object-fit:contain;border-radius:8px;background:#e8eef4}.obs-assessment-photo input{font-size:11px;padding:5px}.obs-assessment-actions{margin-top:10px}.obs-assessment-status{margin:6px 0 0;font-size:12px;color:#526579}
 #obsAssessmentSections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}#obsAssessmentSections .info-tool-btn{margin:0;font-size:12px;padding:8px}
+
+/* Ferramentas e seleção de datas em fileiras compactas. */
+#infoQuickActions{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:4px;flex-wrap:nowrap}
+#infoQuickActions .info-tool-btn{min-width:0;margin:0;padding:5px 4px;font-size:11px;min-height:32px;line-height:1.15}
+#treinoLevelSelector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+#treinoLevelSelector .level-btn{margin:0;min-width:0;padding:5px 3px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;line-height:1.1}
+#treinoLevelSelector .level-btn small{font-size:10px;font-weight:400}
+.obs-native-assessment .obs-assessment-history{gap:4px;margin-bottom:6px}
+.obs-native-assessment .obs-assessment-history select{padding:4px 7px;height:32px}
+.obs-native-assessment .obs-assessment-history button{min-height:32px;padding:4px 7px;font-size:12px;white-space:nowrap}
+.obs-native-assessment .obs-assessment-date{max-width:none;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;margin-bottom:8px}
+.obs-native-assessment .obs-assessment-date input{height:32px;padding:3px 7px}
+.obs-native-assessment .obs-assessment-date label{font-size:11px;margin:0}
+.obs-assessment-pdf-options{margin-top:9px;display:grid;gap:4px}
+.obs-assessment-pdf-options label{font-size:11px;font-weight:600}
+.obs-native-assessment .obs-assessment-pdf-options select{font-size:16px;padding:5px 7px}
+
+#closeObsFocusBtn{display:none}
+#workoutObsDialog.expanded{position:fixed;inset:0;width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;box-sizing:border-box;border-radius:0;padding:10px max(10px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+#workoutObsDialog.assessment-focus>h3,#workoutObsDialog.assessment-focus>#toggleObsContentBtn,#workoutObsDialog.assessment-focus>#obsContent,#workoutObsDialog.assessment-focus>.dialog-actions,#workoutObsDialog.assessment-focus #toggleInfoRelevanteBtn,#workoutObsDialog.assessment-focus #obsStudentHeader{display:none!important}
+#workoutObsDialog.assessment-focus #infoRelevanteContent>*:not(#obsAssessmentSections):not(#obsNativeAssessment){display:none!important}
+#workoutObsDialog.assessment-focus .obs-info-relevante-wrap{border:0;margin:0}
+#workoutObsDialog.assessment-focus #infoRelevanteContent{border:0;padding:0}
+#workoutObsDialog.assessment-focus>.obs-header-bar{position:sticky;top:-10px;justify-content:flex-end;padding:5px 0;margin:0 0 5px;background:white;z-index:6}
+#workoutObsDialog.assessment-focus #closeObsFocusBtn{display:inline-block}
+#workoutObsDialog.assessment-focus #obsNativeAssessment{margin-top:6px}
+#workoutObsDialog.assessment-focus #obsAssessmentSections{position:static;background:white;padding:3px 0;margin:0}

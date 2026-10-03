@@ -1387,7 +1387,7 @@ function renderizarPreviewDobras(av,aluno){
 const LINHAS_NEGRITO_PDF = ['% Gordura', '% Massa Gorda'];
 
 /* GERAÇÃO DE PDF — AVALIAÇÃO FÍSICA COM DELTA */
-async function gerarPDFAluno(alunoId){
+async function gerarPDFAluno(alunoId, options={}){
   const aluno=alunos.find(a=>a.id===alunoId);
   if(!aluno||!aluno.avaliacoes?.length){ notifMsg('⚠️ Nenhuma avaliação!'); return; }
   notifMsg('📄 Gerando PDF...');
@@ -1395,6 +1395,16 @@ async function gerarPDFAluno(alunoId){
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const altura=aluno.altura||'—';
   const headers=['Indicador',...aluno.avaliacoes.map(av=>av.data||'—')];
+  const mode=options.mode||'completo';
+  if(!['auto','medidas-dobras','medidas-composicao','completo'].includes(mode)) throw Error('Escolha um conteúdo válido para o PDF.');
+  const filled=value=>value!==undefined&&value!==null&&String(value).trim()!==''&&!['NaN','—','undefined'].includes(String(value));
+  const has=fields=>aluno.avaliacoes.some(av=>fields.some(key=>filled(av[key])));
+  const includeComposition=mode==='completo'||mode==='medidas-composicao'||(mode==='auto'&&has(['peso','gordura','visceral','massamuscular','proteina','agua','tmb','imc']));
+  const includeMeasures=mode!=='auto'||has(['peitoral','biceps','barriga','cintura','quadril','coxa']);
+  const includeSkinfolds=mode==='completo'||mode==='medidas-dobras'||(mode==='auto'&&has(['triceps','axilar','torax','abdominal','suprailiaca','subescapular','pregaCoxa','panturrilha']));
+  if(!includeComposition&&!includeMeasures&&!includeSkinfolds) throw Error('Preencha a composição, medidas ou dobras para gerar o PDF automático.');
+  const pdfRows=rows=>rows.map(row=>row.map(value=>String(value).replace(/\bNaN\b/g,'—'))).filter(row=>mode!=='auto'||row.slice(1).some(filled));
+
 
   doc.setFillColor(18,18,26); doc.rect(0,0,210,38,'F');
   doc.setFillColor(230,57,57); doc.rect(0,0,6,38,'F');
@@ -1407,11 +1417,13 @@ async function gerarPDFAluno(alunoId){
   doc.setFontSize(8); doc.setTextColor(180,180,190);
   doc.text(new Date().toLocaleDateString('pt-BR'),195,28,{align:'right'});
 
+  const avs = aluno.avaliacoes;
+  let yPos=48;
+  if(includeComposition){
   doc.setFillColor(230,57,57); doc.rect(10,42,3,5,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
   doc.text('COMPOSIÇÃO CORPORAL',16,48);
   
-  const avs = aluno.avaliacoes;
   avs.forEach(av=>{
     const gorduraRef = av.gordura || (av._dobras ? av._dobras.pctG.toFixed(1) : '');
     if(gorduraRef) av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef);
@@ -1428,7 +1440,7 @@ async function gerarPDFAluno(alunoId){
     ['TMB (kcal)', ...avs.map((av, idx) => `${av.tmb||'—'}${idx===0 ? '' : formatDelta(av.tmb, avs[idx-1].tmb)}`)],
     ['Idade Metabólica', ...avs.map((av, idx) => `${av.idadeMetabolica||'—'}${idx===0 ? '' : formatDelta(av.idadeMetabolica, avs[idx-1].idadeMetabolica)}`)]
   ];
-  doc.autoTable({startY:53,head:[headers],body:compRows,theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
+  doc.autoTable({startY:53,head:[headers],body:pdfRows(compRows),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
     didParseCell:function(data){
       if(data.section==='body' && LINHAS_NEGRITO_PDF.includes(data.row.raw[0])){
         data.cell.styles.fontStyle='bold';
@@ -1436,8 +1448,10 @@ async function gerarPDFAluno(alunoId){
       }
     }
   });
-  let yPos=doc.lastAutoTable.finalY+8;
+  yPos=doc.lastAutoTable.finalY+8;
 
+  }
+  if(includeMeasures){
   doc.setFillColor(230,57,57); doc.rect(10,yPos-3,3,5,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
   doc.text('MEDIDAS CORPORAIS (cm)',16,yPos); yPos+=5;
@@ -1460,9 +1474,11 @@ async function gerarPDFAluno(alunoId){
       return delta ? `${valor}\n${delta}` : valor;
     })]
   ];
-  doc.autoTable({startY:yPos,head:[headers],body:medidasRows,theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10}});
+  doc.autoTable({startY:yPos,head:[headers],body:pdfRows(medidasRows),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10}});
   yPos=doc.lastAutoTable.finalY+8;
 
+  }
+  if(includeSkinfolds){
   doc.setFillColor(230,57,57); doc.rect(10,yPos-3,3,5,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
   doc.text('DOBRAS CUTÂNEAS (mm)',16,yPos); yPos+=5;
@@ -1476,11 +1492,12 @@ async function gerarPDFAluno(alunoId){
     ['Suprailíaca', ...avs.map((av, idx) => `${av.suprailiaca||'—'}${idx===0 ? '' : formatDelta(av.suprailiaca, avs[idx-1].suprailiaca)}`)],
     ['Subescapular', ...avs.map((av, idx) => `${av.subescapular||'—'}${idx===0 ? '' : formatDelta(av.subescapular, avs[idx-1].subescapular)}`)],
     ['Coxa', ...avs.map((av, idx) => `${av.pregaCoxa||'—'}${idx===0 ? '' : formatDelta(av.pregaCoxa, avs[idx-1].pregaCoxa)}`)],
+    ['Panturrilha Medial', ...avs.map((av, idx) => `${av.panturrilha||'—'}${idx===0 ? '' : formatDelta(av.panturrilha, avs[idx-1].panturrilha)}`)],
     ['Soma das Dobras', ...avs.map((av, idx) => av._dobras ? `${av._dobras.soma.toFixed(2)} mm${idx===0 ? '' : formatDelta(av._dobras.soma, avs[idx-1]._dobras?.soma)}` : '—')],
     ['% Massa Gorda', ...avs.map((av, idx) => av._dobras ? `${av._dobras.pctG.toFixed(2)}%${idx===0 ? '' : formatDelta(av._dobras.pctG, avs[idx-1]._dobras?.pctG)}` : '—')],
     ['% Massa Magra', ...avs.map((av, idx) => av._dobras ? `${(100-av._dobras.pctG).toFixed(2)}%${idx===0 ? '' : formatDelta(100-av._dobras.pctG, avs[idx-1]._dobras ? 100-avs[idx-1]._dobras.pctG : undefined)}` : '—')],
-    ['Massa Gorda (kg)', ...avs.map((av, idx) => av._dobras ? `${av._dobras.mG.toFixed(2)}${idx===0 ? '' : formatDelta(av._dobras.mG, avs[idx-1]._dobras?.mG)}` : '—')],
-    ['Massa Magra (kg)', ...avs.map((av, idx) => av._dobras ? `${av._dobras.mM.toFixed(2)}${idx===0 ? '' : formatDelta(av._dobras.mM, avs[idx-1]._dobras?.mM)}` : '—')],
+    ['Massa Gorda (kg)', ...avs.map((av, idx) => av._dobras && Number.isFinite(av._dobras.mG) ? `${av._dobras.mG.toFixed(2)}${idx===0 ? '' : formatDelta(av._dobras.mG, avs[idx-1]._dobras?.mG)}` : '—')],
+    ['Massa Magra (kg)', ...avs.map((av, idx) => av._dobras && Number.isFinite(av._dobras.mM) ? `${av._dobras.mM.toFixed(2)}${idx===0 ? '' : formatDelta(av._dobras.mM, avs[idx-1]._dobras?.mM)}` : '—')],
     ['Densidade Corporal', ...avs.map((av, idx) => (av._dobras && av._dobras.dens!==null) ? `${av._dobras.dens.toFixed(5)}${idx===0 ? '' : formatDelta(av._dobras.dens, (avs[idx-1]._dobras&&avs[idx-1]._dobras.dens!==null)?avs[idx-1]._dobras.dens:undefined)}` : '—')],
     ['Razão Cintura/Quadril', ...avs.map(av => av._dobras ? av._dobras.rcq : '—')],
     ['AMB (cm²)', ...avs.map((av, idx) => {
@@ -1502,7 +1519,7 @@ async function gerarPDFAluno(alunoId){
       return `${agb}${formatDelta(agb, agbAnt)}`;
     })]
   ];
-  doc.autoTable({startY:yPos,head:[headers],body:dobrasRows,theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
+  doc.autoTable({startY:yPos,head:[headers],body:pdfRows(dobrasRows),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
     didParseCell:function(data){
       if(data.section==='body' && LINHAS_NEGRITO_PDF.includes(data.row.raw[0])){
         data.cell.styles.fontStyle='bold';
@@ -1514,6 +1531,7 @@ async function gerarPDFAluno(alunoId){
     }
   });
 
+  }
   const pH=297;
   doc.setFillColor(18,18,26); doc.rect(0,pH-16,210,16,'F');
   doc.setFillColor(230,57,57); doc.rect(0,pH-16,4,16,'F');
@@ -1903,7 +1921,7 @@ document.getElementById('ordemAluno').addEventListener('change', function(){
 window.TreinoAssessmentEngine = {
   calculate:calcularIMCeDobras, classify:getClassificacaoTexto, gauge:renderizarGauge,
   protocol:getProtocoloDef, skinfoldLabel:key=>LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
-  async pdf(records,id,type) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id); else await gerarPDFAluno(id); }
+  async pdf(records,id,type,options={}) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id); else await gerarPDFAluno(id,options); }
 };
 if(avaliacaoParams.get('embed')!=='treino36-engine') {
   carregarDados();

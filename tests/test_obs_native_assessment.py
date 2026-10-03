@@ -67,6 +67,30 @@ with sync_playwright() as p:
             else:assert '72' in text and '74.50' in text,text
             assert doc.page_count>=1
     expect(page.locator('#assessmentLibraryDialog')).not_to_be_visible()
+    # Selective PDFs omit excluded sections and automatic PDFs omit empty sections.
+    with tempfile.TemporaryDirectory() as tmp:
+        for mode,expected,excluded in [('medidas-dobras','DOBRAS CUTÂNEAS','COMPOSIÇÃO CORPORAL'),('medidas-composicao','COMPOSIÇÃO CORPORAL','DOBRAS CUTÂNEAS')]:
+            page.locator('#obsAssessmentPdfMode').select_option(mode)
+            with page.expect_download() as download:page.locator('#obsAssessment-pdf').click()
+            path=Path(tmp)/(mode+'.pdf');download.value.save_as(path);doc=fitz.open(path);text=' '.join(p.get_text() for p in doc)
+            assert expected in text and excluded not in text and 'MEDIDAS CORPORAIS' in text,text
+        with page.expect_download() as download:
+            page.evaluate("""async()=>{const w=[...document.querySelectorAll('iframe')].map(f=>f.contentWindow).find(w=>w.TreinoAssessmentEngine);await w.TreinoAssessmentEngine.pdf([{id:20,nome:'Somente medidas',avaliacoes:[{id:21,data:'03/10/2026',peitoral:'95',protocolo:'jp7'}]}],20,'pdf',{mode:'auto'});}""")
+        path=Path(tmp)/'auto.pdf';download.value.save_as(path);text=' '.join(p.get_text() for p in fitz.open(path))
+        assert 'MEDIDAS CORPORAIS' in text and 'COMPOSIÇÃO CORPORAL' not in text and 'DOBRAS CUTÂNEAS' not in text and 'Cintura' not in text,text
+    # Each requested group is a single row and dates no longer occupy a tall field.
+    for selector in ['#infoQuickActions','#treinoLevelSelector']:
+        rects=page.locator(selector+' button').evaluate_all('(buttons)=>buttons.map(b=>b.getBoundingClientRect().top)')
+        assert max(rects)-min(rects)<2,(selector,rects)
+    assert page.locator('#obsAssessmentHistory').bounding_box()['height']<=34
+    assert page.locator('#obsAssessmentDate').bounding_box()['height']<=34
+    page.locator('#expandObsBtn').click()
+    box=page.locator('#workoutObsDialog').bounding_box();assert box['width']>=389 and box['height']>=843,box
+    expect(page.locator('#infoQuickActions')).not_to_be_visible();expect(page.locator('#obsTextarea')).not_to_be_visible()
+    expect(page.locator('#obsNativeAssessment')).to_be_visible();expect(page.locator('#closeObsFocusBtn')).to_be_visible()
+    assert page.locator('#obsAssessmentSections').bounding_box()['y']<100
+    page.screenshot(path=str(Path(__file__).parent/'obs-focus-mobile.png'),full_page=True)
+    page.locator('#expandObsBtn').click();expect(page.locator('#infoQuickActions')).to_be_visible()
     page.locator('#saveObsBtn').click();page.locator('#assessmentsLibraryBtn').click()
     library=page.frame_locator('#assessmentLibraryFrame');library.locator('.aluno-nome').click()
     library.locator('#av-item-'+str(latest['id'])+' .av-header').click()
@@ -84,6 +108,10 @@ with sync_playwright() as p:
     assert state['avaliacoes'][0]['peso']=='74.50' and state['avaliacoes'][1]['peso']=='71',state
     assert state['avaliacoes'][0]['cintura']=='79' and state['avaliacoes'][1]['cintura']=='78'
     assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].treino.A[0]")=='Agachamento 3x10'
+    page.locator('#workoutObsDialog [data-close]').click();page.locator('#studentEvaluationBtn').click()
+    expect(page.locator('#obs-av-peso')).to_have_value('71')
+    expect(page.locator('#obsContent')).not_to_be_visible()
+    expect(page.locator('#mergeEvaluationDialog')).not_to_be_visible()
     assert not errors,errors
     page.screenshot(path=str(Path(__file__).parent/'obs-native-mobile.png'),full_page=True)
     browser.close();print('PASS: native Obs fields, dated history, D/E formatting, calculations, photos, PDF actions and bidirectional library edits; no visible evaluation iframe')
