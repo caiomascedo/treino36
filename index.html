@@ -1453,7 +1453,7 @@ window.AvaliacaoTreinoSync = (function () {
       <summary>📂 Mais opções</summary>
       <div class="more-options-menu">
         <button id="ocrImageBtn" class="ocr">📷 OCR via Imagem</button>
-        <button id="exportBtn" class="export">💾 Exportar JSON</button>
+        <button id="exportBtn" class="export" title="Salvar treinos, avaliações, fotos e vínculos no mesmo arquivo">💾 Salvar tudo (JSON)</button>
         <button id="importBtn" class="import">📂 Carregar JSON</button>
       </div>
     </details>
@@ -6479,6 +6479,7 @@ window.AvaliacaoTreinoSync = (function () {
           + '<button class="fav-aluno-btn' + (isFav ? ' fav-ativo' : '') + '" data-nome="' + escAttr(a.nome) + '" title="' + (isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + svgEstrela(isFav, 13) + (isFav ? ' Favorito' : ' Favoritar') + '</button>'
           + '<button class="hist-aluno-btn' + (isSelecionado ? ' hist-selecionado' : '') + '" data-nome="' + escAttr(a.nome) + '"' + (isSelecionado ? ' style="background:#0284c7!important;font-weight:700;box-shadow:0 1px 3px rgba(2,132,199,0.35);"' : '') + '>📜 Histórico</button>'
           + '<button class="wpp-aluno-btn" data-nome="' + escAttr(a.nome) + '" style="background:#25d366!important;font-size:.62rem!important;padding:3px 7px!important;" title="Editar WhatsApp">📱 ' + escHtml(a.whatsapp || 'WhatsApp') + '</button>'
+          + '<button class="evaluation-aluno-btn" data-nome="' + escAttr(a.nome) + '" title="Adicionar ou abrir avaliação">📋 Avaliação</button>'
           + '<button class="move-student-btn" data-nome="' + escAttr(a.nome) + '">↪ Mover</button>'
           + '<button class="delete-aluno-btn" data-nome="' + escAttr(a.nome) + '">🗑️ Apagar</button>'
           + '</div></div>';
@@ -6531,6 +6532,13 @@ window.AvaliacaoTreinoSync = (function () {
           }
           return;
         }
+        if (e.target.closest('.evaluation-aluno-btn')) {
+          var evaluationStudent = buscarAluno(item.dataset.nome);
+          if (!evaluationStudent) return;
+          carregarTreinoAluno(evaluationStudent); modal.style.visibility = 'hidden';
+          document.getElementById('studentEvaluationBtn').click();
+          return;
+        }
         if (e.target.closest('.hist-aluno-btn')) {
           var aHist = buscarAluno(item.dataset.nome);
           if (!aHist) return;
@@ -6545,7 +6553,7 @@ window.AvaliacaoTreinoSync = (function () {
           if (!aWpp) return;
           var novoWpp = prompt('📱 WhatsApp de ' + aWpp.nome + ':', aWpp.whatsapp || '');
           if (novoWpp === null) return;
-          aWpp.whatsapp = novoWpp.trim();
+          atualizarWhatsAppDoAluno(aWpp, novoWpp.trim());
           salvarLocalStorage();
           if (document.getElementById('searchName').value.trim() === aWpp.nome) {
             var wf = document.getElementById('studentWhatsapp');
@@ -6804,7 +6812,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (novoWpp === null) return;
     novoWpp = novoWpp.trim();
     if (aluno) {
-      aluno.whatsapp = novoWpp;
+      atualizarWhatsAppDoAluno(aluno, novoWpp);
       salvarLocalStorage();
       exibirMensagem('📱 WhatsApp salvo.', '#1e6f3f', false);
     }
@@ -8637,9 +8645,8 @@ window.AvaliacaoTreinoSync = (function () {
         '<span id="infoToggleAction" class="panel-toggle-action">Maximizar</span>'+
       '</button>'+
       '<div id="infoRelevanteContent" class="info-relevante-content" hidden>'+
-        '<div class="info-tools-bar"><button type="button" id="openEvaluationBtn" class="info-tool-btn primary">📊 Fazer / editar avaliação</button><button type="button" id="saveFichaEvaluationBtn" class="info-tool-btn">💾 Salvar ficha na avaliação</button><button type="button" id="mergeEvaluationBtn" class="info-tool-btn">🔗 Sincronizar com pessoa cadastrada</button></div>'+
+        '<div class="info-tools-bar"><button type="button" id="openEvaluationBtn" class="info-tool-btn primary">📊 Fazer / editar avaliação</button><button type="button" id="saveFichaEvaluationBtn" class="info-tool-btn">💾 Salvar ficha na avaliação</button></div>'+
         '<p>Faça a avaliação aqui ou pelo botão Avaliações. Salvar a ficha cadastra e sincroniza os dados da mesma pessoa.</p>'+
-        '<div class="info-tools-bar"><button type="button" id="importAssessmentsBtn" class="info-tool-btn">📂 Importar avaliações (JSON)</button><button type="button" id="exportAssessmentsBtn" class="info-tool-btn">💾 Exportar somente avaliações</button></div>'+
         '<section id="trainingEvaluationPanel" hidden style="margin:16px 0">'+
           '<div class="obs-header-bar"><strong>📊 Avaliação completa</strong><button type="button" id="toggleInlineEvaluationBtn" aria-expanded="true" aria-controls="trainingEvaluationContent">Minimizar avaliação</button><button type="button" id="saveInlineEvaluationBtn">💾 Salvar avaliação</button><button type="button" id="closeInlineEvaluationBtn">Voltar às observações</button></div>'+
           '<p id="trainingEvaluationStudent"></p><div id="trainingEvaluationContent"><p id="trainingEvaluationStatus" role="status">Carregando avaliação…</p><iframe id="trainingEvaluationFrame" title="Avaliação física completa do aluno" style="display:block;width:100%;height:70dvh;border:0" hidden></iframe></div>'+
@@ -9229,11 +9236,6 @@ window.AvaliacaoTreinoSync = (function () {
   document.querySelector('.workout-tools').appendChild(assessmentsButton);
   var assessmentsMenuButton = document.createElement('button'); assessmentsMenuButton.type = 'button'; assessmentsMenuButton.textContent = '📋 Avaliações / importar JSON'; assessmentsMenuButton.onclick = function () { moreOptions.open = false; abrirBibliotecaAvaliacoes(); };
   document.querySelector('.more-options-menu').prepend(assessmentsMenuButton);
-  function importarSomenteAvaliacoes() {
-    AvaliacoesJSON.choose(function () { atualizarFichaDaAvaliacao(); exibirMensagem('Avaliações importadas. Confirme a pessoa correspondente ao treino para sincronizar.', '#1e6f3f', false); }, function (message) { exibirMensagem(message, '#b22222', false); });
-  }
-  document.getElementById('importAssessmentsBtn').onclick = importarSomenteAvaliacoes;
-  document.getElementById('exportAssessmentsBtn').onclick = function () { try { AvaliacoesJSON.download(); } catch(e) { exibirMensagem(e.message, '#b22222', false); } };
   window.addEventListener('avaliacoes-importadas', atualizarFichaDaAvaliacao);
   assessmentLibraryDialog.addEventListener('close', atualizarFichaDaAvaliacao);
 
@@ -9310,7 +9312,6 @@ window.AvaliacaoTreinoSync = (function () {
   }
   document.getElementById('mergeEvaluationSelect').onchange = function () { document.getElementById('confirmSamePerson').checked = false; mostrarComparacaoCadastros(); };
   document.getElementById('confirmSamePerson').onchange = mostrarComparacaoCadastros;
-  document.getElementById('mergeEvaluationBtn').onclick = function () { abrirUniaoCadastros(false); };
   document.getElementById('createSeparateEvaluation').onclick = function () {
     var student = alunos.find(function (a) { return a.student_id === mergeStudentId; });
     if (!student) return;
@@ -9358,6 +9359,9 @@ window.AvaliacaoTreinoSync = (function () {
   function atualizarFichaDaAvaliacao() {
     try {
       var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+      AvaliacaoTreinoSync.read('treinoAlunos').forEach(function (saved) {
+        if (saved.student_id && !alunos.some(function (a) { return a.student_id === saved.student_id; })) { garantirHistorico(saved); alunos.push(saved); }
+      });
       var changed = false;
       alunos.forEach(function (student) {
         var record = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
@@ -9452,8 +9456,37 @@ window.AvaliacaoTreinoSync = (function () {
     definirPainelObservacoes(true);
   };
   window.addEventListener('storage', function (event) {
-    if (event.key === AvaliacaoTreinoSync.key) atualizarFichaDaAvaliacao();
+    if (event.key === 'treinoAlunos') {
+      try { alunos = AvaliacaoTreinoSync.read('treinoAlunos'); alunos.forEach(garantirHistorico); }
+      catch (e) { exibirMensagem(e.message, '#b22222', false); return; }
+    }
+    if (event.key === AvaliacaoTreinoSync.key || event.key === 'treinoAlunos') atualizarFichaDaAvaliacao();
   });
+
+  function atualizarWhatsAppDoAluno(student, value) {
+    student.whatsapp = value;
+    var ficha = (student.infoGuias || []).find(function (g) { return g.id === student.avaliacaoFichaId; }) || (student.infoGuias || [])[0];
+    if (ficha) ficha.whats = value;
+    if (student.infoRelevante) student.infoRelevante.whats = value;
+    try {
+      var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+      var record = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
+      if (record) {
+        record.whatsapp = value;
+        localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
+        atualizarFichaDaAvaliacao();
+      }
+    } catch (e) { exibirMensagem('Não foi possível sincronizar o WhatsApp: ' + e.message, '#b22222', false); }
+  }
+
+  var studentEvaluationButton = document.createElement('button');
+  studentEvaluationButton.type = 'button'; studentEvaluationButton.id = 'studentEvaluationBtn'; studentEvaluationButton.className = 'search-action-btn'; studentEvaluationButton.textContent = '📋'; studentEvaluationButton.title = 'Adicionar / abrir avaliação deste aluno'; studentEvaluationButton.setAttribute('aria-label', 'Avaliação do aluno');
+  document.getElementById('obsIconBtn').after(studentEvaluationButton);
+  studentEvaluationButton.onclick = function () {
+    var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+    if (!student) { exibirMensagem('Selecione um aluno cadastrado no treino.', '#b22222', false); return; }
+    abrirObservacoes(); definirPainelInformacoes(true); document.getElementById('openEvaluationBtn').click();
+  };
 
   function abrirObservacoes() {
     atualizarFichaDaAvaliacao();
@@ -10437,9 +10470,57 @@ window.AvaliacaoTreinoSync = (function () {
 
   function exportarJSON() {
     concluirAutoSave();
-    var backup={schema_version:'2.0',alunos:alunos,mobilidades:mobilidades,padrao_caio:padraoCaio};
+    var backup=montarBackupCompleto();
     var blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download='treinos_'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }
+  function montarBackupCompleto() {
+    var studentIds = new Set(alunos.map(function (a) { return a.student_id; }));
+    var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).map(function (record) {
+      var copy = cloneData(record);
+      var ids = Array.isArray(copy.treinoStudentIds) ? copy.treinoStudentIds.slice() : [];
+      if (copy.treinoStudentId) ids.push(copy.treinoStudentId);
+      ids = Array.from(new Set(ids)).filter(function (id) { return studentIds.has(id); });
+      if (ids.length) { copy.treinoStudentIds = ids; copy.treinoStudentId = ids[0]; }
+      else { delete copy.treinoStudentIds; delete copy.treinoStudentId; }
+      return copy;
+    });
+    var students=alunos.map(function (student) {
+      var copy=cloneData(student), record=records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a,student.student_id); });
+      if(record)copy.avaliacaoId=record.id;
+      else {delete copy.avaliacaoId;delete copy.avaliacaoFichaId;}
+      return copy;
+    });
+    return {schema_version:'3.0', tipo:'treino36-completo', alunos:students, avaliacoes:records, mobilidades:mobilidades, padrao_caio:padraoCaio, preferencias:{notificacoes_avaliacao:localStorage.getItem('avaliacao_notificacoes_ativas')==='1'}};
+  }
+  function prepararAvaliacoesBackupCompleto(raw, students) {
+    if (!Array.isArray(raw.avaliacoes)) throw Error('O backup completo deve incluir a lista de avaliações.');
+    var plan = AvaliacoesJSON.prepare(raw.avaliacoes, AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key), true);
+    var studentsById = new Map(students.map(function (a) { return [a.student_id, a]; }));
+    var owners = new Map();
+    plan.records.forEach(function (a) {
+      var ids = (a.treinoStudentIds || []).concat(a.treinoStudentId || []);
+      ids.forEach(function (id) { if (owners.has(id) && owners.get(id) !== Number(a.id)) throw Error('Um treino está vinculado a duas pessoas diferentes.'); owners.set(id, Number(a.id)); });
+    });
+    raw.avaliacoes.forEach(function (a) {
+      if (a.treinoStudentIds !== undefined && (!Array.isArray(a.treinoStudentIds) || a.treinoStudentIds.some(function (id) { return typeof id !== 'string' || !id; }))) throw Error('Vínculos inválidos no backup de avaliações.');
+      if (a.treinoStudentId !== undefined && (typeof a.treinoStudentId !== 'string' || !a.treinoStudentId)) throw Error('Vínculo inválido no backup.');
+      var target = plan.records.find(function (record) { return Number(record.id) === Number(a.id); });
+      var links = (a.treinoStudentIds || []).concat(a.treinoStudentId || []);
+      links.forEach(function (id) {
+        var student = studentsById.get(id);
+        if (!student) throw Error('Um vínculo da avaliação não corresponde a um aluno incluído no backup.');
+        if (student.avaliacaoId && Number(student.avaliacaoId) !== Number(a.id)) throw Error('Os vínculos do treino e da avaliação são diferentes.');
+        if (owners.has(id) && owners.get(id) !== Number(a.id)) throw Error('Este treino já está vinculado a outra pessoa neste navegador.');
+        AvaliacaoTreinoSync.link(target, id); owners.set(id, Number(a.id));
+      });
+    });
+    students.forEach(function (student) {
+      if (student.avaliacaoId && owners.get(student.student_id) !== Number(student.avaliacaoId)) throw Error('O vínculo de um aluno está ausente no cadastro de avaliações do backup.');
+    });
+    if (raw.preferencias !== undefined && (!raw.preferencias || typeof raw.preferencias !== 'object' || Array.isArray(raw.preferencias))) throw Error('Preferências inválidas no backup.');
+    if (raw.preferencias && raw.preferencias.notificacoes_avaliacao !== undefined && typeof raw.preferencias.notificacoes_avaliacao !== 'boolean') throw Error('Preferência de notificações inválida.');
+    return plan;
   }
   function validarTreinoImportado(v){
     if(!v||typeof v!=='object'||!v.treino||typeof v.treino!=='object'||Array.isArray(v.treino))throw Error('Treino inválido.');
@@ -10453,6 +10534,7 @@ window.AvaliacaoTreinoSync = (function () {
       try{
         var raw=JSON.parse(reader.result);
         if (AvaliacoesJSON.isAssessmentPayload(raw)) { AvaliacoesJSON.preview(raw, function () { atualizarFichaDaAvaliacao(); exibirMensagem('Somente avaliações importadas. Treinos mantidos.', '#1e6f3f', false); }); return; }
+        concluirAutoSave();
         var data=Array.isArray(raw)?raw:raw.alunos,library=Array.isArray(raw)?mobilidades:(raw.mobilidades||[]);
         if(!Array.isArray(data)||!Array.isArray(library))throw Error('Formato de backup inválido.');
         var names=new Set(),ids=new Set();
@@ -10464,16 +10546,47 @@ window.AvaliacaoTreinoSync = (function () {
           if(existing){var versions=new Map();existing.historicoTreinos.forEach(function(v){versions.set(v.workout_id,v);});if(diferencaDados(existing,a)){var old=snapshotAluno(existing);old.status='archived';old.archived_at=new Date().toISOString();versions.set(old.workout_id,old);if(a.treino_id===existing.treino_id)a.treino_id=novoId('treino');}a.historicoTreinos.forEach(function(v){if(!versions.has(v.workout_id))versions.set(v.workout_id,v);});a.historicoTreinos=Array.from(versions.values());}
         });
         library.forEach(function(m){if(!m||typeof m.id!=='string'||typeof m.nome!=='string'||typeof m.texto!=='string')throw Error('Biblioteca de mobilidades inválida.');});
-        concluirAutoSave();
-        var previous=alunos,previousLibrary=mobilidades,oldName=document.getElementById('searchName').value;
-        // Importar alunos novos atualiza por ID/nome; não apaga alunos ausentes do arquivo.
-        var merged=alunos.filter(function(a){return !data.some(function(x){return x.student_id===a.student_id||normalizarNome(x.nome)===normalizarNome(a.nome);});}).concat(data);
-        var mergedLibrary=new Map(mobilidades.map(function(m){return[m.id,m];}));library.forEach(function(m){mergedLibrary.set(m.id,m);});
-        alunos=merged;mobilidades=Array.from(mergedLibrary.values());
-        if(!salvarLocalStorage()){alunos=previous;mobilidades=previousLibrary;throw Error('Não foi possível salvar os alunos.');}
-        try{localStorage.setItem('treinoMobilidades',JSON.stringify(mobilidades));}catch(e){alunos=previous;mobilidades=previousLibrary;salvarLocalStorage();throw Error('Não foi possível salvar a biblioteca.');}
-        if(alunos.length)carregarTreinoAluno(buscarAluno(oldName)||alunos[0]);else registrarAlunoSelecionado('');
-        exibirMensagem('JSON carregado com histórico e mobilidades.','#1e6f3f',false);
+        var complete = raw.tipo === 'treino36-completo';
+        if (complete) prepararAvaliacoesBackupCompleto(raw, data);
+        function aplicarBackup() {
+          var assessmentPlan = complete ? prepararAvaliacoesBackupCompleto(raw, data) : null;
+          concluirAutoSave();
+          var previous=alunos,previousLibrary=mobilidades,oldName=document.getElementById('searchName').value;
+          var keys=['treinoAlunos','treinoMobilidades',AvaliacaoTreinoSync.key,'avaliacao_notificacoes_ativas'];
+          var snapshot={}; keys.forEach(function (key) { snapshot[key]=localStorage.getItem(key); });
+          var merged=alunos.filter(function(a){return !data.some(function(x){return x.student_id===a.student_id||normalizarNome(x.nome)===normalizarNome(a.nome);});}).concat(data);
+          var mergedLibrary=new Map(mobilidades.map(function(m){return[m.id,m];}));library.forEach(function(m){mergedLibrary.set(m.id,m);});
+          try {
+            if (complete) localStorage.setItem('treino36_backup_antes_importacao',JSON.stringify(snapshot));
+            alunos=merged;mobilidades=Array.from(mergedLibrary.values());
+            if(!salvarLocalStorage())throw Error('Não foi possível salvar os alunos.');
+            localStorage.setItem('treinoMobilidades',JSON.stringify(mobilidades));
+            if (assessmentPlan) {
+              localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(assessmentPlan.records));
+              if (raw.preferencias && raw.preferencias.notificacoes_avaliacao !== undefined) localStorage.setItem('avaliacao_notificacoes_ativas',raw.preferencias.notificacoes_avaliacao?'1':'0');
+              atualizarFichaDaAvaliacao();
+            }
+          } catch (e) {
+            alunos=previous;mobilidades=previousLibrary;
+            keys.forEach(function (key) { if(snapshot[key]===null)localStorage.removeItem(key);else localStorage.setItem(key,snapshot[key]); });
+            throw e;
+          }
+          if(alunos.length)carregarTreinoAluno(buscarAluno(oldName)||alunos[0]);else registrarAlunoSelecionado('');
+          exibirMensagem(complete?'Backup completo carregado: treinos, avaliações e vínculos.':'JSON carregado com histórico e mobilidades.','#1e6f3f',false);
+        }
+        if (!complete) { aplicarBackup(); return; }
+        var preview=criarDialogo('completeBackupImportDialog','💾 Importar backup completo',
+          '<p id="completeBackupSummary"></p><p>Os vínculos entre treinos e avaliações salvos neste arquivo serão restaurados. Cadastros e históricos que não estão no arquivo serão mantidos.</p><p id="completeBackupImportStatus" role="status"></p><button type="button" id="confirmCompleteBackupImport" class="primary">Importar tudo</button> <button type="button" data-close>Cancelar</button>');
+        document.getElementById('completeBackupSummary').textContent=data.length+' aluno(s) do treino · '+raw.avaliacoes.length+' cadastro(s) de avaliação · '+raw.avaliacoes.reduce(function(n,a){return n+a.avaliacoes.length;},0)+' avaliação(ões), incluindo fotos e medidas.';
+        var initialSnapshot=JSON.stringify([localStorage.getItem('treinoAlunos'),localStorage.getItem(AvaliacaoTreinoSync.key)]);
+        preview.addEventListener('close',function(){preview.remove();},{once:true});
+        document.getElementById('confirmCompleteBackupImport').onclick=function(){
+          try {
+            if(initialSnapshot!==JSON.stringify([localStorage.getItem('treinoAlunos'),localStorage.getItem(AvaliacaoTreinoSync.key)]))throw Error('Os dados mudaram em outra tela. Importe o arquivo novamente para conferir a prévia atualizada.');
+            aplicarBackup();preview.close();
+          } catch (e) { document.getElementById('completeBackupImportStatus').textContent='Não foi possível importar: '+e.message; }
+        };
+        preview.showModal();
       }catch(e){exibirMensagem('Não foi possível importar: '+escHtml(e.message),'#b22222',false);}
     };reader.readAsText(file,'UTF-8');};input.click();
   }

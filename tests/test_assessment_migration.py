@@ -81,7 +81,7 @@ with sync_playwright() as p, tempfile.TemporaryDirectory() as tmp:
     page.locator('#assessmentLibraryDialog [data-close]').click()
     # Link the imported person only after explicit confirmation.
     page.locator('#obsIconBtn').click(); page.locator('#toggleInfoRelevanteBtn').click()
-    page.locator('#mergeEvaluationBtn').click(); page.locator('#mergeEvaluationSelect').select_option('100')
+    page.locator('#openEvaluationBtn').click(); page.locator('#mergeEvaluationSelect').select_option('100')
     expect(page.locator('#confirmMergeEvaluation')).to_be_disabled()
     page.locator('#confirmSamePerson').check(); page.locator('#confirmMergeEvaluation').click()
     expect(page.locator('#infoPeso')).to_have_value('68')

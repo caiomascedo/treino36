@@ -105,7 +105,7 @@ with sync_playwright() as p:
     page.locator('#searchName').fill('Maria do treino')
     page.locator('#obsIconBtn').click()
     page.locator('#toggleInfoRelevanteBtn').click()
-    page.locator('#mergeEvaluationBtn').click()
+    page.locator('#openEvaluationBtn').click()
     page.locator('#mergeEvaluationSelect').select_option('100')
     expect(page.locator('#mergeEvaluationPreview')).to_contain_text('Maria Completa')
     expect(page.locator('#confirmMergeEvaluation')).to_be_disabled()
@@ -125,17 +125,13 @@ with sync_playwright() as p:
     frame.locator('[id^="peso-input-"]').press('Tab')
     expect(page.locator('#infoPeso')).to_have_value('66')
     page.locator('#closeInlineEvaluationBtn').click()
-    # Prefer workout values on a second merge without deleting the assessment.
+    # Linked ficha edits update the same assessment without another merge.
     page.locator('#infoPeso').fill('63')
     page.locator('#infoPeso').press('Tab')
-    page.locator('#mergeEvaluationBtn').click()
-    page.locator('#confirmSamePerson').check()
-    page.locator('#mergeEvaluationSource').select_option('training')
-    page.locator('#confirmMergeEvaluation').click()
     assert page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0].peso") == '63'
     assert page.evaluate("Boolean(localStorage.getItem('avaliacao_treino_antes_uniao'))")
     assert not errors, errors
-    print('PASS: explicit merge with different names, conflicts, missing fields, WhatsApp, preserved photos/history, source choice and post-merge sync')
+    print('PASS: explicit merge with different names, conflicts, missing fields, WhatsApp, preserved photos/history, post-merge sync')
     # A second separate workout may refer to the same confirmed person.
     page.evaluate("""() => {
       const students = JSON.parse(localStorage.getItem('treinoAlunos'));

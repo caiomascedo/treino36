@@ -594,6 +594,7 @@ function carregarJSONArquivo(input){
 }
 
 function notifMsg(msg){
+  if(!notificacoesAvaliacaoAtivas() && !/^[⚠️❌]/.test(msg)) return;
   const el=document.getElementById('notif');
   el.textContent=msg; el.style.opacity='1';
   setTimeout(()=>el.style.opacity='0',2000);
@@ -778,7 +779,7 @@ function getAlunosComPendencias(){
 function renderizarBannerRenovacoes(itens){
   const banner=document.getElementById('bannerRenovacao');
   if(!banner) return;
-  if(!itens.length){ banner.classList.remove('show'); banner.innerHTML=''; return; }
+  if(!notificacoesAvaliacaoAtivas() || !itens.length){ banner.classList.remove('show'); banner.innerHTML=''; return; }
   const estavaMinimizado=banner.classList.contains('minimized');
   banner.innerHTML=`
     <h4>🔔 ${itens.length} aluno(s) com pendência (avaliação ou pagamento)
@@ -818,7 +819,7 @@ function irParaAvaliacaoAluno(alunoId){
 function verificarRenovacoesEnviarNotificacao(forcar){
   const itens=getAlunosComPendencias();
   renderizarBannerRenovacoes(itens);
-  if(!itens.length) return;
+  if(!notificacoesAvaliacaoAtivas() || !itens.length) return;
   if(!('Notification' in window) || Notification.permission!=='granted') return;
   const hojeStr=new Date().toDateString();
   const ultimoEnvio=localStorage.getItem('notifRenovacaoData');
@@ -1018,7 +1019,7 @@ function calcularIMCeDobras(aluno,avId){
   const cintura=pf(av.cintura), quadril=pf(av.quadril);
   const rcq=(cintura&&quadril)?(cintura/quadril).toFixed(2):'—';
   av._dobras={soma,dens,pctG,mG,mM,rcq,protocolo};
-  if(!av.agua) av.agua=(mM*0.73).toFixed(1);
+  if(!av.agua || av.agua==='NaN') av.agua=Number.isFinite(mM)?(mM*0.73).toFixed(1):'';
   const gorduraRef = av.gordura || pctG.toFixed(1);
   av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef);
 }
@@ -1323,18 +1324,24 @@ function renderizarGauge(metricKey, valor, sexo, idadeReal, label){
   </div>`;
 }
 
-function toggleMetricGauge(panelId, metricKey, valor, sexo, idadeReal, label){
-  const panel=document.getElementById(panelId);
+function toggleMetricGauge(panelId, metricKey, valor, sexo, idadeReal, label, trigger){
+  const field=trigger && trigger.closest('.field,.preview-item');
+  let panel=field ? field.querySelector(':scope > .gauge-panel') : document.getElementById(panelId);
+  if(field && !panel){
+    panel=document.createElement('div'); panel.className='gauge-panel metric-detail-inline';
+    panel.id=panelId+'-'+metricKey; field.appendChild(panel);
+  }
   if(!panel) return;
   if(panel.classList.contains('show') && panel.dataset.metric===metricKey){
     panel.classList.remove('show');
     panel.dataset.metric='';
     return;
   }
+  const assessment=panel.closest('.av-content');
+  if(assessment) assessment.querySelectorAll('.gauge-panel.show').forEach(other=>{if(other!==panel){other.classList.remove('show');other.dataset.metric='';}});
   panel.innerHTML=renderizarGauge(metricKey,valor,sexo,idadeReal,label);
   panel.dataset.metric=metricKey;
   panel.classList.add('show');
-  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
 }
 
 /* Igual ao toggleMetricGauge, mas lê o valor e a idade direto dos campos no momento do clique
@@ -1344,7 +1351,7 @@ function toggleMetricGaugeLive(panelId, metricKey, valorInputId, sexo, idadeInpu
   const idadeEl=document.getElementById(idadeInputId);
   const valor=valorEl?valorEl.value:'';
   const idadeReal=idadeEl?idadeEl.value:'';
-  toggleMetricGauge(panelId, metricKey, valor, sexo, idadeReal, label);
+  toggleMetricGauge(panelId, metricKey, valor, sexo, idadeReal, label, valorEl);
 }
 
 /* PREVIEW DOBRAS */
@@ -1362,15 +1369,15 @@ function renderizarPreviewDobras(av,aluno){
     <h4>📊 RESULTADOS — ${nomeProtocolo.toUpperCase()} <small style="font-weight:400;color:#6b8c6e">(toque num item para ver a análise)</small></h4>
     <div class="preview-grid">
       <div class="preview-item"><span class="preview-label">📊 IMC</span><span class="preview-value">${av.imc||'—'}</span><span class="preview-ref">(18,50-25,00)</span></div>
-      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagordapct','${db.pctG.toFixed(2)}','${aluno.sexo}',${idadeArg},'% Massa Gorda')"><span class="preview-label">💧 % Massa Gorda</span><span class="preview-value">${db.pctG.toFixed(2)}%</span><span class="preview-ref">(13,0%-25,0%)</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagordapct','${db.pctG.toFixed(2)}','${aluno.sexo}',${idadeArg},'% Massa Gorda',this)"><span class="preview-label">💧 % Massa Gorda</span><span class="preview-value">${db.pctG.toFixed(2)}%</span><span class="preview-ref">(13,0%-25,0%)</span></div>
       <div class="preview-item"><span class="preview-label">💪 % Massa Magra</span><span class="preview-value">${(100-db.pctG).toFixed(2)}%</span><span class="preview-ref">(75,0%-87,0%)</span></div>
-      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagorda','${db.mG.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Gorda (kg)')"><span class="preview-label">⚖️ Massa Gorda</span><span class="preview-value">${db.mG.toFixed(2)} kg</span><span class="preview-ref">(6,71-12,90 kg)</span></div>
-      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massamagra','${db.mM.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Magra (kg)')"><span class="preview-label">🏋️ Massa Magra</span><span class="preview-value">${db.mM.toFixed(2)} kg</span><span class="preview-ref">(38,70-44,89 kg)</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagorda','${db.mG.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Gorda (kg)',this)"><span class="preview-label">⚖️ Massa Gorda</span><span class="preview-value">${db.mG.toFixed(2)} kg</span><span class="preview-ref">(6,71-12,90 kg)</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massamagra','${db.mM.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Magra (kg)',this)"><span class="preview-label">🏋️ Massa Magra</span><span class="preview-value">${db.mM.toFixed(2)} kg</span><span class="preview-ref">(38,70-44,89 kg)</span></div>
       ${db.dens!==null?`<div class="preview-item"><span class="preview-label">📐 Densidade</span><span class="preview-value">${db.dens.toFixed(5)}</span></div>`:''}
       <div class="preview-item"><span class="preview-label">📏 Soma Dobras</span><span class="preview-value">${db.soma.toFixed(2)} mm</span></div>
-      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','rcq','${db.rcq}','${aluno.sexo}',${idadeArg},'RCQ (Cintura/Quadril)')"><span class="preview-label">📐 RCQ</span><span class="preview-value">${db.rcq}</span><span class="preview-ref">(${rcqRef})</span></div>
-      <div class="preview-item" ${amb?`style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','amb','${amb}','${aluno.sexo}',${idadeArg},'AMB (Área Muscular do Braço)')"`:''}><span class="preview-label">💪 AMB</span><span class="preview-value">${amb||'—'} cm²</span></div>
-      <div class="preview-item" ${agb?`style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','agb','${agb}','${aluno.sexo}',${idadeArg},'AGB (Área de Gordura do Braço)')"`:''}><span class="preview-label">🍔 AGB</span><span class="preview-value">${agb||'—'} cm²</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','rcq','${db.rcq}','${aluno.sexo}',${idadeArg},'RCQ (Cintura/Quadril)',this)"><span class="preview-label">📐 RCQ</span><span class="preview-value">${db.rcq}</span><span class="preview-ref">(${rcqRef})</span></div>
+      <div class="preview-item" ${amb?`style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','amb','${amb}','${aluno.sexo}',${idadeArg},'AMB (Área Muscular do Braço)',this)"`:''}><span class="preview-label">💪 AMB</span><span class="preview-value">${amb||'—'} cm²</span></div>
+      <div class="preview-item" ${agb?`style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','agb','${agb}','${aluno.sexo}',${idadeArg},'AGB (Área de Gordura do Braço)',this)"`:''}><span class="preview-label">🍔 AGB</span><span class="preview-value">${agb||'—'} cm²</span></div>
     </div>
   </div>`;
 }
@@ -1667,10 +1674,11 @@ function renderizarAlunos(alunosParaRenderizar){
         </div>
         <div class="aluno-acoes" onclick="event.stopPropagation()">
           ${aluno.whatsapp?`<button class="btn-whatsapp-aluno btn-icone" title="WhatsApp" onclick="abrirWhatsApp(${aluno.id})">💬</button>`:''}
-          <button class="btn-renomear-aluno btn-icone" title="Renomear" onclick="renomearAluno(${aluno.id})">✏️</button>
+          <button class="btn-renomear-aluno btn-icone" title="Renomear" onclick="renomearAluno(${aluno.id})">✏️ Nome</button>
+          <button class="btn-add-to-training" onclick="adicionarAvaliacaoAoTreino(${aluno.id})">＋ Ao treino</button>
           <button class="btn-pdf-aluno" onclick="gerarPDFAluno(${aluno.id})">📄 PDF</button>
           <button class="btn-postural-aluno" onclick="gerarPDFPosturalAluno(${aluno.id})">📸 Postural</button>
-          <button onclick="apagarAluno(${aluno.id})">🗑️</button>
+          <button class="btn-delete-assessment-client" title="Excluir cadastro da avaliação" onclick="apagarAluno(${aluno.id})">🗑️ Excluir</button>
         </div>
       </div>
       <div class="aluno-content">
