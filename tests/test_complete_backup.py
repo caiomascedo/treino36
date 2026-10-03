@@ -60,8 +60,10 @@ with sync_playwright() as p:
     assert page.evaluate("localStorage.getItem('treinoAlunos')")==before
     # A foreign link is rejected before any dataset is changed.
     invalid=json.loads(json.dumps(backup));invalid['avaliacoes'][0]['treinoStudentIds']=['not-in-backup'];invalid['avaliacoes'][0]['treinoStudentId']='not-in-backup'
+    if not page.locator('#moreOptions').evaluate('el=>el.open'):page.locator('#moreOptions > summary').click()
     with page.expect_file_chooser() as chooser:page.locator('#importBtn').click()
     chooser.value.set_files({'name':'invalid.json','mimeType':'application/json','buffer':json.dumps(invalid).encode()})
+    expect(page.get_by_text('Não foi possível importar: Um vínculo da avaliação não corresponde',exact=False)).to_be_visible()
     expect(page.locator('#completeBackupImportDialog')).not_to_be_visible()
     assert page.evaluate("localStorage.getItem('treinoAlunos')")==before
     assert not errors,errors
