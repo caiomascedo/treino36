@@ -57,6 +57,8 @@
 .aluno-acoes button{background:#edf2f7!important;font-size:12px!important;padding:6px 8px!important;min-height:30px;opacity:1!important;white-space:normal;font-weight:600}
 .aluno-nome{overflow-wrap:anywhere;color:#243b53!important}
 .assessment-tab-panel .field label,.assessment-tab-panel .sec-label{white-space:normal;overflow-wrap:anywhere}
+.assessment-tab-panel .sec-label{color:#475569!important}
+.assessment-tab-panel .sec-label small{color:#64748b!important}
 .training-student-preview,.assessment-training-person{overflow-wrap:anywhere}
 .training-student-picker input[type="text"]{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
 @media(max-width:520px){.alunos-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aluno-card:not(.active) .aluno-header{min-height:94px;padding:10px}.aluno-card:not(.active) .aluno-nome{font-size:13px}}
