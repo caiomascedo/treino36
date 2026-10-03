@@ -8659,9 +8659,9 @@ window.AvaliacaoTreinoSync = (function () {
           '<div id="infoTabsList" class="info-tabs-list"></div>'+
           '<button type="button" id="addInfoTabBtn" class="add-obs-tab-btn">＋ Nova guia da ficha</button>'+
         '</div>'+
-        '<div class="info-tools-bar">'+
+        '<div id="infoQuickActions" class="info-tools-bar">'+
           '<button type="button" id="copyAllInfoBtn" class="info-tool-btn primary" title="Copiar resumo completo da ficha">📋 Copiar Tudo</button>'+
-          '<button type="button" id="autoFillInfoBtn" class="info-tool-btn" title="Preencher automaticamente a partir do texto das observações">⚡ Auto-preencher da anotação</button>'+
+          '<button type="button" id="autoFillInfoBtn" class="info-tool-btn" title="Preencher automaticamente a partir do texto das observações">⚡ Auto-preencher</button>'+
           '<button type="button" id="clearAllInfoBtn" class="info-tool-btn" title="Limpar todos os campos desta ficha">🧹 Limpar Ficha</button>'+
         '</div>'+
         '<div class="info-grid">'+
@@ -8700,9 +8700,9 @@ window.AvaliacaoTreinoSync = (function () {
           '<div class="info-field full-width">'+
             '<label>Nível de Treino (para calcular Kcal diárias):</label>'+
             '<div id="treinoLevelSelector" class="treino-level-selector">'+
-              '<button type="button" class="level-btn" data-level="leve">🌱 Leve (1-3x/sem)</button>'+
-              '<button type="button" class="level-btn active" data-level="moderado">⚡ Moderado (3-5x/sem)</button>'+
-              '<button type="button" class="level-btn" data-level="pesado">🔥 Pesado (6-7x/sem)</button>'+
+              '<button type="button" class="level-btn" data-level="leve"><span>Leve</span><small>1–3x/sem</small></button>'+
+              '<button type="button" class="level-btn active" data-level="moderado"><span>Moderado</span><small>3–5x/sem</small></button>'+
+              '<button type="button" class="level-btn" data-level="pesado"><span>Pesado</span><small>6–7x/sem</small></button>'+
             '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
@@ -9429,7 +9429,7 @@ window.AvaliacaoTreinoSync = (function () {
     atualizarFichaDaAvaliacao();
     return record;
   }
-  var obsNativeEditor = ObsAssessmentEditor.mount(document.getElementById('obsNativeAssessment'), {ensure:obterCadastroAvaliacaoObs,changed:atualizarFichaDaAvaliacao});
+  var obsNativeEditor = ObsAssessmentEditor.mount(document.getElementById('obsNativeAssessment'), {ensure:obterCadastroAvaliacaoObs,changed:atualizarFichaDaAvaliacao,minimized:function(){if(obsDialog.classList.contains('assessment-focus'))document.getElementById('expandObsBtn').click();}});
   function abrirSecaoObsDiretamente(student) { abrirFormularioAvaliacao(student, false); }
   document.getElementById('openEvaluationBtn').onclick = function (event) {
     if (!event || event.isTrusted) obsAssessmentSection = null;
@@ -9504,7 +9504,7 @@ window.AvaliacaoTreinoSync = (function () {
   studentEvaluationButton.onclick = function () {
     var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
     if (!student) { exibirMensagem('Selecione um aluno cadastrado no treino.', '#b22222', false); return; }
-    abrirObservacoes(); definirPainelInformacoes(true); document.getElementById('openEvaluationBtn').click();
+    abrirObservacoes(); definirPainelInformacoes(true); definirPainelObservacoes(false); abrirSecaoObsDiretamente(student);
   };
 
   function abrirObservacoes() {
@@ -9558,7 +9558,7 @@ window.AvaliacaoTreinoSync = (function () {
     autoPreencherCamposDaAnotacao(false);
 
     // Reset expand e sanfona
-    obsDialog.classList.remove('expanded');
+    obsDialog.classList.remove('expanded','assessment-focus');
     document.getElementById('expandObsBtn').textContent = '⛶ Maximizar janela';
     document.getElementById('expandObsBtn').setAttribute('aria-pressed', 'false');
     evaluationPanel.hidden = true;
@@ -9570,9 +9570,17 @@ window.AvaliacaoTreinoSync = (function () {
     obsDialog.scrollTop = 0;
   }
 
+  var closeObsFocusButton = document.createElement('button');
+  closeObsFocusButton.id='closeObsFocusBtn';closeObsFocusButton.type='button';closeObsFocusButton.textContent='Fechar';closeObsFocusButton.onclick=function(){obsDialog.close();};
+  document.getElementById('expandObsBtn').after(closeObsFocusButton);
   document.getElementById('expandObsBtn').onclick = function() {
     obsDialog.classList.toggle('expanded');
     var expanded = obsDialog.classList.contains('expanded');
+    obsDialog.classList.remove('assessment-focus');
+    if(expanded) {
+      var student=alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+      if(student) {obsDialog.classList.add('assessment-focus');definirPainelInformacoes(true);if(document.getElementById('obsNativeAssessment').hidden)abrirSecaoObsDiretamente(student);obsDialog.scrollTop=0;}
+    }
     this.textContent = expanded ? '↙ Minimizar janela' : '⛶ Maximizar janela';
     this.setAttribute('aria-pressed', String(expanded));
   };
