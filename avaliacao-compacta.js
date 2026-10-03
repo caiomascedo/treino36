@@ -55,6 +55,11 @@ function adicionarAlunoDoTreino() {
     person.replaceChildren(new Option('Criar cadastro para este aluno','new'));
     alunos.forEach(a=>person.add(new Option(a.nome,String(a.id))));
     if(linked) person.value=String(linked.id);
+    else if(student) {
+      const normal=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase();
+      const matches=alunos.filter(a=>[ficha.nomeCompleto,student.nome].filter(Boolean).some(name=>normal(name)===normal(a.nome)));
+      if(matches.length===1) person.value=String(matches[0].id);
+    }
     person.disabled=!!linked;
     dialog.querySelector('.identity-confirmation').hidden=!!linked || person.value==='new';
     dialog.querySelector('.picker-add').disabled=!student;
