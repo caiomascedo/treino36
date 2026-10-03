@@ -64,3 +64,34 @@
 @media(max-width:520px){.alunos-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aluno-card:not(.active) .aluno-header{min-height:94px;padding:10px}.aluno-card:not(.active) .aluno-nome{font-size:13px}}
 @media(max-width:520px){.controles-header{flex-direction:column}.compact-actions{display:flex!important;flex-direction:row!important}.assessment-more-options{margin-left:auto}}
 @media(max-width:480px){.assessment-tabs button{padding:9px 10px;font-size:12px}.aluno-content,.av-content{padding:8px!important}.aluno-acoes{flex-wrap:wrap}.assessment-tab-panel .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.assessment-tab-panel .field{min-width:0}.assessment-tab-panel .field label{font-size:12px}}
+/* Formulário mais enxuto, com hierarquia e controles legíveis no celular. */
+.aluno-card.active{border-color:#b8cadd;box-shadow:0 2px 8px #203c5b12}
+.aluno-card.active .aluno-header{padding:9px 10px;gap:7px;background:#f8fafc}
+.aluno-card.active .aluno-header>div:first-child{gap:6px!important;min-width:0}
+.aluno-card.active .aluno-nome{font-size:15px;line-height:1.2}
+.aluno-card.active .aluno-info{font-size:10px;color:#64748b}
+.aluno-card.active .aluno-acoes{width:100%;display:flex;flex-wrap:nowrap;gap:4px!important}
+.aluno-card.active .aluno-acoes button{width:auto;height:32px;min-height:32px;flex:1 0 auto;padding:4px 6px!important;font-size:11px!important;white-space:nowrap;line-height:1.2;border:1px solid #e2e8f0;border-radius:7px}
+.aluno-card.active .aluno-acoes button:hover{background:#e1eaf3!important}
+.aluno-card.active .aluno-content{padding:7px!important}
+.aluno-card.active .assessment-tabs{position:static;padding:4px 0 6px;margin-bottom:7px;gap:4px}
+.aluno-card.active .assessment-tabs button{min-height:32px;padding:6px 9px;font-size:12px;line-height:1.2;border-radius:7px}
+.aluno-card.active .av-content>.assessment-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.aluno-card.active .av-content>.assessment-tabs button{padding:6px 3px;font-size:11px}
+.aluno-card.active .card{padding:8px;border-radius:9px;box-shadow:none;border:1px solid #e8eef4}
+.aluno-card.active .card-title{font-size:12px;color:#203c5b;margin-bottom:7px;padding-bottom:5px}
+.aluno-card.active .avs-list{gap:7px}
+.aluno-card.active .av-item{border-radius:9px;margin-bottom:4px}
+.aluno-card.active .av-header{padding:8px 9px;background:#eef3f7;min-height:34px;box-sizing:border-box}
+.aluno-card.active .av-num{font-size:12px;color:#203c5b}
+.aluno-card.active .av-resumo{font-size:10px;margin-left:5px}
+.aluno-card.active .av-content{padding:7px!important}
+.aluno-card.active .assessment-tab-panel .grid2,.aluno-card.active .assessment-tab-panel .grid3{gap:8px}
+.aluno-card.active .assessment-tab-panel .field{gap:3px}
+.aluno-card.active .assessment-tab-panel .field label{font-size:11px;letter-spacing:0;line-height:1.2}
+.aluno-card.active .assessment-tab-panel .field input,.aluno-card.active .assessment-tab-panel .field select{padding:6px 8px;font-size:16px;min-height:34px;border-radius:7px}
+.aluno-card.active .assessment-tab-panel .sec-label{margin:8px 0 5px;font-size:10px;line-height:1.3;gap:5px}
+.aluno-card.active .assessment-tab-panel .sec-label small{font-size:9px}
+.aluno-card.active .assessment-tab-panel .badge{font-size:10px;line-height:1.2;padding:2px 5px;margin-left:0}
+.aluno-card.active .btn-add-av{padding:7px 10px;font-size:12px;margin-top:7px}
+@media(max-width:360px){.aluno-card.active .aluno-acoes{flex-wrap:wrap}.aluno-card.active .aluno-acoes button{flex:1 0 auto}.aluno-card.active .av-content>.assessment-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
