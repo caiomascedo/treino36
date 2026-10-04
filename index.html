@@ -4,8 +4,8 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<script src="storage-compression.js?v=13"></script>
-<script src="storage-adapter.js?v=13"></script>
+<script src="storage-compression.js?v=14"></script>
+<script src="storage-adapter.js?v=14"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1399,9 +1399,9 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js?v=13"></script>
-<script src="obs-avaliacao.js?v=13"></script>
-<link rel="stylesheet" href="obs-avaliacao.css?v=13">
+<script src="avaliacao-import.js?v=14"></script>
+<script src="obs-avaliacao.js?v=14"></script>
+<link rel="stylesheet" href="obs-avaliacao.css?v=14">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -9284,7 +9284,8 @@ window.AvaliacaoTreinoSync = (function () {
   });
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
-    document.getElementById('assessmentLibraryFrame').src = new URL('avaliacao.html?embed=treino36-library&v=13', location.href).href;
+    var frame=document.getElementById('assessmentLibraryFrame');
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=14', location.href).href;
     assessmentLibraryDialog.showModal();
   }
   var assessmentsButton = document.createElement('button'); assessmentsButton.type = 'button'; assessmentsButton.id = 'assessmentsLibraryBtn'; assessmentsButton.textContent = '📋 Avaliações'; assessmentsButton.onclick = abrirBibliotecaAvaliacoes;
