@@ -251,7 +251,7 @@ window.AvaliacaoTreinoSync = (function () {
 
 <div class="controles-header">
   <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
-    <input type="text" id="buscaAluno" class="busca-input" placeholder="🔍 Buscar aluno..." oninput="filtrarAlunos()">
+    <input type="text" id="buscaAluno" class="busca-input" placeholder="🔍 Buscar aluno...">
     <select id="ordemAluno" class="select-ordem" onchange="ordenarAlunos()">
       <option value="nome">Ordenar por Nome (A-Z)</option>
       <option value="nome_desc">Ordenar por Nome (Z-A)</option>
@@ -593,8 +593,7 @@ function carregarDados(){
   }
   oferecerRecuperacaoInterna();
   alunoAtivoId=null;
-  alunos.forEach(a => (a.avaliacoes || []).forEach(av => calcularIMCeDobras(a, av.id)));
-  salvarDados();
+  if(!saved && alunos.length) salvarDados();
   filtrarAlunos();
   if('Notification' in window){
     const btn=document.getElementById('btnAtivarNotif');
@@ -1001,15 +1000,10 @@ function syncAvaliacao(alunoId,avId,campo,valor){
   if(campo==='peso' && aluno.avaliacoes.slice(-1)[0]===av) {aluno.pesoAtual=valor;aluno.pesoAtualAvaliacaoId=av.id;}
   calcularIMCeDobras(aluno,avId);
   salvarDados();
-  if(timeoutDobras) clearTimeout(timeoutDobras);
-  timeoutDobras=setTimeout(()=>{
-    calcularIMCeDobras(aluno,avId);
-    salvarDados();
-    atualizarCamposCalculados(aluno, avId);
-    // Atualizar resumo no header
-    const headerResumo = document.getElementById(`av-resumo-${avId}`);
-    if(headerResumo) headerResumo.innerText = getResumoAvaliacao(av) ? ` — ${getResumoAvaliacao(av)}` : '';
-  },500);
+  atualizarCamposCalculados(aluno, avId);
+  const headerResumo = document.getElementById(`av-resumo-${avId}`);
+  if(headerResumo) headerResumo.textContent = getResumoAvaliacao(av) ? ` — ${getResumoAvaliacao(av)}` : '';
+
 }
 
 /* METADADOS DOS PROTOCOLOS DE DOBRAS CUTÂNEAS */
@@ -1457,6 +1451,7 @@ async function gerarPDFAluno(alunoId, options={}){
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const altura=aluno.altura||'—';
   const headers=['Indicador',...aluno.avaliacoes.map(av=>av.data||'—')];
+  aluno.avaliacoes.forEach(av=>calcularIMCeDobras(aluno,av.id));
   const mode=options.mode||'completo';
   if(!['auto','medidas-dobras','medidas-composicao','completo'].includes(mode)) throw Error('Escolha um conteúdo válido para o PDF.');
   const filled=value=>value!==undefined&&value!==null&&String(value).trim()!==''&&!['NaN','—','undefined'].includes(String(value));
@@ -1836,6 +1831,7 @@ function renderizarAlunos(alunosParaRenderizar){
       const avContainer=document.getElementById(`avaliacoesList-${aluno.id}`);
       if(avContainer){
         avContainer.innerHTML=aluno.avaliacoes.map((av,idx)=>{
+          calcularIMCeDobras(aluno,av.id);
           const clsPeso=getClassificacaoTexto('Peso',av.peso,aluno.sexo);
           const clsIMC=getClassificacaoTexto('IMC',av.imc,aluno.sexo);
           const clsGordura=getClassificacaoTexto('% Gordura',av.gordura,aluno.sexo);
@@ -1968,8 +1964,6 @@ window.addEventListener('storage', function (event) {
     // Os valores já são persistidos; cancelar apenas a atualização visual pendente.
     if (timeoutDobras) { clearTimeout(timeoutDobras); timeoutDobras = null; }
     alunos = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
-    alunos.forEach(a => (a.avaliacoes || []).forEach(av => calcularIMCeDobras(a, av.id)));
-    salvarDados();
     filtrarAlunos();
   } catch (e) { notifMsg('⚠️ ' + e.message); }
 });
@@ -1983,9 +1977,10 @@ document.getElementById('btnNovoAluno').addEventListener('click',function(e){
   novoAluno();
 });
 
+let assessmentSearchTimer;
 document.getElementById('buscaAluno').addEventListener('input', function(){
-  currentBusca = this.value;
-  ordenarAlunos();
+  clearTimeout(assessmentSearchTimer);
+  assessmentSearchTimer=setTimeout(filtrarAlunos,120);
 });
 document.getElementById('ordemAluno').addEventListener('change', function(){
   currentOrdem = this.value;
@@ -1993,10 +1988,11 @@ document.getElementById('ordemAluno').addEventListener('change', function(){
 });
 
 window.TreinoAssessmentEngine = {
-  calculate:calcularIMCeDobras, classify:getClassificacaoTexto, gauge:renderizarGauge,
+  compressImage:comprimirImagem, calculate:calcularIMCeDobras, classify:getClassificacaoTexto, gauge:renderizarGauge,
   protocol:getProtocoloDef, skinfoldLabel:key=>LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
   async pdf(records,id,type,options={}) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id); else await gerarPDFAluno(id,options); }
 };
+if(avaliacaoParams.get('embed')==='treino36-engine') window.parent.postMessage({type:'treino36-engine-ready'},location.origin);
 if(avaliacaoParams.get('embed')!=='treino36-engine') {
   carregarDados();
   abrirAlunoDoTreino();

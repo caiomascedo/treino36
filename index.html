@@ -1427,7 +1427,7 @@ window.AvaliacaoTreinoSync = (function () {
 
 </script>
 <script src="avaliacao-import.js?v=15"></script>
-<script src="obs-avaliacao.js?v=15"></script>
+<script src="obs-avaliacao.js?v=16"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=15">
 </head>
 <body>
@@ -9440,9 +9440,10 @@ window.AvaliacaoTreinoSync = (function () {
       if (mergeOpenAfterConfirm) abrirFormularioAvaliacao(student, false);
     } catch (e) { document.getElementById('mergeEvaluationStatus').textContent = e.message; }
   };
-  function atualizarFichaDaAvaliacao() {
+  function atualizarFichaDaAvaliacao(updatedRecords, selectedStudent) {
     try {
-      var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+      var records = Array.isArray(updatedRecords) ? updatedRecords : AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+      if (selectedStudent) { var selectedRecord = AvaliacaoTreinoSync.resolve(records, selectedStudent); records = selectedRecord ? [selectedRecord] : []; }
       AvaliacaoTreinoSync.read('treinoAlunos').forEach(function (saved) {
         if (saved.student_id && !alunos.some(function (a) { return a.student_id === saved.student_id; })) { garantirHistorico(saved); alunos.push(saved); }
       });
@@ -9553,7 +9554,9 @@ window.AvaliacaoTreinoSync = (function () {
     button.textContent = expanded ? 'Minimizar avaliação' : 'Maximizar avaliação';
     button.setAttribute('aria-expanded', String(expanded));
   }
+  obsDialog.addEventListener('close', function () { if (obsNativeEditor) obsNativeEditor.flush(); });
   function salvarCampoAvaliacaoAtivo() {
+    if (obsNativeEditor) obsNativeEditor.flush();
     try { var active = evaluationFrame.contentDocument.activeElement; if (active) active.blur(); } catch (e) {}
   }
   document.getElementById('toggleInlineEvaluationBtn').onclick = function () {
@@ -9603,7 +9606,7 @@ window.AvaliacaoTreinoSync = (function () {
     obsStudentId = null;
     obsAssessmentSection = null;
     if (obsNativeEditor) obsNativeEditor.reset();
-    atualizarFichaDaAvaliacao();
+    atualizarFichaDaAvaliacao(null, alunoDasObservacoes());
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) {
       exibirMensagem('❌ Digite ou selecione um aluno para ver/adicionar observações.', '#b22222', false);
