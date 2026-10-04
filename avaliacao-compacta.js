@@ -115,7 +115,8 @@ function adicionarAvaliacaoAoTreino(recordId) {
         if(!name.value.trim()) throw Error('Digite o nome do aluno no treino.');
         if(students.some(s=>nomeAlunoNaAvaliacao(s.nome)===nomeAlunoNaAvaliacao(name.value))) throw Error('Já existe esse nome no treino. Selecione o cadastro existente ou escolha outro nome para o novo treino.');
       }
-      localStorage.setItem('avaliacao_treino_antes_uniao',JSON.stringify({data:new Date().toISOString(),avaliacoes:records,treinos:students}));
+      try { localStorage.setItem('avaliacao_treino_antes_uniao',JSON.stringify({data:new Date().toISOString(),avaliacoes:records,treinos:students})); }
+      catch (backupError) { /* A cópia adicional não deve impedir o vínculo. Os cadastros originais continuam guardados. */ }
       if(!student) {
         const uuid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
         student={student_id:'aluno-'+uuid(),nome:name.value.trim(),treino:{},titulos:{},secaoFAtiva:false,historicoTreinos:[],treino_id:'treino-'+uuid(),treinoNome:'Treino de '+name.value.trim(),criadoEm:new Date().toISOString()};
@@ -127,7 +128,7 @@ function adicionarAvaliacaoAoTreino(recordId) {
       localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(records));
       alunos=records; AvaliacaoTreinoSync.syncTraining(records); filtrarAlunos(); dialog.close();
       notifMsg('Cadastro disponível no treino. Informações sincronizadas.');
-    } catch(e) { dialog.querySelector('.picker-status').textContent=e.message; }
+    } catch(e) { dialog.querySelector('.picker-status').textContent=e.name==='QuotaExceededError'?'O espaço deste navegador está cheio. Exporte Salvar tudo (JSON) para guardar seus dados antes de liberar espaço. Nenhum cadastro foi apagado.':e.message; }
   };
   filter();
   const linked=students.filter(s=>AvaliacaoTreinoSync.isLinked(initialRecord,s.student_id));
@@ -245,3 +246,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   const bannerToggle=document.querySelector('.minimizar-banner'); if(bannerToggle) bannerToggle.textContent='▼';
   window.addEventListener('storage',event=>{if(event.key===chaveNotificacoesAvaliacao){atualizarControleNotificacoes();renderizarBannerRenovacoes(getAlunosComPendencias());}});
 });
+function abrirOpcoesPDFAvaliacao(recordId) {
+  const dialog=document.createElement('dialog');dialog.className='assessment-pdf-picker';
+  dialog.innerHTML='<h3>PDF da avaliação</h3><label>Conteúdo<select class="assessment-pdf-mode" aria-label="Conteúdo do PDF"><option value="auto">Automático · partes preenchidas</option><option value="medidas-dobras">Medidas + dobras cutâneas</option><option value="medidas-composicao">Medidas + composição corporal</option><option value="completo">Avaliação completa</option></select></label><p class="assessment-pdf-status" role="status"></p><div class="picker-actions"><button type="button" class="assessment-pdf-generate">Gerar PDF</button><button type="button" class="assessment-pdf-cancel">Cancelar</button></div>';
+  document.body.appendChild(dialog);dialog.onclose=()=>dialog.remove();dialog.querySelector('.assessment-pdf-cancel').onclick=()=>dialog.close();
+  const button=dialog.querySelector('.assessment-pdf-generate');
+  button.onclick=async()=>{button.disabled=true;try{alunos=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);await gerarPDFAluno(recordId,{mode:dialog.querySelector('.assessment-pdf-mode').value});dialog.close();}catch(e){dialog.querySelector('.assessment-pdf-status').textContent=e.message;}finally{button.disabled=false;}};
+  dialog.showModal();
+}

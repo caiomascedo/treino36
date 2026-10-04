@@ -44,3 +44,35 @@
 #workoutObsDialog.assessment-focus #closeObsFocusBtn{display:inline-block}
 #workoutObsDialog.assessment-focus #obsNativeAssessment{margin-top:6px}
 #workoutObsDialog.assessment-focus #obsAssessmentSections{position:static;background:white;padding:3px 0;margin:0}
+
+/* Legendas independentes do tamanho das faixas: palavras inteiras e sem cortes. */
+.gauge-labels-row{display:flex!important;flex-wrap:wrap!important;gap:5px 10px!important;text-align:left!important;align-items:flex-start}
+.gauge-labels-row .gauge-legend-item{display:inline-flex;align-items:baseline;gap:4px;flex:0 1 auto!important;min-width:0;max-width:100%;white-space:normal;overflow-wrap:normal;word-break:normal;line-height:1.3}
+.gauge-legend-item i{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+.gauge-card,.preview-item,.preview-grid{min-width:0;max-width:100%;box-sizing:border-box}
+
+.obs-metric-detail .gauge-labels-row{flex-direction:column;gap:3px!important;font-size:11px}
+.obs-metric-detail .gauge-marker{position:absolute;top:0;width:8px;height:8px;border:2px solid #243b53;border-radius:50%;background:white;box-sizing:border-box;transform:translateX(-50%)}
+.obs-native-assessment .obs-assessment-date{grid-template-columns:40px minmax(0,1fr);min-width:0;max-width:100%}
+.obs-native-assessment #obsAssessmentDate{min-width:0;min-inline-size:0;width:100%;max-width:100%;display:block;box-sizing:border-box;-webkit-appearance:none;appearance:none;overflow:hidden}
+#obsAssessmentDate::-webkit-date-and-time-value{text-align:left;white-space:nowrap;font-size:14px}
+#obsAssessmentDate::-webkit-datetime-edit{min-width:0;padding:0}
+.lista-archive-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:8px 0;font-size:12px;color:#334155}
+.lista-archive-controls input[type="checkbox"],.aluno-list-item input.lista-select-student{width:16px;height:16px;margin:0}
+.lista-archive-controls label{display:flex;align-items:center;gap:5px}
+.lista-archive-controls button{font-size:11px;padding:5px 7px;border:1px solid #cbd5e1;border-radius:6px;background:#edf2f7;color:#243b53}
+.lista-archive-controls .archive-list-switch{margin-left:auto}
+.archive-list-switch input{appearance:none;width:30px!important;height:18px!important;border-radius:10px;background:#94a3b8;border:0;padding:2px;cursor:pointer}
+.archive-list-switch input::after{content:'';display:block;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .15s}
+.archive-list-switch input:checked{background:#23864a}.archive-list-switch input:checked::after{transform:translateX(12px)}
+.lista-select-wrap{padding:5px;display:flex;align-items:center;flex-shrink:0}
+.archive-aluno-btn{font-size:11px!important;padding:4px 7px!important;background:#e8eef4!important;color:#243b53!important}
+#historyStudentClearBtn{width:30px;flex-shrink:0;padding:4px;border:1px solid #cbd5e1;border-radius:6px;background:#edf2f7;color:#334155}
+#assessmentLibraryDialog.assessment-expanded{position:fixed;inset:0;width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;padding:8px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));border-radius:0;box-sizing:border-box;overflow:hidden}
+#assessmentLibraryDialog.assessment-expanded>h3{font-size:16px;margin:0 0 4px}
+#assessmentLibraryDialog.assessment-expanded>p{display:none}
+#assessmentLibraryDialog.assessment-expanded>.obs-header-bar{position:static;padding:4px 0;margin:0 0 5px;flex-shrink:0}
+#assessmentLibraryDialog.assessment-expanded iframe{flex:1;min-height:0;height:auto!important;width:100%}
+.history-search-row{display:flex;gap:4px;min-width:0}
+.history-search-row input{flex:1;min-width:0;width:0;padding:6px 8px!important;font-size:16px!important}
+#historyStudentDropdownBtn{position:static;transform:none;top:auto;right:auto;flex:0 0 28px;padding:4px;min-height:30px}

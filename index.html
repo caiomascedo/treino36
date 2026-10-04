@@ -4,6 +4,8 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<script src="storage-compression.js"></script>
+<script src="storage-adapter.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -6449,14 +6451,40 @@ window.AvaliacaoTreinoSync = (function () {
         + '<label class="lista-ordem-label" for="ordemAlunosSelect">Ordenar lista por:</label>'
         + '<select id="ordemAlunosSelect">' + ORDENS_ALUNOS.map(function(o) {
           return '<option value="' + o.valor + '"' + (o.valor === ordemAlunos ? ' selected' : '') + '>' + escHtml(o.texto) + '</option>';
-        }).join('') + '</select><div id="listaAlunosItens" class="lista-alunos-itens"></div><button id="closeModalBtn">Fechar</button>';
+        }).join('') + '</select><div class="lista-archive-controls"><label><input id="selectAllListStudents" type="checkbox">Selecionar todos</label><label class="archive-list-switch"><span>Incluir arquivados</span><input id="includeArchivedListStudents" type="checkbox" role="switch"></label><button id="archiveSelectedListStudents" type="button">Arquivar selecionados</button><button id="restoreSelectedListStudents" type="button">Restaurar selecionados</button><span id="selectedListStudentsCount" role="status"></span></div><div id="listaAlunosItens" class="lista-alunos-itens"></div><button id="closeModalBtn">Fechar</button>';
       mc.innerHTML = html;
       var lista = document.getElementById('listaAlunosItens');
       var buscaLista = document.getElementById('buscarAlunoLista');
+      var selectedListStudents = new Set(), visibleListStudents = [];
+      var includeArchivedListStudents = document.getElementById('includeArchivedListStudents');
+      includeArchivedListStudents.checked = localStorage.getItem('treinoListaIncluirArquivados') === '1';
+      function listStudentKey(student) { return String(student.student_id || student.nome); }
+      function atualizarSelecaoLista() {
+        var all = document.getElementById('selectAllListStudents');
+        all.checked = !!visibleListStudents.length && visibleListStudents.every(function(a){return selectedListStudents.has(listStudentKey(a));});
+        all.indeterminate = selectedListStudents.size > 0 && !all.checked;
+        all.disabled = !visibleListStudents.length;
+        document.getElementById('selectedListStudentsCount').textContent = selectedListStudents.size ? selectedListStudents.size+' selecionado(s)' : '';
+        document.getElementById('archiveSelectedListStudents').disabled = !visibleListStudents.some(function(a){return selectedListStudents.has(listStudentKey(a)) && !a.arquivadoNaLista;});
+        document.getElementById('restoreSelectedListStudents').disabled = !visibleListStudents.some(function(a){return selectedListStudents.has(listStudentKey(a)) && a.arquivadoNaLista;});
+      }
+      function arquivarSelecaoLista(archived) {
+        concluirAutoSave();
+        visibleListStudents.forEach(function(a){if(selectedListStudents.has(listStudentKey(a)))a.arquivadoNaLista=archived;});
+        salvarLocalStorage(); selectedListStudents.clear(); atualizarItens();
+      }
+      includeArchivedListStudents.onchange=function(){localStorage.setItem('treinoListaIncluirArquivados',this.checked?'1':'0');atualizarItens();};
+      document.getElementById('selectAllListStudents').onchange=function(){var checked=this.checked;visibleListStudents.forEach(function(a){if(checked)selectedListStudents.add(listStudentKey(a));else selectedListStudents.delete(listStudentKey(a));});lista.querySelectorAll('.lista-select-student').forEach(function(input){input.checked=checked;});atualizarSelecaoLista();};
+      document.getElementById('archiveSelectedListStudents').onclick=function(){arquivarSelecaoLista(true);};
+      document.getElementById('restoreSelectedListStudents').onclick=function(){arquivarSelecaoLista(false);};
+      lista.addEventListener('change',function(e){if(!e.target.matches('.lista-select-student'))return;var key=e.target.dataset.studentKey;if(e.target.checked)selectedListStudents.add(key);else selectedListStudents.delete(key);atualizarSelecaoLista();});
+
       function atualizarItens() {
         var alunoAtivo = (typeof alunoNaTela === 'function' ? alunoNaTela() : null) || (document.getElementById('searchName') && document.getElementById('searchName').value.trim() ? buscarAluno(document.getElementById('searchName').value.trim()) : null);
         var termo = normalizarBusca(buscaLista.value);
-        var encontrados = ordenarAlunos().filter(function(a) { return normalizarBusca(a.nome).includes(termo); });
+        var encontrados = ordenarAlunos().filter(function(a) { return (includeArchivedListStudents.checked || !a.arquivadoNaLista) && normalizarBusca(a.nome).includes(termo); });
+        visibleListStudents=encontrados;
+        selectedListStudents=new Set(Array.from(selectedListStudents).filter(function(key){return encontrados.some(function(a){return listStudentKey(a)===key;});}));
         if (alunoAtivo) {
           var idxAtivo = encontrados.findIndex(function(a) {
             return (a.student_id && a.student_id === alunoAtivo.student_id) || normalizarNome(a.nome) === normalizarNome(alunoAtivo.nome);
@@ -6475,7 +6503,8 @@ window.AvaliacaoTreinoSync = (function () {
           var badgeSel = isSelecionado ? ' <span class="sub-badge selecionado" style="background:#16a34a;color:#ffffff;font-size:0.65rem;padding:2px 7px;border-radius:12px;font-weight:700;vertical-align:middle;box-shadow:0 1px 3px rgba(22,163,74,0.35);">📌 Selecionado(a)</span>' : '';
           var itemClass = 'aluno-list-item' + (isSelecionado ? ' aluno-selecionado' : '');
           return '<div class="' + itemClass + '" tabindex="0" role="button" aria-label="Abrir treino de ' + escAttr(a.nome) + (isSelecionado ? ' (atualmente selecionado)' : '') + '" data-nome="' + escAttr(a.nome) + '">'
-          + '<div class="aluno-info"><div class="aluno-nome">' + escHtml(a.nome) + badgeSel + badgeFav + badgeNovo + '</div>'
+          + '<label class="lista-select-wrap"><input class="lista-select-student" type="checkbox" data-student-key="' + escAttr(listStudentKey(a)) + '" aria-label="Selecionar ' + escAttr(a.nome) + '"' + (selectedListStudents.has(listStudentKey(a))?' checked':'') + '></label>'
+          + '<div class="aluno-info"><div class="aluno-nome">' + escHtml(a.nome) + (a.arquivadoNaLista?' <span class="sub-badge">📦 Arquivado</span>':'') + badgeSel + badgeFav + badgeNovo + '</div>'
           + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + (isSelecionado ? ' · <strong style="color:#16a34a;">🟢 Aluno ativo na tela</strong>' : '') + '</div></div>'
           + '<div class="aluno-actions">'
           + '<button class="fav-aluno-btn' + (isFav ? ' fav-ativo' : '') + '" data-nome="' + escAttr(a.nome) + '" title="' + (isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + svgEstrela(isFav, 13) + (isFav ? ' Favorito' : ' Favoritar') + '</button>'
@@ -6483,10 +6512,12 @@ window.AvaliacaoTreinoSync = (function () {
           + '<button class="wpp-aluno-btn" data-nome="' + escAttr(a.nome) + '" style="background:#25d366!important;font-size:.62rem!important;padding:3px 7px!important;" title="Editar WhatsApp">📱 ' + escHtml(a.whatsapp || 'WhatsApp') + '</button>'
           + '<button class="evaluation-aluno-btn" data-nome="' + escAttr(a.nome) + '" title="Adicionar ou abrir avaliação">📋 Avaliação</button>'
           + '<button class="move-student-btn" data-nome="' + escAttr(a.nome) + '">↪ Mover</button>'
+          + '<button type="button" class="archive-aluno-btn" data-nome="' + escAttr(a.nome) + '">' + (a.arquivadoNaLista?'↩ Restaurar':'📦 Arquivar') + '</button>'
           + '<button class="delete-aluno-btn" data-nome="' + escAttr(a.nome) + '">🗑️ Apagar</button>'
           + '</div></div>';
         }).join('');
         if (!encontrados.length) lista.innerHTML = '<p role="status" style="font-size:.8rem;color:#666;padding:10px 0;">Nenhum aluno encontrado.</p>';
+        atualizarSelecaoLista();
         lista.scrollTop = 0;
       }
       buscaLista.addEventListener('input', atualizarItens);
@@ -6518,6 +6549,11 @@ window.AvaliacaoTreinoSync = (function () {
       lista.addEventListener('click', function(e) {
         var item = e.target.closest('.aluno-list-item');
         if (!item) return;
+        if(e.target.closest('.lista-select-wrap'))return;
+        if(e.target.closest('.archive-aluno-btn')) {
+          concluirAutoSave();var archiveStudent=buscarAluno(item.dataset.nome);if(!archiveStudent)return;
+          archiveStudent.arquivadoNaLista=!archiveStudent.arquivadoNaLista;salvarLocalStorage();atualizarItens();return;
+        }
         if (e.target.closest('.fav-aluno-btn')) {
           var aFav = buscarAluno(item.dataset.nome);
           if (!aFav) return;
@@ -8189,6 +8225,7 @@ window.AvaliacaoTreinoSync = (function () {
       '</div>'+
       '<div class="history-search-row">'+
         '<input type="text" id="historyStudentSearch" placeholder="Buscar ou escolher aluno..." autocomplete="off">'+
+        '<button type="button" id="historyStudentClearBtn" title="Limpar aluno e pesquisas" aria-label="Limpar aluno e pesquisas">✕</button>'+
         '<button type="button" id="historyStudentDropdownBtn" title="Ver todos os alunos">▼</button>'+
       '</div>'+
       '<div id="historyStudentSuggestions" class="history-suggestions-dropdown" hidden></div>'+
@@ -8447,6 +8484,11 @@ window.AvaliacaoTreinoSync = (function () {
       }
     });
   }
+  document.getElementById('historyStudentClearBtn').onclick=function(){
+    historyStudent=null;historySearchInput.value='';document.getElementById('historyWorkoutSearchInput').value='';
+    document.getElementById('historyWorkoutSearchClearBtn').hidden=true;document.getElementById('historyStudentName').textContent='';
+    atualizarVersoesHistorico('');renderizarSugestoesHistorico('');historySearchInput.focus();
+  };
   var historyDropdownBtn = document.getElementById('historyStudentDropdownBtn');
   if (historyDropdownBtn) {
     historyDropdownBtn.addEventListener('click', function(e) {
@@ -8767,6 +8809,11 @@ window.AvaliacaoTreinoSync = (function () {
     '</div>'
   );
 
+  var obsStudentId = null;
+  function alunoDasObservacoes() {
+    if (obsDialog.open && obsStudentId) return alunos.find(function(a){return a.student_id===obsStudentId;}) || null;
+    return alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+  }
   var obsGuiasAtuais = [];
   var obsGuiaAtivaIndex = 0;
   var infoGuiasAtuais = [];
@@ -9078,7 +9125,7 @@ window.AvaliacaoTreinoSync = (function () {
     var preencheu = 0;
 
     var nomeAtual = document.getElementById('searchName').value.trim();
-    var aluno = alunoNaTela() || buscarAluno(nomeAtual);
+    var aluno = alunoDasObservacoes();
 
     var fNome = document.getElementById('infoNomeCompleto');
     if (fNome && (!fNome.value.trim() || forcar)) {
@@ -9275,7 +9322,7 @@ window.AvaliacaoTreinoSync = (function () {
     box.appendChild(history);
   }
   function abrirUniaoCadastros(openAfterConfirm, saveAfterConfirm) {
-    var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+    var student = alunoDasObservacoes();
     if (!student) { exibirMensagem('Selecione um aluno salvo no treino.', '#b22222', false); return; }
     salvarGuiaInfoAtual();
     student.infoGuias = cloneData(infoGuiasAtuais);
@@ -9372,7 +9419,7 @@ window.AvaliacaoTreinoSync = (function () {
         if (before !== JSON.stringify(student)) changed = true;
       });
       if (changed) salvarLocalStorage();
-      var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+      var student = alunoDasObservacoes();
       if (student && obsDialog.open && student.infoGuias) {
         infoGuiasAtuais = cloneData(student.infoGuias);
         carregarGuiaInfo(Math.min(infoGuiaAtivaIndex, infoGuiasAtuais.length - 1));
@@ -9380,7 +9427,7 @@ window.AvaliacaoTreinoSync = (function () {
     } catch (e) { exibirMensagem(e.message, '#b22222', false); }
   }
   function sincronizarFichaEditada(previous) {
-    var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+    var student = alunoDasObservacoes();
     if (!student || !student.avaliacaoFichaId || infoGuiasAtuais[infoGuiaAtivaIndex].id !== student.avaliacaoFichaId) return;
     try {
       var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
@@ -9399,7 +9446,7 @@ window.AvaliacaoTreinoSync = (function () {
   var obsAssessmentSection = null;
   document.querySelectorAll('#obsAssessmentSections [data-assessment-section]').forEach(function (button) {
     button.onclick = function () {
-      var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+      var student = alunoDasObservacoes();
       if (!student) { exibirMensagem('Selecione um aluno cadastrado no treino.', '#b22222', false); return; }
       obsAssessmentSection = {studentId:student.student_id, section:button.dataset.assessmentSection};
       abrirSecaoObsDiretamente(student);
@@ -9433,7 +9480,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirSecaoObsDiretamente(student) { abrirFormularioAvaliacao(student, false); }
   document.getElementById('openEvaluationBtn').onclick = function (event) {
     if (!event || event.isTrusted) obsAssessmentSection = null;
-    var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+    var student = alunoDasObservacoes();
     if (!student) { exibirMensagem('Salve o aluno no treino antes de criar a avaliação.', '#b22222', false); return; }
     try {
       var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
@@ -9502,12 +9549,13 @@ window.AvaliacaoTreinoSync = (function () {
   studentEvaluationButton.type = 'button'; studentEvaluationButton.id = 'studentEvaluationBtn'; studentEvaluationButton.className = 'search-action-btn'; studentEvaluationButton.textContent = '📋'; studentEvaluationButton.title = 'Adicionar / abrir avaliação deste aluno'; studentEvaluationButton.setAttribute('aria-label', 'Avaliação do aluno');
   document.getElementById('obsIconBtn').after(studentEvaluationButton);
   studentEvaluationButton.onclick = function () {
-    var student = alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+    var student = alunoDasObservacoes();
     if (!student) { exibirMensagem('Selecione um aluno cadastrado no treino.', '#b22222', false); return; }
     abrirObservacoes(); definirPainelInformacoes(true); definirPainelObservacoes(false); abrirSecaoObsDiretamente(student);
   };
 
   function abrirObservacoes() {
+    obsStudentId = null;
     obsAssessmentSection = null;
     if (obsNativeEditor) obsNativeEditor.reset();
     atualizarFichaDaAvaliacao();
@@ -9517,7 +9565,8 @@ window.AvaliacaoTreinoSync = (function () {
       document.getElementById('searchName').focus();
       return;
     }
-    var aluno = alunoNaTela() || buscarAluno(nome);
+    var aluno = alunoDasObservacoes();
+    obsStudentId = aluno ? aluno.student_id : null;
     document.getElementById('obsStudentHeader').textContent = 'Aluno: ' + (aluno ? aluno.nome : nome);
     
     // Configurar Guias/Abas de Observações
@@ -9578,7 +9627,7 @@ window.AvaliacaoTreinoSync = (function () {
     var expanded = obsDialog.classList.contains('expanded');
     obsDialog.classList.remove('assessment-focus');
     if(expanded) {
-      var student=alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
+      var student=alunoDasObservacoes();
       if(student) {obsDialog.classList.add('assessment-focus');definirPainelInformacoes(true);if(document.getElementById('obsNativeAssessment').hidden)abrirSecaoObsDiretamente(student);obsDialog.scrollTop=0;}
     }
     this.textContent = expanded ? '↙ Minimizar janela' : '⛶ Maximizar janela';
@@ -9665,7 +9714,7 @@ window.AvaliacaoTreinoSync = (function () {
     salvarGuiaInfoAtual();
     var num = infoGuiasAtuais.length + 1;
     var nomeAtual = document.getElementById('searchName').value.trim();
-    var aluno = alunoNaTela() || buscarAluno(nomeAtual);
+    var aluno = alunoDasObservacoes();
     infoGuiasAtuais.push({
       id: String(Date.now()),
       titulo: 'Ficha ' + num,
@@ -9755,9 +9804,10 @@ window.AvaliacaoTreinoSync = (function () {
 
   function salvarObservacoes() {
     salvarCampoAvaliacaoAtivo();
-    var nome = document.getElementById('searchName').value.trim();
+    var aluno = alunoDasObservacoes();
+    if(obsStudentId && !aluno){exibirMensagem('O aluno desta janela não está mais disponível. Feche e selecione novamente.', '#b22222', false);return;}
+    var nome = aluno ? aluno.nome : document.getElementById('searchName').value.trim();
     if (!nome) return;
-    var aluno = alunoNaTela() || buscarAluno(nome);
     if (!aluno) {
       salvarAlunoAtual(false);
       aluno = buscarAluno(nome);
@@ -9818,7 +9868,7 @@ window.AvaliacaoTreinoSync = (function () {
       obsGuiasAtuais[obsGuiaAtivaIndex].texto = '';
     }
     var nome = document.getElementById('searchName').value.trim();
-    var aluno = alunoNaTela() || buscarAluno(nome);
+    var aluno = alunoDasObservacoes();
     if (aluno) {
       aluno.observacoes = '';
       aluno.obsGuias = [{ id: '1', titulo: 'Guia 1', texto: '' }];
@@ -9837,7 +9887,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('clearObsBtn').onclick = limparObservacoes;
 
   function atualizarIndicadorObs() {
-    var aluno = alunoNaTela() || buscarAluno(document.getElementById('searchName').value);
+    var aluno = alunoDasObservacoes();
     var temObs = false;
     if (aluno) {
       if (aluno.observacoes && aluno.observacoes.trim()) temObs = true;
@@ -9880,7 +9930,7 @@ window.AvaliacaoTreinoSync = (function () {
     '<div class="compare-search-bar">'+
       '<span class="compare-search-icon">🔍</span>'+
       '<input type="text" id="compareSearchInput" class="compare-search-input" placeholder="Pesquisar aluno por nome..." autocomplete="off">'+
-      '<button type="button" id="compareSearchClearBtn" class="compare-search-clear" hidden title="Limpar pesquisa">✕</button>'+
+      '<button type="button" id="compareSearchClearBtn" class="compare-search-clear" title="Limpar pesquisa" aria-label="Limpar pesquisa">✕</button>'+
     '</div>'+
     '<div id="compareSearchResults" class="compare-search-results" hidden></div>'+
   '</div>'+
@@ -10003,7 +10053,7 @@ window.AvaliacaoTreinoSync = (function () {
     var clearBtn=document.getElementById('compareSearchClearBtn');
     if(!host)return;
     var q=normalizarNome(termo||'');
-    if(clearBtn)clearBtn.hidden=!q;
+    if(clearBtn)clearBtn.hidden=false;
     var student=compareContext.studentId?alunos.find(function(x){return x.student_id===compareContext.studentId;}):null;
     if(!q){
       host.replaceChildren();host.hidden=true;
@@ -10077,7 +10127,7 @@ window.AvaliacaoTreinoSync = (function () {
     side.options[2].disabled=compareContext.suggestion;
     var sInput=document.getElementById('compareSearchInput');if(sInput)sInput.value='';
     var sRes=document.getElementById('compareSearchResults');if(sRes){sRes.replaceChildren();sRes.hidden=true;}
-    var sClear=document.getElementById('compareSearchClearBtn');if(sClear)sClear.hidden=true;
+    var sClear=document.getElementById('compareSearchClearBtn');if(sClear)sClear.hidden=false;
     var sCont=document.getElementById('compareSearchContainer');if(sCont)sCont.hidden=!!compareContext.suggestion;
     popularPickersComparacao(student,current,previous,'');
     compareApply.textContent=compareContext.suggestion?'Aplicar na prévia':'Aplicar alterações';document.getElementById('compareEditStatus').textContent='';atualizarHistoricoComparacao();
