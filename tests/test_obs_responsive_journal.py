@@ -37,7 +37,8 @@ with sync_playwright() as p:
     page.locator('#obs-av-biceps').fill('20 ');expect(page.locator('#obs-av-biceps')).to_have_value('20 ')
     page.locator('#obs-av-biceps').press('End');page.locator('#obs-av-biceps').press_sequentially('21')
     expect(page.locator('#obs-av-biceps')).to_have_value('20 / 21')
-    page.locator('#obs-av-coxa').fill('55');page.locator('#obs-av-coxa').locator('..').locator('.obs-pair-separator').click();page.locator('#obs-av-coxa').press_sequentially('54')
+    expect(page.locator('.obs-pair-separator')).to_have_count(0)
+    page.locator('#obs-av-coxa').fill('55 ');page.locator('#obs-av-coxa').press('End');page.locator('#obs-av-coxa').press_sequentially('54')
     expect(page.locator('#obs-av-coxa')).to_have_value('55 / 54')
     page.locator('[data-assessment-section="fotos"]').click()
     for key in ['motivo','resumo']:
@@ -83,4 +84,4 @@ with sync_playwright() as p:
     result=failed.evaluate('''() => {const key=AvaliacaoTreinoSync.key,value=localStorage.getItem(key);localStorage.setItem(key,value);TreinoStorage.clearAssessmentDrafts();return AvaliacaoTreinoSync.read(key)[2].avaliacoes[0].cintura;}''')
     assert result=='88'
     assert not errors,errors
-    browser.close();print('PASS: CPU4 typing/text pauses with zero main-thread compression, durable cross-page edits, D/E keyboard and separator, full-width text, safe delete including last, worker conflict preservation')
+    browser.close();print('PASS: CPU4 typing/text pauses with zero main-thread compression, durable cross-page edits, D/E keyboard and automatic formatting, full-width text, safe delete including last, worker conflict preservation')
