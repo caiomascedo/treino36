@@ -5,6 +5,7 @@
 <script src="storage-compression.js?v=15"></script>
 <script src="assessment-journal.js?v=17"></script>
 <script src="storage-adapter.js?v=17"></script>
+<script src="pdf-viewer.js?v=1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
 
@@ -336,6 +337,11 @@ document.getElementById('btnTopo').addEventListener('click', function() {
 /* ESTADO GLOBAL */
 let alunos = [];
 let alunoAtivoId = null;
+const assessmentSelectionKey='treino36_assessment_selected';
+function guardarSelecaoAvaliacao(){
+  if(avaliacaoParams.get('embed')==='treino36-engine')return;
+  try {if(alunoAtivoId!==null)sessionStorage.setItem(assessmentSelectionKey,String(alunoAtivoId));else sessionStorage.removeItem(assessmentSelectionKey);}catch(error){}
+}
 let ultimoEstado = null;
 let timeoutDobras = null;
 let currentBusca = '';
@@ -593,7 +599,7 @@ function carregarDados(){
     alunos=[{id:Date.now(),nome:'João Silva',nasc:'',idade:'',altura:'',pesoIni:'',sexo:'M',whatsapp:'',valorPago:'',renovacaoDias:'',pagamentoTipo:'',pagamentoData1:'',pagamentoData2:'',avaliacoes:[]}];
   }
   oferecerRecuperacaoInterna();
-  alunoAtivoId=null;
+  try {const selected=sessionStorage.getItem(assessmentSelectionKey);alunoAtivoId=alunos.find(a=>String(a.id)===selected)?.id??null;}catch(error){alunoAtivoId=null;}
   if(!saved && alunos.length) salvarDados();
   filtrarAlunos();
   if('Notification' in window){
@@ -921,6 +927,7 @@ function renomearAluno(id){
 
 function selecionarAluno(id){
   alunoAtivoId=(alunoAtivoId===id)?null:id;
+  guardarSelecaoAvaliacao();
   filtrarAlunos();
 }
 
@@ -1444,9 +1451,12 @@ const LINHAS_NEGRITO_PDF = ['% Gordura', '% Massa Gorda'];
 
 /* GERAÇÃO DE PDF — AVALIAÇÃO FÍSICA COM DELTA */
 async function gerarPDFAluno(alunoId, options={}){
-  await carregarBibliotecasPDF();
   const aluno=alunos.find(a=>a.id===alunoId);
   if(!aluno||!aluno.avaliacoes?.length){ notifMsg('⚠️ Nenhuma avaliação!'); return; }
+  guardarSelecaoAvaliacao();
+  const viewer=Object.hasOwn(options,'viewer') ? options.viewer : TreinoPDFViewer.reserve();
+  try {
+  await carregarBibliotecasPDF();
   notifMsg('📄 Gerando PDF...');
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -1597,15 +1607,19 @@ async function gerarPDFAluno(alunoId, options={}){
   doc.text('Caio Macêdo',12,pH-8);
   doc.setFontSize(5.5); doc.setTextColor(170,170,180);
   doc.text('CREF 007854-G/PI • @caiomacedo.personal • (86) 98879-6410',12,pH-3.5);
-  doc.save(`Avaliacao_${aluno.nome.replace(/\s+/g,'_')}.pdf`);
+  TreinoPDFViewer.deliver(doc,`Avaliacao_${aluno.nome.replace(/\s+/g,'_')}.pdf`,viewer);
   notifMsg('✅ PDF gerado!');
+  } catch(error) {TreinoPDFViewer.close(viewer);throw error;}
 }
 
 /* GERAÇÃO DE PDF — POSTURAL */
-async function gerarPDFPosturalAluno(alunoId){
-  await carregarBibliotecasPDF();
+async function gerarPDFPosturalAluno(alunoId, options={}){
   const aluno=alunos.find(a=>a.id===alunoId);
   if(!aluno||!aluno.avaliacoes?.length){ notifMsg('⚠️ Nenhuma avaliação!'); return; }
+  guardarSelecaoAvaliacao();
+  const viewer=Object.hasOwn(options,'viewer') ? options.viewer : TreinoPDFViewer.reserve();
+  try {
+  await carregarBibliotecasPDF();
   notifMsg('📸 Gerando PDF Postural...');
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -1676,8 +1690,9 @@ async function gerarPDFPosturalAluno(alunoId){
     doc.setTextColor(130,130,140);
     doc.text(`Pág. ${i+1} de ${aluno.avaliacoes.length}`,200,pH-8,{align:'right'});
   }
-  doc.save(`Postural_${aluno.nome.replace(/\s+/g,'_')}.pdf`);
+  TreinoPDFViewer.deliver(doc,`Postural_${aluno.nome.replace(/\s+/g,'_')}.pdf`,viewer);
   notifMsg('✅ PDF Postural gerado!');
+  } catch(error) {TreinoPDFViewer.close(viewer);throw error;}
 }
 
 function getImgDataURL(src){
@@ -1973,6 +1988,7 @@ window.addEventListener('storage', function (event) {
   } catch (e) { notifMsg('⚠️ ' + e.message); }
 });
 window.addEventListener('pagehide', function () {
+  guardarSelecaoAvaliacao();
   if (timeoutDobras) { clearTimeout(timeoutDobras); timeoutDobras = null; salvarDados(); }
 });
 
@@ -1995,7 +2011,7 @@ document.getElementById('ordemAluno').addEventListener('change', function(){
 window.TreinoAssessmentEngine = {
   compressImage:comprimirImagem, calculate:calcularIMCeDobras, classify:getClassificacaoTexto, gauge:renderizarGauge,
   protocol:getProtocoloDef, skinfoldLabel:key=>LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
-  async pdf(records,id,type,options={}) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id); else await gerarPDFAluno(id,options); }
+  async pdf(records,id,type,options={}) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id,options); else await gerarPDFAluno(id,options); }
 };
 if(avaliacaoParams.get('embed')==='treino36-engine') window.parent.postMessage({type:'treino36-engine-ready'},location.origin);
 if(avaliacaoParams.get('embed')!=='treino36-engine') {

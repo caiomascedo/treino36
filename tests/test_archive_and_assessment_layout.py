@@ -24,6 +24,7 @@ with sync_playwright() as p:
                 return
         request.fulfill(status=404, body='')
     context.route('**/*', route)
+    context.add_init_script('window.open=()=>null')
     page = context.new_page()
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
