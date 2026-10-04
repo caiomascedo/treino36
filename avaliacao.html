@@ -215,19 +215,23 @@ window.AvaliacaoTreinoSync = (function () {
     student.avaliacaoId = record.id;
     return ficha;
   }
+  // Compare only the fields changed by synchronization, without workout history.
+  function fichaState(student) {
+    return JSON.stringify([student.infoGuias, student.infoRelevante, student.avaliacaoFichaId, student.whatsapp, student.avaliacaoId]);
+  }
   function syncTraining(records) {
     var students = read('treinoAlunos'), changed = false;
     students.forEach(function (student) {
       if (!student.student_id) return;
       var record = resolve(records, student);
       if (!record) return;
-      var before = JSON.stringify(student);
+      var before = fichaState(student);
       toFicha(student, record);
-      if (before !== JSON.stringify(student)) changed = true;
+      if (before !== fichaState(student)) changed = true;
     });
     if (changed) localStorage.setItem('treinoAlunos', JSON.stringify(students));
   }
-  return {key:key, read:read, resolve:resolve, join:join, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, syncTraining:syncTraining};
+  return {key:key, read:read, resolve:resolve, join:join, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, fichaState:fichaState, syncTraining:syncTraining};
 })();
 
 </script>
@@ -679,15 +683,20 @@ function novoAluno(){
   notifMsg(`✅ Aluno "${nomeAluno}" criado!`);
 }
 
+// Display preferences are small and separate from assessments, photos and training data.
+function estadoSecao(aluno, campo) {
+  try { const value = sessionStorage.getItem('avaliacao-view-' + aluno.id + '-' + campo); if (value !== null) return value === '1'; } catch (e) {}
+  return !!aluno[campo];
+}
 function toggleSecao(alunoId, secao, btn){
   const aluno=alunos.find(a=>a.id===alunoId);
   if(!aluno) return;
   const campo=secao==='pagamento'?'pagamentoMinimizado':'renovacaoMinimizado';
-  aluno[campo]=!aluno[campo];
-  salvarDados();
+  const minimized=!estadoSecao(aluno,campo);
   const el=document.getElementById(`${secao}-content-${alunoId}`);
-  if(el) el.style.display=aluno[campo]?'none':'grid';
-  if(btn) btn.textContent=aluno[campo]?'▼':'▲';
+  if(el) el.style.display=minimized?'none':'grid';
+  if(btn) { btn.textContent=minimized?'▼':'▲'; btn.setAttribute('aria-expanded',String(!minimized)); }
+  try { sessionStorage.setItem('avaliacao-view-' + aluno.id + '-' + campo,minimized?'1':'0'); } catch(e) {}
 }
 
 function onChangeRenovacaoTipo(alunoId, valor){
@@ -1734,11 +1743,15 @@ function renderizarAlunos(alunosParaRenderizar){
     return;
   }
   container.innerHTML='';
+  let trainingStudents=[];
+  try { trainingStudents=AvaliacaoTreinoSync.read('treinoAlunos'); } catch(e) {}
   alunosParaRenderizar.forEach(aluno=>{
     const isActive=(alunoAtivoId===aluno.id);
     const card=document.createElement('div');
     card.className=`aluno-card ${isActive?'active':''}`;
     card.setAttribute('data-aluno-card', aluno.id);
+    const linkedTraining=trainingStudents.filter(student=>AvaliacaoTreinoSync.isLinked(aluno,student.student_id));
+    const trainingLinkLabel=linkedTraining.length ? '🔗 Treino: '+linkedTraining.map(student=>student.nome).join(' · ') : 'Sem vínculo com treino';
     const statusRenov=getStatusRenovacao(aluno);
     const statusPagtos=getStatusPagamentos(aluno);
     card.innerHTML=`
@@ -1747,6 +1760,7 @@ function renderizarAlunos(alunosParaRenderizar){
           <span>📌</span>
           <span class="aluno-nome">${escapeHtml(aluno.nome)}</span>
           <span class="aluno-info">📅 ${getUltimaDataAvaliacao(aluno)||'Sem avaliações'} | ${aluno.avaliacoes?.length||0} avals</span>
+          <span class="assessment-training-link" style="font-size:12px;color:#267457;flex-basis:100%">${escapeHtml(trainingLinkLabel)}</span>
           ${statusRenov?`<span class="badge-renovacao ${statusRenov.classe}" title="Renovação de avaliação">📋 ${statusRenov.texto}</span>`:''}
           ${statusPagtos.map(p=>`<span class="badge-renovacao ${p.classe}" title="Pagamento">💰 ${p.texto}</span>`).join('')}
         </div>
@@ -1772,8 +1786,8 @@ function renderizarAlunos(alunosParaRenderizar){
             <div class="field"><label>E-mail</label><input type="email" value="${escapeHtml(aluno.email||'')}" onchange="atualizarAluno(${aluno.id},'email',this.value)"></div>
             <div class="field"><label>WhatsApp</label><input type="tel" placeholder="86988776655" value="${escapeHtml(aluno.whatsapp||'')}" onchange="atualizarAluno(${aluno.id},'whatsapp',this.value)"></div>
           </div>
-          <div class="sec-label" style="display:flex;align-items:center">Pagamento <button type="button" class="btn-toggle-secao" onclick="toggleSecao(${aluno.id},'pagamento',this)">${aluno.pagamentoMinimizado?'▼':'▲'}</button></div>
-          <div class="grid2" id="pagamento-content-${aluno.id}" style="display:${aluno.pagamentoMinimizado?'none':'grid'}">
+          <div class="sec-label" style="display:flex;align-items:center">Pagamento <button type="button" class="btn-toggle-secao" onclick="toggleSecao(${aluno.id},'pagamento',this)">${estadoSecao(aluno,'pagamentoMinimizado')?'▼':'▲'}</button></div>
+          <div class="grid2" id="pagamento-content-${aluno.id}" style="display:${estadoSecao(aluno,'pagamentoMinimizado')?'none':'grid'}">
             <div class="field"><label>Valor Pago (R$)</label><input type="text" placeholder="150,00" value="${escapeHtml(aluno.valorPago||'')}" onchange="atualizarAluno(${aluno.id},'valorPago',this.value)"></div>
             <div class="field"><label>Cobrança</label>
               <select onchange="atualizarAluno(${aluno.id},'pagamentoTipo',this.value);document.getElementById('pagDia2Wrap-${aluno.id}').style.display=this.value==='2x'?'block':'none'">
@@ -1795,8 +1809,8 @@ function renderizarAlunos(alunosParaRenderizar){
               </div>
             </div>
           </div>
-          <div class="sec-label" style="display:flex;align-items:center">Renovação de Avaliação <button type="button" class="btn-toggle-secao" onclick="toggleSecao(${aluno.id},'renovacao',this)">${aluno.renovacaoMinimizado?'▼':'▲'}</button></div>
-          <div class="grid2" id="renovacao-content-${aluno.id}" style="display:${aluno.renovacaoMinimizado?'none':'grid'}">
+          <div class="sec-label" style="display:flex;align-items:center">Renovação de Avaliação <button type="button" class="btn-toggle-secao" onclick="toggleSecao(${aluno.id},'renovacao',this)">${estadoSecao(aluno,'renovacaoMinimizado')?'▼':'▲'}</button></div>
+          <div class="grid2" id="renovacao-content-${aluno.id}" style="display:${estadoSecao(aluno,'renovacaoMinimizado')?'none':'grid'}">
             <div class="field"><label>Renovar a cada</label>
               <select id="renovacaoSel-${aluno.id}" onchange="onChangeRenovacaoTipo(${aluno.id},this.value)">
                 <option value="" ${!aluno.renovacaoDias?'selected':''}>Nenhum</option>
@@ -1948,6 +1962,7 @@ if (['treino36','treino36-library'].includes(avaliacaoParams.get('embed'))) {
 }
 window.addEventListener('storage', function (event) {
   if (avaliacaoParams.get('embed') === 'treino36-engine') return;
+  if (event.key === 'treinoAlunos') { filtrarAlunos(); return; }
   if (event.key !== AvaliacaoTreinoSync.key) return;
   try {
     // Os valores já são persistidos; cancelar apenas a atualização visual pendente.
