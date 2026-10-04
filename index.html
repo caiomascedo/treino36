@@ -4972,8 +4972,40 @@ window.AvaliacaoTreinoSync = (function () {
     }
   }
 
+  var pdfReturnContext = null, pdfContextRestoring = false, appSelectionReady = false;
+  var PDF_RETURN_CONTEXT_KEY = 'treino36_pdf_return_context';
+  function limparContextoPDF() {
+    if(pdfContextRestoring||!pdfReturnContext)return;
+    pdfReturnContext=null;
+    try {sessionStorage.removeItem(PDF_RETURN_CONTEXT_KEY);}catch(error){}
+  }
+  function guardarContextoPDF() {
+    restaurarContextoPDF(false);
+    var name=document.getElementById('searchName').value.trim();
+    if(!name){limparContextoPDF();return;}
+    var student=alunoNaTela();
+    pdfReturnContext={name:name,studentId:student?student.student_id:null,state:getCurrentState(),baseline:student?JSON.stringify([student.treino,student.titulos,!!student.secaoFAtiva]):null};
+    try {sessionStorage.setItem(PDF_RETURN_CONTEXT_KEY,JSON.stringify(pdfReturnContext));}catch(error){}
+  }
+  function restaurarContextoPDF(reload) {
+    if(!pdfReturnContext)return;
+    if(!reload&&document.getElementById('searchName').value.trim())return;
+    var context=pdfReturnContext;
+    var student=context.studentId?alunos.find(function(a){return a.student_id===context.studentId;}):null;
+    if(context.studentId&&!student){limparContextoPDF();return;}
+    pdfContextRestoring=true;
+    try {
+      registrarAlunoSelecionado(student?student.nome:context.name);
+      alunoVinculadoId=student?student.student_id:null;
+      if(reload&&context.state&&(!student||context.baseline===JSON.stringify([student.treino,student.titulos,!!student.secaoFAtiva])))applyState(context.state,true);
+    } finally {pdfContextRestoring=false;}
+  }
+  window.addEventListener('pageshow',function(){if(appSelectionReady)restaurarContextoPDF(false);});
+  window.addEventListener('focus',function(){if(appSelectionReady)restaurarContextoPDF(false);});
+
   /* ===== GERAR PDF VIEWER COM YOUTUBE ===== */
   function gerarPDFViewer() {
+    guardarContextoPDF();
     const nomeAluno = document.getElementById('searchName').value.trim() || 'Aluno';
     const footer = document.querySelector('.footer') ? document.querySelector('.footer').innerText.trim() : 'Personal Caio Macêdo';
     const hoje = new Date().toLocaleDateString('pt-BR');
@@ -5003,10 +5035,12 @@ window.AvaliacaoTreinoSync = (function () {
   }
 
   document.getElementById('closePdfViewer').onclick = function() {
+    restaurarContextoPDF(false);
     document.getElementById('pdfViewerModal').classList.remove('open');
   };
 
   document.getElementById('downloadPdfBtn').onclick = async function() {
+    guardarContextoPDF();
     const viewer = TreinoPDFViewer.reserve();
     const el = document.getElementById('pdfBody');
     const nomeAluno = safeFileName(document.getElementById('searchName').value.trim() || 'treino');
@@ -5101,7 +5135,8 @@ window.AvaliacaoTreinoSync = (function () {
     }
     return state;
   }
-  function applyState(state) {
+  function applyState(state, skipAutoSave) {
+    if(!skipAutoSave)limparContextoPDF();
     finalizarArrasteTreino(false); finalizarArrasteExercicio(false);
     ocultarDesfazerMovimento();
     isUndoRedoAction = true;
@@ -5117,7 +5152,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (footer && state.footer !== undefined) footer.innerHTML = state.footer;
     isUndoRedoAction = false;
     lastStateSnapshot = JSON.stringify(getCurrentState());
-    autoSave();
+    if(!skipAutoSave)autoSave();
     if (expandedSectionId) renderExpandedSection();
   }
   function pushState() {
@@ -5125,6 +5160,7 @@ window.AvaliacaoTreinoSync = (function () {
     var newState = getCurrentState();
     var snapshot = JSON.stringify(newState);
     if (snapshot === lastStateSnapshot) return;
+    limparContextoPDF();
     ocultarDesfazerMovimento();
     historyStack = historyStack.slice(0, currentIndex + 1);
     historyStack.push(newState);
@@ -6170,6 +6206,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   function registrarAlunoSelecionado(nome) {
     nome = String(nome || '').trim();
+    if(appSelectionReady&&pdfReturnContext&&nome!==pdfReturnContext.name)limparContextoPDF();
     document.getElementById('searchName').value = nome;
     var vinculado=alunos.find(function(a){return normalizarNome(a.nome)===normalizarNome(nome);});alunoVinculadoId=vinculado?vinculado.student_id:null;if(typeof destinoBadge!=="undefined"&&destinoBadge){destinoSugeridoId=null;destinoNomeDigitado="";atualizarDestinoSalvamento();}
     atualizarNomeTreino();
@@ -6300,6 +6337,7 @@ window.AvaliacaoTreinoSync = (function () {
       });
     });
   }
+  searchNameInput.addEventListener('input', limparContextoPDF);
   searchNameInput.addEventListener('input', atualizarNomeTreino);
   searchNameInput.addEventListener('input', mostrarSugestoes);
   searchNameInput.addEventListener('input', function() { if (typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs(); });
@@ -10854,12 +10892,15 @@ window.AvaliacaoTreinoSync = (function () {
   },true);
 
   // Restaurar o aluno completo sem transformar a consulta em um lançamento.
+  try {pdfReturnContext=JSON.parse(sessionStorage.getItem(PDF_RETURN_CONTEXT_KEY)||'null');}catch(error){}
   var ultimoAlunoNome = '';
   try { ultimoAlunoNome = localStorage.getItem(ALUNO_SELECIONADO_KEY) || ''; } catch(e) {}
   var ultimoAluno = buscarAluno(ultimoAlunoNome);
   if (ultimoAluno) carregarTreinoAluno(ultimoAluno);
   else if (alunos.length) carregarTreinoAluno(alunos[0]);
   else registrarAlunoSelecionado('');
+  restaurarContextoPDF(true);
+  appSelectionReady=true;
 
   initHistory();
   observeEditableChanges();
