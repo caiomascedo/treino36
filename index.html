@@ -1428,7 +1428,8 @@ window.AvaliacaoTreinoSync = (function () {
 
 </script>
 <script src="avaliacao-import.js?v=17"></script>
-<script src="obs-avaliacao.js?v=19"></script>
+<script src="pdf-viewer.js?v=1"></script>
+<script src="obs-avaliacao.js?v=20"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
 </head>
 <body>
@@ -5006,6 +5007,7 @@ window.AvaliacaoTreinoSync = (function () {
   };
 
   document.getElementById('downloadPdfBtn').onclick = async function() {
+    const viewer = TreinoPDFViewer.reserve();
     const el = document.getElementById('pdfBody');
     const nomeAluno = safeFileName(document.getElementById('searchName').value.trim() || 'treino');
     
@@ -5023,13 +5025,15 @@ window.AvaliacaoTreinoSync = (function () {
     try {
       var pdfReady = await ensureHtml2Pdf();
       if (!pdfReady) {
-        abrirPDFParaImpressao();
+        abrirPDFParaImpressao(viewer);
         exibirMensagem('⚠️ CDN do PDF indisponível. Abrindo modo alternativo para salvar/imprimir com links.', '#b8860b', false);
         return;
       }
-      await html2pdf().set(opt).from(el).save();
+      const doc = await html2pdf().set(opt).from(el).toPdf().get('pdf');
+      TreinoPDFViewer.deliver(doc,opt.filename,viewer);
       exibirMensagem('✅ PDF salvo! Links do YouTube funcionam no PDF.', '#1e6f3f', false);
     } catch(e) {
+      TreinoPDFViewer.close(viewer);
       console.error(e);
       exibirMensagem('❌ Erro ao gerar PDF', '#b22222', false);
     }
@@ -5073,10 +5077,10 @@ window.AvaliacaoTreinoSync = (function () {
     }
     return false;
   }
-  function abrirPDFParaImpressao() {
+  function abrirPDFParaImpressao(viewer) {
     var pdfBody = document.getElementById('pdfBody');
     if (!pdfBody || !pdfBody.innerHTML.trim()) gerarPDFViewer();
-    var win = window.open('', '_blank');
+    var win = viewer || window.open('', '_blank');
     if (!win) {
       exibirMensagem('❌ Permita pop-ups para usar o modo alternativo de PDF.', '#b22222', false);
       return;
@@ -9338,7 +9342,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
     var frame=document.getElementById('assessmentLibraryFrame');
-    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=17', location.href).href;
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=20', location.href).href;
     assessmentLibraryDialog.showModal();
     frame.contentWindow.postMessage({type:'treino36-library-refresh'},location.origin);
   }
@@ -9688,8 +9692,8 @@ window.AvaliacaoTreinoSync = (function () {
         nivelTreino: 'moderado'
       }];
     }
-    infoGuiaAtivaIndex = 0;
-    carregarGuiaInfo(0);
+    infoGuiaAtivaIndex = infoGuiasAtuais.length - 1;
+    carregarGuiaInfo(infoGuiaAtivaIndex);
 
     // Auto-extrair dados do texto se campos estiverem vazios
     autoPreencherCamposDaAnotacao(false);
