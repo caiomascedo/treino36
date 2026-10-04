@@ -70,7 +70,7 @@ window.ObsAssessmentEditor = (() => {
         if(key==='biceps'||key==='coxa') {const v=input.value.replace(/\s*\/\s*/g,' / ');if(!v.includes('/')&&/\d\s+\d/.test(v))input.value=v.replace(/\s+/, ' / ');}
         update(key,input.value);
       };
-      if(key==='biceps'||key==='coxa'){input.placeholder='Direito / Esquerdo';const separator=el('button',{type:'button',class:'obs-pair-separator','aria-label':'Inserir separador entre direito e esquerdo'},' / ');separator.onclick=()=>{input.focus();const pos=input.selectionStart??input.value.length;input.setRangeText(' / ',pos,input.selectionEnd??pos,'end');input.dispatchEvent(new Event('input',{bubbles:true}));};wrap.append(separator);}
+      if(key==='biceps'||key==='coxa'){input.placeholder='Direito / Esquerdo';}
       if(section==='composicao') {
         const metrics={peso:['peso','Peso'],imc:['imc','IMC'],gordura:['gordura','% Gordura'],visceral:['visceral','Gordura Visceral'],massamuscular:['massamuscular','Massa Muscular'],proteina:['proteina','% Proteína'],agua:['agua','% Água'],tmb:['tmb','TMB'],idadeMetabolica:['idademetabolica','Idade Metabólica']};
         const [metric,name]=metrics[key];const button=el('button',{type:'button','data-metric':key,'data-label':name,'aria-expanded':'false'});const detail=el('div',{class:'obs-metric-detail',hidden:''});

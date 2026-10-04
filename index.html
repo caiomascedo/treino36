@@ -1428,8 +1428,8 @@ window.AvaliacaoTreinoSync = (function () {
 
 </script>
 <script src="avaliacao-import.js?v=17"></script>
-<script src="obs-avaliacao.js?v=17"></script>
-<link rel="stylesheet" href="obs-avaliacao.css?v=17">
+<script src="obs-avaliacao.js?v=18"></script>
+<link rel="stylesheet" href="obs-avaliacao.css?v=18">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -6526,7 +6526,7 @@ window.AvaliacaoTreinoSync = (function () {
         try { assessmentRecords = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key); } catch (e) { /* Keep the workout list available if assessment storage is invalid. */ }
         lista.innerHTML = encontrados.map(function(a) {
           var linkedAssessment = AvaliacaoTreinoSync.resolve(assessmentRecords, a);
-          var assessmentBadge = '<div class="training-assessment-link" style="font-size:.72rem;color:#267457;margin:4px 0">' + (linkedAssessment ? '🔗 Avaliação: ' + escHtml(linkedAssessment.nome) : 'Sem vínculo com avaliação') + '</div>';
+          var assessmentBadge = linkedAssessment ? ' · <span class="training-assessment-link" style="color:#267457">Avaliação</span>' : '';
           var isSelecionado = alunoAtivo && ((a.student_id && a.student_id === alunoAtivo.student_id) || normalizarNome(a.nome) === normalizarNome(alunoAtivo.nome));
           var isNovo = (!Array.isArray(a.historicoTreinos) || a.historicoTreinos.length === 0);
           var isFav = isFavorito(a);
@@ -6538,8 +6538,8 @@ window.AvaliacaoTreinoSync = (function () {
           + '<div class="lista-student-heading"><label class="lista-select-wrap"><input class="lista-select-student" type="checkbox" data-student-key="' + escAttr(listStudentKey(a)) + '" aria-label="Selecionar ' + escAttr(a.nome) + '"' + (selectedListStudents.has(listStudentKey(a))?' checked':'') + '></label>'
           + '<div class="aluno-nome">' + escHtml(a.nome) + (a.arquivadoNaLista?' <span class="sub-badge">📦 Arquivado</span>':'') + badgeSel + badgeFav + badgeNovo + '</div>'
           + '<button type="button" class="archive-aluno-btn" data-nome="' + escAttr(a.nome) + '" title="' + (a.arquivadoNaLista?'Restaurar na lista':'Arquivar na lista') + '" aria-label="' + (a.arquivadoNaLista?'Restaurar ':'Arquivar ') + escAttr(a.nome) + '">' + (a.arquivadoNaLista?'↩':'📦') + '</button></div><div class="aluno-info">'
-          + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + (isSelecionado ? ' · <strong style="color:#16a34a;">🟢 Aluno ativo na tela</strong>' : '') + '</div></div>'
-          + assessmentBadge + '<div class="aluno-actions">'
+          + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + assessmentBadge + (isSelecionado ? ' · <strong style="color:#16a34a;">🟢 Aluno ativo na tela</strong>' : '') + '</div></div>'
+          + '<div class="aluno-actions">'
           + '<button class="fav-aluno-btn' + (isFav ? ' fav-ativo' : '') + '" data-nome="' + escAttr(a.nome) + '" title="' + (isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + svgEstrela(isFav, 13) + (isFav ? ' Favorito' : ' Favoritar') + '</button>'
           + '<button class="hist-aluno-btn' + (isSelecionado ? ' hist-selecionado' : '') + '" data-nome="' + escAttr(a.nome) + '"' + (isSelecionado ? ' style="background:#0284c7!important;font-weight:700;box-shadow:0 1px 3px rgba(2,132,199,0.35);"' : '') + '>📜 Histórico</button>'
           + '<button class="wpp-aluno-btn" data-nome="' + escAttr(a.nome) + '" style="background:#25d366!important;font-size:.62rem!important;padding:3px 7px!important;" title="Editar WhatsApp">📱 ' + escHtml(a.whatsapp || 'WhatsApp') + '</button>'
