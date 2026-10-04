@@ -4,8 +4,8 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<script src="storage-compression.js"></script>
-<script src="storage-adapter.js"></script>
+<script src="storage-compression.js?v=13"></script>
+<script src="storage-adapter.js?v=13"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1399,9 +1399,9 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js"></script>
-<script src="obs-avaliacao.js"></script>
-<link rel="stylesheet" href="obs-avaliacao.css">
+<script src="avaliacao-import.js?v=13"></script>
+<script src="obs-avaliacao.js?v=13"></script>
+<link rel="stylesheet" href="obs-avaliacao.css?v=13">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -6503,8 +6503,9 @@ window.AvaliacaoTreinoSync = (function () {
           var badgeSel = isSelecionado ? ' <span class="sub-badge selecionado" style="background:#16a34a;color:#ffffff;font-size:0.65rem;padding:2px 7px;border-radius:12px;font-weight:700;vertical-align:middle;box-shadow:0 1px 3px rgba(22,163,74,0.35);">📌 Selecionado(a)</span>' : '';
           var itemClass = 'aluno-list-item' + (isSelecionado ? ' aluno-selecionado' : '');
           return '<div class="' + itemClass + '" tabindex="0" role="button" aria-label="Abrir treino de ' + escAttr(a.nome) + (isSelecionado ? ' (atualmente selecionado)' : '') + '" data-nome="' + escAttr(a.nome) + '">'
-          + '<label class="lista-select-wrap"><input class="lista-select-student" type="checkbox" data-student-key="' + escAttr(listStudentKey(a)) + '" aria-label="Selecionar ' + escAttr(a.nome) + '"' + (selectedListStudents.has(listStudentKey(a))?' checked':'') + '></label>'
-          + '<div class="aluno-info"><div class="aluno-nome">' + escHtml(a.nome) + (a.arquivadoNaLista?' <span class="sub-badge">📦 Arquivado</span>':'') + badgeSel + badgeFav + badgeNovo + '</div>'
+          + '<div class="lista-student-heading"><label class="lista-select-wrap"><input class="lista-select-student" type="checkbox" data-student-key="' + escAttr(listStudentKey(a)) + '" aria-label="Selecionar ' + escAttr(a.nome) + '"' + (selectedListStudents.has(listStudentKey(a))?' checked':'') + '></label>'
+          + '<div class="aluno-nome">' + escHtml(a.nome) + (a.arquivadoNaLista?' <span class="sub-badge">📦 Arquivado</span>':'') + badgeSel + badgeFav + badgeNovo + '</div>'
+          + '<button type="button" class="archive-aluno-btn" data-nome="' + escAttr(a.nome) + '" title="' + (a.arquivadoNaLista?'Restaurar na lista':'Arquivar na lista') + '" aria-label="' + (a.arquivadoNaLista?'Restaurar ':'Arquivar ') + escAttr(a.nome) + '">' + (a.arquivadoNaLista?'↩':'📦') + '</button></div><div class="aluno-info">'
           + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + (isSelecionado ? ' · <strong style="color:#16a34a;">🟢 Aluno ativo na tela</strong>' : '') + '</div></div>'
           + '<div class="aluno-actions">'
           + '<button class="fav-aluno-btn' + (isFav ? ' fav-ativo' : '') + '" data-nome="' + escAttr(a.nome) + '" title="' + (isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + svgEstrela(isFav, 13) + (isFav ? ' Favorito' : ' Favoritar') + '</button>'
@@ -6512,7 +6513,6 @@ window.AvaliacaoTreinoSync = (function () {
           + '<button class="wpp-aluno-btn" data-nome="' + escAttr(a.nome) + '" style="background:#25d366!important;font-size:.62rem!important;padding:3px 7px!important;" title="Editar WhatsApp">📱 ' + escHtml(a.whatsapp || 'WhatsApp') + '</button>'
           + '<button class="evaluation-aluno-btn" data-nome="' + escAttr(a.nome) + '" title="Adicionar ou abrir avaliação">📋 Avaliação</button>'
           + '<button class="move-student-btn" data-nome="' + escAttr(a.nome) + '">↪ Mover</button>'
-          + '<button type="button" class="archive-aluno-btn" data-nome="' + escAttr(a.nome) + '">' + (a.arquivadoNaLista?'↩ Restaurar':'📦 Arquivar') + '</button>'
           + '<button class="delete-aluno-btn" data-nome="' + escAttr(a.nome) + '">🗑️ Apagar</button>'
           + '</div></div>';
         }).join('');
@@ -8052,6 +8052,10 @@ window.AvaliacaoTreinoSync = (function () {
     var d=document.createElement('dialog');d.id=id;d.className='app-dialog';d.setAttribute('aria-labelledby',id+'Title');
     d.innerHTML='<h3 id="'+id+'Title">'+title+'</h3>'+content;
     document.body.appendChild(d);
+    var outsideDown=false;
+    function outside(event){var r=d.getBoundingClientRect();return event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom;}
+    d.addEventListener('pointerdown',function(event){outsideDown=outside(event);});
+    d.addEventListener('click',function(event){if(event.target===d&&outsideDown&&outside(event))d.close();outsideDown=false;});
     d.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){d.close();};});
     return d;
   }
@@ -9280,7 +9284,7 @@ window.AvaliacaoTreinoSync = (function () {
   });
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
-    document.getElementById('assessmentLibraryFrame').src = new URL('avaliacao.html?embed=treino36-library', location.href).href;
+    document.getElementById('assessmentLibraryFrame').src = new URL('avaliacao.html?embed=treino36-library&v=13', location.href).href;
     assessmentLibraryDialog.showModal();
   }
   var assessmentsButton = document.createElement('button'); assessmentsButton.type = 'button'; assessmentsButton.id = 'assessmentsLibraryBtn'; assessmentsButton.textContent = '📋 Avaliações'; assessmentsButton.onclick = abrirBibliotecaAvaliacoes;
@@ -9620,7 +9624,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
 
   var closeObsFocusButton = document.createElement('button');
-  closeObsFocusButton.id='closeObsFocusBtn';closeObsFocusButton.type='button';closeObsFocusButton.textContent='Fechar';closeObsFocusButton.onclick=function(){obsDialog.close();};
+  closeObsFocusButton.id='closeObsFocusBtn';closeObsFocusButton.type='button';closeObsFocusButton.textContent='✕';closeObsFocusButton.setAttribute('aria-label','Fechar observações');closeObsFocusButton.onclick=function(){obsDialog.close();};
   document.getElementById('expandObsBtn').after(closeObsFocusButton);
   document.getElementById('expandObsBtn').onclick = function() {
     obsDialog.classList.toggle('expanded');
