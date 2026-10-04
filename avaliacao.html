@@ -2,6 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
+<script src="storage-compression.js"></script>
+<script src="storage-adapter.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1316,7 +1318,7 @@ function renderizarGauge(metricKey, valor, sexo, idadeReal, label){
   const totalMin=zonas[0].min, totalMax=zonas[zonas.length-1].max;
   const pos=Math.max(0,Math.min(100,((v-totalMin)/(totalMax-totalMin))*100));
   const barras=zonas.map(z=>`<div style="flex:${z.max-z.min};background:${z.color}"></div>`).join('');
-  const labels=zonas.map(z=>`<span style="flex:${z.max-z.min}">${z.label}</span>`).join('');
+  const labels=zonas.map(z=>`<span class="gauge-legend-item"><i style="background:${z.color}" aria-hidden="true"></i>${z.label}</span>`).join('');
   return `<div class="gauge-card">
     <div class="gauge-title">${label}: <strong>${valor}</strong></div>
     <div class="gauge-bar">${barras}<div class="gauge-marker" style="left:${pos}%"></div></div>
@@ -1695,7 +1697,7 @@ function renderizarAlunos(alunosParaRenderizar){
           ${aluno.whatsapp?`<button class="btn-whatsapp-aluno btn-icone" title="WhatsApp" onclick="abrirWhatsApp(${aluno.id})">💬</button>`:''}
           <button class="btn-renomear-aluno btn-icone" title="Renomear" onclick="renomearAluno(${aluno.id})">✏️ Nome</button>
           <button class="btn-add-to-training" onclick="adicionarAvaliacaoAoTreino(${aluno.id})">＋ Ao treino</button>
-          <button class="btn-pdf-aluno" onclick="gerarPDFAluno(${aluno.id})">📄 PDF</button>
+          <button class="btn-pdf-aluno" onclick="abrirOpcoesPDFAvaliacao(${aluno.id})">📄 PDF</button>
           <button class="btn-postural-aluno" onclick="gerarPDFPosturalAluno(${aluno.id})">📸 Postural</button>
           <button class="btn-delete-assessment-client" title="Excluir cadastro da avaliação" onclick="apagarAluno(${aluno.id})">🗑️ Excluir</button>
         </div>

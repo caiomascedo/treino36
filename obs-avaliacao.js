@@ -14,10 +14,10 @@ window.ObsAssessmentEditor = (() => {
     let studentId,recordId,avId,section='composicao',api,opening=0,pdfChoice='auto';
     const el=(tag,attrs={},text)=>{const node=document.createElement(tag);Object.entries(attrs).forEach(([key,value])=>node.setAttribute(key,value));if(text!==undefined)node.textContent=text;return node;};
     const status=el('p',{class:'obs-assessment-status',role:'status'});
-    function current() {const records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);const person=records.find(a=>String(a.id)===String(recordId));if(!person)throw Error('O cadastro deste aluno não está disponível.');const av=person.avaliacoes.find(a=>String(a.id)===String(avId));return{records,person,av};}
+    function current(target) {const wantedRecord=target?target.recordId:recordId,wantedAv=target?target.avId:avId;const records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);const person=records.find(a=>String(a.id)===String(wantedRecord));if(!person)throw Error('O cadastro deste aluno não está disponível.');const av=person.avaliacoes.find(a=>String(a.id)===String(wantedAv));return{records,person,av};}
     function persist(state) {localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(state.records));AvaliacaoTreinoSync.syncTraining(state.records);config.changed();status.textContent='Salvo automaticamente nesta avaliação.';}
-    function update(key,value) {
-      try {const state=current();if(!state.av)return;state.av[key]=value;if(key==='peso'&&state.person.avaliacoes.slice(-1)[0]===state.av){state.person.pesoAtual=value;state.person.pesoAtualAvaliacaoId=state.av.id;}api.calculate(state.person,state.av.id);persist(state);updateResults(state);}
+    function update(key,value,target) {
+      try {const state=current(target);if(!state.av)return;state.av[key]=value;if(key==='peso'&&state.person.avaliacoes.slice(-1)[0]===state.av){state.person.pesoAtual=value;state.person.pesoAtualAvaliacaoId=state.av.id;}api.calculate(state.person,state.av.id);persist(state);if(String(state.person.id)===String(recordId)&&String(state.av.id)===String(avId))updateResults(state);}
       catch(error){status.textContent='Não foi possível salvar: '+error.message;}
     }
     function updateResults(state) {
@@ -53,7 +53,7 @@ window.ObsAssessmentEditor = (() => {
       state.person.avaliacoes.forEach((av,index)=>{const option=el('option',{value:av.id},(index+1)+' · '+(av.data||'Sem data'));option.selected=String(av.id)===String(avId);picker.append(option);});
       picker.onchange=()=>{avId=picker.value;render();};toolbar.append(picker);const add=el('button',{type:'button',class:'info-tool-btn',id:'obsNewAssessment'},'＋ Nova');add.onclick=newAssessment;toolbar.append(add);host.append(toolbar);
       if(!state.av){host.append(el('p',{},'Crie uma avaliação para registrar a data e as medidas.'),status);return;}
-      const dateWrap=el('div',{class:'obs-assessment-date info-field'}),date=el('input',{type:'date',id:'obsAssessmentDate','aria-label':'Data desta avaliação'});const parts=(state.av.data||'').split('/');date.value=parts.length===3?parts.reverse().join('-'):state.av.data||'';date.onchange=()=>{update('data',date.value.split('-').reverse().join('/'));const option=picker.selectedOptions[0];if(option)option.textContent=(picker.selectedIndex+1)+' · '+current().av.data;};dateWrap.append(el('label',{for:'obsAssessmentDate'},'Data da avaliação'),date);host.append(dateWrap);
+      const dateWrap=el('div',{class:'obs-assessment-date info-field'}),date=el('input',{type:'date',id:'obsAssessmentDate','aria-label':'Data desta avaliação'});const parts=(state.av.data||'').split('/');date.value=parts.length===3?parts.reverse().join('-'):state.av.data||'';date.onchange=()=>{update('data',date.value.split('-').reverse().join('/'));const option=picker.selectedOptions[0];if(option)option.textContent=(picker.selectedIndex+1)+' · '+current().av.data;};dateWrap.append(el('label',{for:'obsAssessmentDate'},'Data'),date);host.append(dateWrap);
       const content=el('div',{class:'obs-assessment-fields info-grid','data-section':section});host.append(content);
       if(section==='composicao') {
         const sexWrap=el('div',{class:'info-field'}),sex=el('select',{id:'obsAssessmentSex','aria-label':'Sexo para cálculo'});
@@ -69,7 +69,7 @@ window.ObsAssessmentEditor = (() => {
       if(section==='fotos') {
         [['fotoF','Frontal'],['fotoL','Lateral'],['fotoD','Dorsal']].forEach(([key,label])=>{
           const box=el('div',{class:'obs-assessment-photo'}),input=el('input',{type:'file',accept:'image/*',id:'obs-av-'+key,'aria-label':'Foto '+label}),image=el('img',{alt:'Foto '+label});image.hidden=!state.av[key];if(state.av[key])image.src=state.av[key];
-          input.onchange=async()=>{const file=input.files[0];if(!file)return;try{const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});update(key,data);image.src=data;image.hidden=false;}catch(e){status.textContent='Não foi possível carregar a foto.';}};
+          input.onchange=async()=>{const file=input.files[0];if(!file)return;const target={recordId,avId};try{const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});update(key,data,target);image.src=data;image.hidden=false;}catch(e){status.textContent='Não foi possível carregar a foto.';}};
           const remove=el('button',{type:'button',class:'info-tool-btn'},'Apagar foto');remove.onclick=()=>{update(key,null);image.removeAttribute('src');image.hidden=true;input.value='';};box.append(el('label',{for:input.id},label),image,input,remove);content.append(box);
         });
         [['motivo','Objetivo'],['resumo','Análise postural']].forEach(([key,label])=>{const wrap=el('div',{class:'info-field'}),input=el('textarea',{'data-av-field':key,id:'obs-av-'+key});input.value=state.av[key]||'';input.oninput=()=>update(key,input.value);wrap.append(el('label',{for:input.id},label),input);content.append(wrap);});
