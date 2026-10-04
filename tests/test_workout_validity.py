@@ -13,6 +13,11 @@ with sync_playwright() as p:
     page.goto('http://app.test/treino36/')
     page.evaluate("""() => {localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',treino_id:'work-a',treino:{A:['Agachamento 3x10']}},{student_id:'b',nome:'Bruno',treino_id:'work-b',treino:{A:['Supino 3x10']}}]));localStorage.setItem('avaliacao_fisica_alunos','[]');}""")
     page.reload();expect(page.locator('#workoutValiditySummary')).not_to_be_visible()
+    page.locator('#workoutValidityBtn').click()
+    expect(page.locator('#workoutValidityDialogTitle')).to_be_focused()
+    expect(page.locator('#validityStart')).to_have_value(page.evaluate('WorkoutValidity.today()'))
+    page.locator('#validityStart').click();expect(page.locator('#validityStart')).to_be_focused()
+    page.locator('#workoutValidityDialog [data-close]').click()
     cases=[('2026-01-31','months',1,'2026-02-28'),('2024-02-29','months',12,'2025-02-28'),('2026-10-04','days',45,'2026-11-18'),('2026-12-31','months',3,'2027-03-31')]
     for start,unit,amount,expected in cases:assert page.evaluate('args=>WorkoutValidity.calculate(args[0],{unit:args[1],amount:args[2]})',[start,unit,amount])==expected
     for value in ['d7','d14','m1','d45','m2','m3','custom']:
