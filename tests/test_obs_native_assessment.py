@@ -108,7 +108,7 @@ with sync_playwright() as p:
     assert state['avaliacoes'][0]['peso']=='74.50' and state['avaliacoes'][1]['peso']=='71',state
     assert state['avaliacoes'][0]['cintura']=='79' and state['avaliacoes'][1]['cintura']=='78'
     assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].treino.A[0]")=='Agachamento 3x10'
-    page.locator('#workoutObsDialog [data-close]').click();page.locator('#studentEvaluationBtn').click()
+    page.locator('#workoutObsDialog [data-close]').click();page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
     expect(page.locator('#obs-av-peso')).to_have_value('74.50')
     expect(page.locator('#infoPeso')).to_have_value('75')
     expect(page.locator('#obsContent')).not_to_be_visible()

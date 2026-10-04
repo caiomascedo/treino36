@@ -36,8 +36,8 @@ with sync_playwright() as p:
   student=page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0]")
   assert student['avaliacaoId']==10 and student['treino']['A']==['Agachamento 3x10']
  seed(True)
- page.locator('#searchName').fill('Aluno teste');page.locator('#studentEvaluationBtn').click();assertions()
- page.locator('#closeObsFocusBtn').click();page.locator('#assessmentsLibraryBtn').click()
+ page.locator('#searchName').fill('Aluno teste');page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click();assertions()
+ page.locator('#workoutObsDialog [data-close]').click();page.locator('#assessmentsLibraryBtn').click()
  library=page.frame_locator('#assessmentLibraryFrame');library.locator('.aluno-nome').click();library.locator('.aluno-content > .assessment-tabs [data-section="avaliacoes"]').click();library.locator('#av-item-11 .av-header').click();library.locator('#av-item-11 .assessment-tabs [data-section="medidas"]').click()
  expect(library.locator('#biceps-10-11')).to_have_value('31 / 30')
  page.locator('#assessmentLibraryDialog [data-close]').click()
@@ -47,5 +47,5 @@ with sync_playwright() as p:
  library.locator('.btn-add-to-training[onclick="adicionarAvaliacaoAoTreino(10)"]').click()
  expect(library.locator('.assessment-training-confirm')).to_be_visible();library.locator('.assessment-training-confirm').check();library.locator('.assessment-training-add').click()
  expect(library.locator('.training-student-picker')).to_have_count(0)
- page.locator('#assessmentLibraryDialog [data-close]').click();page.locator('#searchName').fill('Aluno teste');page.locator('#studentEvaluationBtn').click();assertions()
+ page.locator('#assessmentLibraryDialog [data-close]').click();page.locator('#searchName').fill('Aluno teste');page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click();assertions()
  browser.close();print('PASS: old/imported and new linked histories reunited; original date/sex/photos/measures retained, current 71kg independent of historical 74.50kg; explicit duplicate-link repair and two-way edits')

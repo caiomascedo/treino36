@@ -41,7 +41,7 @@
 #workoutObsDialog.assessment-focus .obs-info-relevante-wrap{border:0;margin:0}
 #workoutObsDialog.assessment-focus #infoRelevanteContent{border:0;padding:0}
 #workoutObsDialog.assessment-focus>.obs-header-bar{position:sticky;top:-10px;justify-content:flex-end;padding:5px 0;margin:0 0 5px;background:white;z-index:6}
-#workoutObsDialog.assessment-focus #closeObsFocusBtn{display:inline-block}
+#workoutObsDialog.expanded #closeObsFocusBtn{display:inline-block}
 #workoutObsDialog.assessment-focus #obsNativeAssessment{margin-top:6px}
 #workoutObsDialog.assessment-focus #obsAssessmentSections{position:static;background:white;padding:3px 0;margin:0}
 

@@ -35,8 +35,8 @@ with sync_playwright() as p:
     assert created['whatsapp']=='86911111111' and created['infoRelevante']['idade']=='32'
     assert created['infoRelevante']['peso']=='65' and created['infoRelevante']['email']=='ana@example.com'
     page.locator('#assessmentLibraryDialog [data-close]').click()
-    page.locator('#searchName').fill('Ana Silva');page.locator('#studentEvaluationBtn').click()
-    frame=page.frame_locator('#trainingEvaluationFrame');expect(frame.locator('[id^="peso-input-"]')).to_have_value('65')
+    page.locator('#searchName').fill('Ana Silva');page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
+    expect(page.locator('#obs-av-peso')).to_have_value('65')
     page.locator('#workoutObsDialog [data-close]').click()
     page.once('dialog',lambda dialog:dialog.accept('86922222222'))
     page.locator('#wppIconBtn').click()

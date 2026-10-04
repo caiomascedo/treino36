@@ -1428,8 +1428,8 @@ window.AvaliacaoTreinoSync = (function () {
 
 </script>
 <script src="avaliacao-import.js?v=17"></script>
-<script src="obs-avaliacao.js?v=18"></script>
-<link rel="stylesheet" href="obs-avaliacao.css?v=18">
+<script src="obs-avaliacao.js?v=19"></script>
+<link rel="stylesheet" href="obs-avaliacao.css?v=19">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -5133,6 +5133,14 @@ window.AvaliacaoTreinoSync = (function () {
   function restaurarAlunoApagado() {
     if (!alunoApagadoRecente || !alunoApagadoRecente.aluno) return false;
     var recuperado = alunoApagadoRecente.aluno;
+    if(alunoApagadoRecente.avaliacoes && alunoApagadoRecente.avaliacoes.length) {
+      try {
+        var records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+        alunoApagadoRecente.avaliacoes.forEach(function(record){if(!records.some(function(saved){return String(saved.id)===String(record.id);}))records.push(cloneData(record));});
+        localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(records));
+        (alunoApagadoRecente.vinculos||[]).forEach(function(link){var student=alunos.find(function(saved){return saved.student_id===link.studentId;});if(student&&!student.avaliacaoId){student.avaliacaoId=link.avaliacaoId;student.avaliacaoFichaId=link.avaliacaoFichaId;}});
+      } catch(error) {exibirMensagem('Não foi possível restaurar as avaliações: '+error.message,'#b22222',false);return false;}
+    }
     var idx = Math.min(alunoApagadoRecente.indice, alunos.length);
     var existenteIdx = alunos.findIndex(function(a) { return normalizarNome(a.nome) === normalizarNome(recuperado.nome); });
     if (existenteIdx !== -1) {
@@ -6325,6 +6333,33 @@ window.AvaliacaoTreinoSync = (function () {
     pushState();
   }
   
+  function apagarTreinoEAvaliacao(idx) {
+    var student = alunos[idx], records;
+    try {records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);}catch(error){exibirMensagem('Não foi possível ler as avaliações. A exclusão foi cancelada.','#b22222',false);return false;}
+    var removed = records.filter(function(record){return AvaliacaoTreinoSync.isLinked(record,student.student_id) || (student.avaliacaoId && String(record.id)===String(student.avaliacaoId));});
+    var recordIds = removed.map(function(record){return String(record.id);});
+    var previousStudents = cloneData(alunos), previousUndo = alunoApagadoRecente;
+    var snapshot = {aluno:cloneData(student),indice:idx,eraFavorito:isFavorito(student.nome),avaliacoes:cloneData(removed),vinculos:[]};
+    try {
+      alunos.forEach(function(other){
+        if(recordIds.includes(String(other.avaliacaoId)) || removed.some(function(record){return AvaliacaoTreinoSync.isLinked(record,other.student_id);})) {
+          snapshot.vinculos.push({studentId:other.student_id,avaliacaoId:other.avaliacaoId,avaliacaoFichaId:other.avaliacaoFichaId});
+          delete other.avaliacaoId; delete other.avaliacaoFichaId;
+        }
+      });
+      alunos.splice(idx,1);
+      if(removed.length)localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(records.filter(function(record){return !recordIds.includes(String(record.id));})));
+      if(!salvarLocalStorage())throw Error('Não foi possível salvar a exclusão.');
+      alunoApagadoRecente=snapshot;
+      removerFavorito(student.nome);
+      return true;
+    } catch(error) {
+      alunos=previousStudents;alunoApagadoRecente=previousUndo;
+      if(removed.length)localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(records));
+      exibirMensagem(error.message,'#b22222',false);return false;
+    }
+  }
+
   function apagarAlunoAtual() {
     concluirAutoSave();
     var nome = document.getElementById('searchName').value.trim();
@@ -6333,19 +6368,11 @@ window.AvaliacaoTreinoSync = (function () {
     if (idx === -1) { exibirMensagem('❌ Aluno "' + nome + '" não encontrado.', '#b22222', false); return; }
     
     var alunoAlvo = alunos[idx];
-    if (!confirm('Deseja realmente apagar o aluno "' + alunoAlvo.nome + '"?\n\nEsta ação apagará todo o treino e histórico deste aluno.')) {
+    if (!confirm('Deseja realmente apagar o aluno "' + alunoAlvo.nome + '"?\n\nEsta ação apagará este treino, seu histórico e também o cadastro e todas as avaliações vinculadas. Outros treinos da pessoa serão mantidos sem o vínculo com a avaliação.')) {
       return;
     }
 
-    alunoApagadoRecente = {
-      aluno: JSON.parse(JSON.stringify(alunoAlvo)),
-      indice: idx,
-      eraFavorito: isFavorito(alunoAlvo.nome)
-    };
-
-    removerFavorito(nome);
-    alunos.splice(idx, 1);
-    salvarLocalStorage();
+    if(!apagarTreinoEAvaliacao(idx))return;
 
     var undoBtnHtml = ' <button id="undoDeleteStudentBtn" type="button" style="margin-left:8px;background:#2563eb;color:#ffffff;border:none;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:bold;cursor:pointer;">↩️ Desfazer</button>';
     exibirMensagem('🗑️ Aluno <strong>' + escHtml(alunoAlvo.nome) + '</strong> removido.' + undoBtnHtml, '#b22222', false);
@@ -6639,16 +6666,10 @@ window.AvaliacaoTreinoSync = (function () {
         if (e.target.closest('.delete-aluno-btn')) {
           concluirAutoSave();
           var nome = item.dataset.nome;
-          if (confirm('Deseja realmente apagar o aluno "' + nome + '"?\n\nEsta ação apagará todo o treino deste aluno.')) {
+          if (confirm('Deseja realmente apagar o aluno "' + nome + '"?\n\nEsta ação apagará este treino, seu histórico e também o cadastro e todas as avaliações vinculadas. Outros treinos da pessoa serão mantidos sem o vínculo com a avaliação.')) {
             var idx = alunos.findIndex(function(a) { return a.nome === nome; });
             if (idx !== -1) {
-              alunoApagadoRecente = {
-                aluno: JSON.parse(JSON.stringify(alunos[idx])),
-                indice: idx,
-                eraFavorito: isFavorito(alunos[idx].nome)
-              };
-              removerFavorito(nome);
-              alunos.splice(idx, 1); salvarLocalStorage();
+              if(!apagarTreinoEAvaliacao(idx))return;
               var undoBtnHtml = ' <button id="undoDeleteStudentBtn" type="button" style="margin-left:8px;background:#2563eb;color:#ffffff;border:none;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:bold;cursor:pointer;">↩️ Desfazer</button>';
               exibirMensagem('🗑️ "' + escHtml(nome) + '" removido.' + undoBtnHtml, '#b22222', false);
               if (alunos.length === 0) {
@@ -8725,7 +8746,7 @@ window.AvaliacaoTreinoSync = (function () {
         '<span id="infoToggleAction" class="panel-toggle-action">Maximizar</span>'+
       '</button>'+
       '<div id="infoRelevanteContent" class="info-relevante-content" hidden>'+
-        '<div class="info-tools-bar"><button type="button" id="openEvaluationBtn" class="info-tool-btn primary">📊 Fazer / editar avaliação</button><button type="button" id="saveFichaEvaluationBtn" class="info-tool-btn">💾 Salvar ficha na avaliação</button></div>'+
+        '<div class="info-tools-bar"><button type="button" id="openEvaluationBtn" class="info-tool-btn primary" aria-expanded="false" aria-controls="obsNativeAssessment">📊 Fazer / editar avaliação</button><button type="button" id="saveFichaEvaluationBtn" class="info-tool-btn">💾 Salvar ficha na avaliação</button></div>'+
         '<p>Preencha pelas abas abaixo. Os dados também aparecem em Avaliações.</p>'+
         '<div id="obsAssessmentSections" class="info-tools-bar" aria-label="Editar avaliação pelas Obs"><button type="button" class="info-tool-btn" data-assessment-section="composicao">Composição</button><button type="button" class="info-tool-btn" data-assessment-section="medidas">Medidas (cm)</button><button type="button" class="info-tool-btn" data-assessment-section="dobras">Dobras / resultados</button><button type="button" class="info-tool-btn" data-assessment-section="fotos">Fotos</button></div>'+
         '<section id="obsNativeAssessment" hidden></section>'+
@@ -9537,10 +9558,11 @@ window.AvaliacaoTreinoSync = (function () {
     atualizarFichaDaAvaliacao([record], student, true);
     return record;
   }
-  var obsNativeEditor = ObsAssessmentEditor.mount(document.getElementById('obsNativeAssessment'), {ensure:obterCadastroAvaliacaoObs,changed:function(records){atualizarFichaDaAvaliacao(records,null,true);},minimized:function(){if(obsDialog.classList.contains('assessment-focus'))document.getElementById('expandObsBtn').click();}});
+  var obsNativeEditor = ObsAssessmentEditor.mount(document.getElementById('obsNativeAssessment'), {ensure:obterCadastroAvaliacaoObs,changed:function(records){atualizarFichaDaAvaliacao(records,null,true);},visibilityChanged:function(visible){var button=document.getElementById('openEvaluationBtn');button.textContent=visible?'Minimizar avaliação':'📊 Fazer / editar avaliação';button.setAttribute('aria-expanded',String(visible));if(visible&&obsDialog.classList.contains('expanded'))obsDialog.classList.add('assessment-focus');},minimized:function(){if(obsDialog.classList.contains('assessment-focus'))document.getElementById('expandObsBtn').click();}});
   window.addEventListener('avaliacoes-importadas', function(){if(obsNativeEditor)obsNativeEditor.refresh();});
   function abrirSecaoObsDiretamente(student) { abrirFormularioAvaliacao(student, false); }
   document.getElementById('openEvaluationBtn').onclick = function (event) {
+    if(!document.getElementById('obsNativeAssessment').hidden){obsNativeEditor.minimize();return;}
     if (!event || event.isTrusted) obsAssessmentSection = null;
     var student = alunoDasObservacoes();
     if (!student) { exibirMensagem('Salve o aluno no treino antes de criar a avaliação.', '#b22222', false); return; }
@@ -9615,13 +9637,15 @@ window.AvaliacaoTreinoSync = (function () {
   studentEvaluationButton.onclick = function () {
     var student = alunoDasObservacoes();
     if (!student) { exibirMensagem('Selecione um aluno cadastrado no treino.', '#b22222', false); return; }
-    abrirObservacoes(); definirPainelInformacoes(true); definirPainelObservacoes(false); abrirSecaoObsDiretamente(student);
+    abrirObservacoes(); definirPainelInformacoes(true); definirPainelObservacoes(false);
+    document.getElementById('infoTabsList').scrollIntoView({block:'nearest'});
   };
 
   function abrirObservacoes() {
     obsStudentId = null;
     obsAssessmentSection = null;
     if (obsNativeEditor) obsNativeEditor.reset();
+    document.querySelectorAll('#obsAssessmentSections button').forEach(function(button){button.setAttribute('aria-pressed','false');button.classList.remove('primary');});
     atualizarFichaDaAvaliacao(null, alunoDasObservacoes(), true);
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) {
@@ -9692,7 +9716,7 @@ window.AvaliacaoTreinoSync = (function () {
     obsDialog.classList.remove('assessment-focus');
     if(expanded) {
       var student=alunoDasObservacoes();
-      if(student) {obsDialog.classList.add('assessment-focus');definirPainelInformacoes(true);if(document.getElementById('obsNativeAssessment').hidden)abrirSecaoObsDiretamente(student);obsDialog.scrollTop=0;}
+      if(student) {definirPainelInformacoes(true);if(!document.getElementById('obsNativeAssessment').hidden)obsDialog.classList.add('assessment-focus');obsDialog.scrollTop=0;}
     }
     this.textContent = expanded ? '↙ Minimizar janela' : '⛶ Maximizar janela';
     this.setAttribute('aria-pressed', String(expanded));
