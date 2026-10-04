@@ -86,7 +86,9 @@ function adicionarAvaliacaoAoTreino(recordId) {
   function selection() {
     const student=students.find(s=>s.student_id===select.value), linked=student && AvaliacaoTreinoSync.isLinked(initialRecord,student.student_id);
     dialog.querySelector('.assessment-training-name-wrap').hidden=select.value!=='new';
-    dialog.querySelector('.assessment-training-confirm-wrap').hidden=select.value==='new' || !!linked;
+    const other=student && AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).find(a=>a.id!==initialRecord.id && AvaliacaoTreinoSync.isLinked(a,student.student_id));
+    dialog.querySelector('.assessment-training-confirm-wrap').hidden=select.value==='new' || (!!linked && !other);
+    check.parentElement.lastChild.textContent=other?' Confirmo que os dois cadastros são da mesma pessoa e desejo reunir o histórico':' Confirmo que é a mesma pessoa';
     check.checked=false; dialog.querySelector('.picker-status').textContent='';
     dialog.querySelector('.assessment-training-add').textContent=linked?'Atualizar cadastro no treino':'Adicionar ao treino';
   }
@@ -110,7 +112,8 @@ function adicionarAvaliacaoAoTreino(recordId) {
         if(!student) throw Error('Selecione novamente o aluno do treino.');
         if(!AvaliacaoTreinoSync.isLinked(record,student.student_id) && !check.checked) throw Error('Confirme que é a mesma pessoa antes de adicionar.');
         const other=records.find(a=>a.id!==record.id && AvaliacaoTreinoSync.isLinked(a,student.student_id));
-        if(other) throw Error('Este treino já está vinculado a '+other.nome+'. Selecione outro treino ou crie um cadastro.');
+        if(other && !check.checked) throw Error('Confirme que os dois cadastros são da mesma pessoa para reunir as avaliações.');
+        if(other) AvaliacaoTreinoSync.join(records,record,other);
       } else {
         if(!name.value.trim()) throw Error('Digite o nome do aluno no treino.');
         if(students.some(s=>nomeAlunoNaAvaliacao(s.nome)===nomeAlunoNaAvaliacao(name.value))) throw Error('Já existe esse nome no treino. Selecione o cadastro existente ou escolha outro nome para o novo treino.');
@@ -123,6 +126,8 @@ function adicionarAvaliacaoAoTreino(recordId) {
         ['A','B','C','D','E','F'].forEach(key=>{student.treino[key]=[];student.titulos[key]=key+'. TREINO '+key;});
         students.push(student);
       }
+      const selected=record.avaliacaoPreferidaId || record.avaliacoes.slice(-1)[0]?.id;
+      if(selected)record.avaliacaoPreferidaId=selected;
       AvaliacaoTreinoSync.link(record,student.student_id); AvaliacaoTreinoSync.toFicha(student,record);
       localStorage.setItem('treinoAlunos',JSON.stringify(students));
       localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(records));

@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
-<script src="storage-compression.js?v=14"></script>
-<script src="storage-adapter.js?v=14"></script>
+<script src="storage-compression.js?v=15"></script>
+<script src="storage-adapter.js?v=15"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
 
@@ -151,6 +151,28 @@ window.AvaliacaoTreinoSync = (function () {
     record.treinoStudentIds = Array.from(new Set(ids));
     if (!record.treinoStudentId) record.treinoStudentId = ids[0];
   }
+  function resolve(records, student) {
+    var selected=records.find(function(a){return String(a.id)===String(student.avaliacaoId) && isLinked(a,student.student_id);});
+    return selected || records.find(function(a){return isLinked(a,student.student_id);}) || null;
+  }
+  function join(records, target, source) {
+    if(!source || target===source)return target;
+    var chosen=(target.avaliacoes||[]).slice(-1)[0];
+    var ids=new Set((target.avaliacoes||[]).map(function(a){return String(a.id);}));
+    target.avaliacoes=target.avaliacoes||[];
+    (source.avaliacoes||[]).forEach(function(av){
+      if(!ids.has(String(av.id))){target.avaliacoes.push(JSON.parse(JSON.stringify(av)));ids.add(String(av.id));}
+      else {var saved=target.avaliacoes.find(function(a){return String(a.id)===String(av.id);});Object.keys(av).forEach(function(k){if(saved[k]===undefined||saved[k]===null||saved[k]==='')saved[k]=av[k];});}
+    });
+    target.avaliacoes.sort(function(a,b){function date(v){var p=String(v||'').split('/');return p.length===3?Date.parse(p[2]+'-'+p[1]+'-'+p[0]):0;}return (date(a.data)-date(b.data))||Number(a.id)-Number(b.id);});
+    Object.keys(source).forEach(function(k){if(['id','avaliacoes','treinoStudentId','treinoStudentIds','avaliacaoPreferidaId','__proto__','constructor','prototype'].includes(k))return;if(target[k]===undefined||target[k]===null||target[k]==='')target[k]=JSON.parse(JSON.stringify(source[k]));});
+    if(source.pesoAtual&&!target.pesoAtual){target.pesoAtual=source.pesoAtual;target.pesoAtualAvaliacaoId=source.pesoAtualAvaliacaoId;}
+    var linked=(source.treinoStudentIds||[]).slice();if(source.treinoStudentId)linked.push(source.treinoStudentId);
+    linked.forEach(function(id){link(target,id);});
+    if(chosen)target.avaliacaoPreferidaId=chosen.id;
+    var index=records.indexOf(source);if(index>=0)records.splice(index,1);
+    return target;
+  }
   function find(records, student) {
     var linked = records.filter(function (a) { return isLinked(a, student.student_id); });
     if (linked.length === 1) return linked[0];
@@ -186,7 +208,8 @@ window.AvaliacaoTreinoSync = (function () {
     student.infoGuias = guias;
     student.avaliacaoFichaId = ficha.id;
     var latest = (record.avaliacoes || []).slice(-1)[0];
-    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId) === String(latest.id)) ? record.pesoAtual : (latest ? (latest.peso || '') : (record.pesoIni || ''))});
+    var currentWeight=record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId)===String(latest.id)) ? record.pesoAtual : (!record.pesoAtual && number(ficha.peso) ? number(ficha.peso) : (latest ? (latest.peso || '') : (record.pesoIni || '')));
+    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:currentWeight});
     student.infoRelevante = Object.assign({}, ficha);
     student.whatsapp = record.whatsapp || '';
     student.avaliacaoId = record.id;
@@ -196,7 +219,7 @@ window.AvaliacaoTreinoSync = (function () {
     var students = read('treinoAlunos'), changed = false;
     students.forEach(function (student) {
       if (!student.student_id) return;
-      var record = records.find(function (a) { return isLinked(a, student.student_id); });
+      var record = resolve(records, student);
       if (!record) return;
       var before = JSON.stringify(student);
       toFicha(student, record);
@@ -204,13 +227,13 @@ window.AvaliacaoTreinoSync = (function () {
     });
     if (changed) localStorage.setItem('treinoAlunos', JSON.stringify(students));
   }
-  return {key:key, read:read, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, syncTraining:syncTraining};
+  return {key:key, read:read, resolve:resolve, join:join, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, syncTraining:syncTraining};
 })();
 
 </script>
-<script src="avaliacao-import.js?v=14"></script>
-<link rel="stylesheet" href="avaliacao-compacta.css?v=14">
-<script src="avaliacao-compacta.js?v=14"></script>
+<script src="avaliacao-import.js?v=15"></script>
+<link rel="stylesheet" href="avaliacao-compacta.css?v=15">
+<script src="avaliacao-compacta.js?v=15"></script>
 </head>
 <body>
 
