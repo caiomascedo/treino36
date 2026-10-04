@@ -20,6 +20,8 @@ with sync_playwright() as p:
   page.reload()
  def assertions():
   expect(page.locator('#obsAssessmentHistory option')).to_have_count(2)
+  expect(page.locator('#obsAssessmentDate')).to_have_value('2026-10-03')
+  page.locator('#obsAssessmentHistory').select_option('11')
   expect(page.locator('#obsAssessmentDate')).to_have_value('2026-07-11')
   expect(page.locator('#obs-av-peso')).to_have_value('74.50')
   expect(page.locator('#infoPeso')).to_have_value('71')

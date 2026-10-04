@@ -187,7 +187,14 @@ window.AvaliacaoTreinoSync = (function () {
     var m = String(value || '').replace(',', '.').match(/\d+(?:\.\d+)?/);
     return m ? m[0] : '';
   }
+  function history(record) {
+    function date(av) { var value=String(av.data||''),p=value.split('/');return p.length===3?Date.parse(p[2]+'-'+p[1]+'-'+p[0]):Date.parse(value); }
+    return (record.avaliacoes||[]).slice().sort(function(a,b){var da=date(a),db=date(b);return (Number.isFinite(da)&&Number.isFinite(db)?da-db:0)||Number(a.id)-Number(b.id);});
+  }
   function fromFicha(student, record, ficha, previous) {
+    var ordered=history(record),latest=ordered.at(-1);
+    var av=ordered.find(function(item){return String(item.id)===String(ficha.avaliacaoOrigemId);});
+    var isCurrent=!av||av===latest;
     var map = { idade:'idade', altura:'altura', dataNasc:'nasc', nomeCompleto:'nome', whats:'whatsapp', email:'email' };
     Object.keys(map).forEach(function (field) {
       if (previous && ficha[field] === previous[field]) return;
@@ -195,26 +202,39 @@ window.AvaliacaoTreinoSync = (function () {
       if (field === 'nomeCompleto' && !value) return;
       if (field === 'altura') { value = number(value); if (Number(value) > 3) value = String(Number(value) / 100); }
       if (field === 'idade') value = number(value);
-      record[map[field]] = value;
+      if(isCurrent)record[map[field]] = value;
+      if(av){av.ficha=Object.assign({},av.ficha);av.ficha[field]=value;}
     });
     if (!previous || ficha.peso !== previous.peso) {
-      record.pesoAtual = number(ficha.peso);
-      record.pesoAtualAvaliacaoId = (record.avaliacoes || []).slice(-1)[0]?.id || null;
-      if (!(record.avaliacoes || []).length) record.pesoIni = number(ficha.peso);
+      var weight=number(ficha.peso);
+      if(av)av.peso=weight;
+      if(isCurrent){record.pesoAtual=weight;record.pesoAtualAvaliacaoId=latest?.id||null;}
+      if (!ordered.length) record.pesoIni = weight;
     }
   }
   function toFicha(student, record) {
-    var guias = student.infoGuias || [];
-    var ficha = guias.find(function (g) { return g.id === student.avaliacaoFichaId; }) || guias[0];
-    if (!ficha) { ficha = Object.assign({id:'1', titulo:'Ficha 1'}, student.infoRelevante || {}); guias.push(ficha); }
-    student.infoGuias = guias;
-    student.avaliacaoFichaId = ficha.id;
-    var latest = (record.avaliacoes || []).slice(-1)[0];
-    var currentWeight=record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId)===String(latest.id)) ? record.pesoAtual : (!record.pesoAtual && number(ficha.peso) ? number(ficha.peso) : (latest ? (latest.peso || '') : (record.pesoIni || '')));
-    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:currentWeight, avaliacaoOrigemId:latest?latest.id:null, avaliacaoOrigemData:latest?(latest.data || ''):''});
-    student.infoRelevante = Object.assign({}, ficha);
-    student.whatsapp = record.whatsapp || '';
-    student.avaliacaoId = record.id;
+    var guias=student.infoGuias||[],ordered=history(record),latest=ordered.at(-1);
+    var legacy=guias.find(function(g){return g.id===student.avaliacaoFichaId;})||guias.find(function(g){return student.infoRelevante&&g.id===student.infoRelevante.id;})||guias.at(-1);
+    var used=new Set(),mapped=[];
+    ordered.forEach(function(av){
+      var ficha=guias.find(function(g){return String(g.avaliacaoOrigemId)===String(av.id);});
+      if(!ficha&&av===latest&&legacy&&!legacy.avaliacaoOrigemId)ficha=legacy;
+      if(!ficha)ficha={id:'av-'+record.id+'-'+av.id};
+      used.add(ficha);
+      var currentWeight=av===latest&&record.pesoAtual&&(!record.pesoAtualAvaliacaoId||String(record.pesoAtualAvaliacaoId)===String(av.id))?record.pesoAtual:(av.peso||'');
+      var common={idade:record.idade||'',altura:record.altura||'',dataNasc:record.nasc||'',nomeCompleto:record.nome||'',whats:record.whatsapp||'',email:record.email||''};
+      Object.assign(ficha,common,av.ficha||{}, {peso:currentWeight,avaliacaoOrigemId:av.id,avaliacaoOrigemData:av.data||'',avaliacaoCadastroId:record.id});
+      mapped.push(ficha);
+    });
+    // Keep old manual fichas. An assessment removed from history no longer leaves a generated ficha.
+    var manual=guias.filter(function(g){return !used.has(g)&&!g.avaliacaoOrigemId;});
+    var all=manual.concat(mapped);
+    if(!all.length){all=[Object.assign({id:'1',titulo:'Ficha 1'},student.infoRelevante||{})];}
+    all.forEach(function(g,i){g.titulo='Ficha '+(i+1);});
+    var ficha=mapped.at(-1)||all.at(-1);
+    if(!ordered.length)Object.assign(ficha,{idade:record.idade||'',altura:record.altura||'',dataNasc:record.nasc||'',nomeCompleto:record.nome||'',whats:record.whatsapp||'',email:record.email||'',peso:record.pesoAtual||ficha.peso||record.pesoIni||'',avaliacaoOrigemId:null,avaliacaoOrigemData:''});
+    student.infoGuias=all;student.avaliacaoFichaId=ficha.id;
+    student.infoRelevante=Object.assign({},ficha);student.whatsapp=record.whatsapp||'';student.avaliacaoId=record.id;
     return ficha;
   }
   // Compare only the fields changed by synchronization, without workout history.
@@ -233,7 +253,7 @@ window.AvaliacaoTreinoSync = (function () {
     });
     if (changed) localStorage.setItem('treinoAlunos', JSON.stringify(students));
   }
-  return {key:key, read:read, resolve:resolve, join:join, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, fichaState:fichaState, syncTraining:syncTraining};
+  return {key:key, history:history, read:read, resolve:resolve, join:join, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, fichaState:fichaState, syncTraining:syncTraining};
 })();
 
 </script>
@@ -944,6 +964,8 @@ function atualizarAluno(id,campo,valor){
       if(el) el.value=idadeCalc;
     }
   }
+  const latest=AvaliacaoTreinoSync.history(aluno).at(-1),fichaField={nome:'nomeCompleto',nasc:'dataNasc',idade:'idade',altura:'altura',whatsapp:'whats',email:'email'}[campo];
+  if(latest&&fichaField){latest.ficha=Object.assign({},latest.ficha,{[fichaField]:valor});if(campo==='nasc')latest.ficha.idade=aluno.idade;}
   if (['altura','idade','nasc','sexo'].includes(campo)) (aluno.avaliacoes || []).forEach(av => calcularIMCeDobras(aluno, av.id));
   salvarDados();
   if(campo!=='nasc') filtrarAlunos();
@@ -960,6 +982,7 @@ function adicionarAvaliacao(alunoId){
     id:Date.now(),
     data:new Date().toLocaleDateString('pt-BR'),
     protocolo:protocoloAnterior,
+    ficha:{idade:aluno.idade||'',altura:aluno.altura||'',dataNasc:aluno.nasc||'',nomeCompleto:aluno.nome||'',whats:aluno.whatsapp||'',email:aluno.email||''},
     peso:aluno.avaliacoes.length ? '' : (aluno.pesoIni || ''),imc:'',gordura:'',visceral:'',massamuscular:'',proteina:'',agua:'',tmb:'',
     peitoral:'',biceps:'',barriga:'',cintura:'',quadril:'',coxa:'',
     triceps:'',axilar:'',torax:'',abdominal:'',suprailiaca:'',subescapular:'',pregaCoxa:'',panturrilha:'',
@@ -1043,12 +1066,12 @@ const LABELS_DOBRAS = {
 function calcularIMCeDobras(aluno,avId){
   const av=aluno.avaliacoes.find(a=>a.id===avId);
   if(!av) return;
-  const altura=pf(aluno.altura), peso=pf(av.peso);
+  const altura=pf(av.ficha?.altura ?? aluno.altura), peso=pf(av.peso);
   av.imc = !isNaN(altura)&&!isNaN(peso)&&altura>0 ? (peso/(altura*altura)).toFixed(1) : '';
-  const idade=pf(aluno.idade);
+  const idade=pf(av.ficha?.idade ?? aluno.idade);
   av.tmb=calcularTMB(aluno.sexo,idade,peso,altura);
   // fallback: idade metabólica pelo % gordura manual (balança) — sobrescrita abaixo se as dobras forem calculadas
-  av.idadeMetabolica = av.gordura ? calcularIdadeMetabolica(aluno.sexo, aluno.idade, av.gordura) : '';
+  av.idadeMetabolica = av.gordura ? calcularIdadeMetabolica(aluno.sexo, idade, av.gordura) : '';
 
   // protocolos antigos (ex.: Petroski 4 dobras, removido) caem automaticamente no padrão de 7 dobras
   if(!PROTOCOLOS_DOBRAS[av.protocolo]) av.protocolo='jp7';
@@ -1085,7 +1108,7 @@ function calcularIMCeDobras(aluno,avId){
   av._dobras={soma,dens,pctG,mG,mM,rcq,protocolo};
   if(!av.agua || av.agua==='NaN') av.agua=Number.isFinite(mM)?(mM*0.73).toFixed(1):'';
   const gorduraRef = av.gordura || pctG.toFixed(1);
-  av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef);
+  av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, idade, gorduraRef);
 }
 
 const LABELS_DOBRAS_EXTRA = {pregaCoxa:'Coxa (prega)'};
