@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const KEY = 'avaliacao_fisica_alunos';
-  const fields = ['id','nome','nasc','idade','altura','pesoIni','pesoAtual','pesoAtualAvaliacaoId','sexo','whatsapp','email','valorPago','renovacaoDias','pagamentoTipo','pagamentoData1','pagamentoData2','pagamentoMinimizado','renovacaoMinimizado'];
+  const fields = ['id','nome','nasc','idade','altura','pesoIni','pesoAtual','pesoAtualAvaliacaoId','avaliacaoPreferidaId','sexo','whatsapp','email','valorPago','renovacaoDias','pagamentoTipo','pagamentoData1','pagamentoData2','pagamentoMinimizado','renovacaoMinimizado'];
   const clone = value => JSON.parse(JSON.stringify(value));
   function read() {
     const data = JSON.parse(localStorage.getItem(KEY) || '[]');

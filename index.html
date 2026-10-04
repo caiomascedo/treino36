@@ -4,8 +4,8 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<script src="storage-compression.js?v=14"></script>
-<script src="storage-adapter.js?v=14"></script>
+<script src="storage-compression.js?v=15"></script>
+<script src="storage-adapter.js?v=15"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1342,6 +1342,28 @@ window.AvaliacaoTreinoSync = (function () {
     record.treinoStudentIds = Array.from(new Set(ids));
     if (!record.treinoStudentId) record.treinoStudentId = ids[0];
   }
+  function resolve(records, student) {
+    var selected=records.find(function(a){return String(a.id)===String(student.avaliacaoId) && isLinked(a,student.student_id);});
+    return selected || records.find(function(a){return isLinked(a,student.student_id);}) || null;
+  }
+  function join(records, target, source) {
+    if(!source || target===source)return target;
+    var chosen=(target.avaliacoes||[]).slice(-1)[0];
+    var ids=new Set((target.avaliacoes||[]).map(function(a){return String(a.id);}));
+    target.avaliacoes=target.avaliacoes||[];
+    (source.avaliacoes||[]).forEach(function(av){
+      if(!ids.has(String(av.id))){target.avaliacoes.push(JSON.parse(JSON.stringify(av)));ids.add(String(av.id));}
+      else {var saved=target.avaliacoes.find(function(a){return String(a.id)===String(av.id);});Object.keys(av).forEach(function(k){if(saved[k]===undefined||saved[k]===null||saved[k]==='')saved[k]=av[k];});}
+    });
+    target.avaliacoes.sort(function(a,b){function date(v){var p=String(v||'').split('/');return p.length===3?Date.parse(p[2]+'-'+p[1]+'-'+p[0]):0;}return (date(a.data)-date(b.data))||Number(a.id)-Number(b.id);});
+    Object.keys(source).forEach(function(k){if(['id','avaliacoes','treinoStudentId','treinoStudentIds','avaliacaoPreferidaId','__proto__','constructor','prototype'].includes(k))return;if(target[k]===undefined||target[k]===null||target[k]==='')target[k]=JSON.parse(JSON.stringify(source[k]));});
+    if(source.pesoAtual&&!target.pesoAtual){target.pesoAtual=source.pesoAtual;target.pesoAtualAvaliacaoId=source.pesoAtualAvaliacaoId;}
+    var linked=(source.treinoStudentIds||[]).slice();if(source.treinoStudentId)linked.push(source.treinoStudentId);
+    linked.forEach(function(id){link(target,id);});
+    if(chosen)target.avaliacaoPreferidaId=chosen.id;
+    var index=records.indexOf(source);if(index>=0)records.splice(index,1);
+    return target;
+  }
   function find(records, student) {
     var linked = records.filter(function (a) { return isLinked(a, student.student_id); });
     if (linked.length === 1) return linked[0];
@@ -1377,7 +1399,8 @@ window.AvaliacaoTreinoSync = (function () {
     student.infoGuias = guias;
     student.avaliacaoFichaId = ficha.id;
     var latest = (record.avaliacoes || []).slice(-1)[0];
-    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId) === String(latest.id)) ? record.pesoAtual : (latest ? (latest.peso || '') : (record.pesoIni || ''))});
+    var currentWeight=record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId)===String(latest.id)) ? record.pesoAtual : (!record.pesoAtual && number(ficha.peso) ? number(ficha.peso) : (latest ? (latest.peso || '') : (record.pesoIni || '')));
+    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:currentWeight});
     student.infoRelevante = Object.assign({}, ficha);
     student.whatsapp = record.whatsapp || '';
     student.avaliacaoId = record.id;
@@ -1387,7 +1410,7 @@ window.AvaliacaoTreinoSync = (function () {
     var students = read('treinoAlunos'), changed = false;
     students.forEach(function (student) {
       if (!student.student_id) return;
-      var record = records.find(function (a) { return isLinked(a, student.student_id); });
+      var record = resolve(records, student);
       if (!record) return;
       var before = JSON.stringify(student);
       toFicha(student, record);
@@ -1395,13 +1418,13 @@ window.AvaliacaoTreinoSync = (function () {
     });
     if (changed) localStorage.setItem('treinoAlunos', JSON.stringify(students));
   }
-  return {key:key, read:read, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, syncTraining:syncTraining};
+  return {key:key, read:read, resolve:resolve, join:join, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, syncTraining:syncTraining};
 })();
 
 </script>
-<script src="avaliacao-import.js?v=14"></script>
-<script src="obs-avaliacao.js?v=14"></script>
-<link rel="stylesheet" href="obs-avaliacao.css?v=14">
+<script src="avaliacao-import.js?v=15"></script>
+<script src="obs-avaliacao.js?v=15"></script>
+<link rel="stylesheet" href="obs-avaliacao.css?v=15">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -9285,7 +9308,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
     var frame=document.getElementById('assessmentLibraryFrame');
-    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=14', location.href).href;
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=15', location.href).href;
     assessmentLibraryDialog.showModal();
   }
   var assessmentsButton = document.createElement('button'); assessmentsButton.type = 'button'; assessmentsButton.id = 'assessmentsLibraryBtn'; assessmentsButton.textContent = '📋 Avaliações'; assessmentsButton.onclick = abrirBibliotecaAvaliacoes;
@@ -9386,7 +9409,7 @@ window.AvaliacaoTreinoSync = (function () {
       var record = records.find(function (a) { return String(a.id) === document.getElementById('mergeEvaluationSelect').value; });
       if (!record) throw Error('Este cadastro não está disponível para vincular.');
       var otherLink = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id) && a.id !== record.id; });
-      if (otherLink) throw Error('Este treino já está sincronizado com ' + otherLink.nome + '. Use o cadastro já vinculado.');
+      if (otherLink) AvaliacaoTreinoSync.join(records, record, otherLink);
       var ficha = cloneData(student.infoRelevante || {});
       if (!ficha.whats) ficha.whats = student.whatsapp || '';
       var candidate = cloneData(record);
@@ -9417,7 +9440,7 @@ window.AvaliacaoTreinoSync = (function () {
       });
       var changed = false;
       alunos.forEach(function (student) {
-        var record = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
+        var record = AvaliacaoTreinoSync.resolve(records, student);
         if (!record) return;
         var before = JSON.stringify(student);
         AvaliacaoTreinoSync.toFicha(student, record);
@@ -9436,7 +9459,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (!student || !student.avaliacaoFichaId || infoGuiasAtuais[infoGuiaAtivaIndex].id !== student.avaliacaoFichaId) return;
     try {
       var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
-      var record = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
+      var record = AvaliacaoTreinoSync.resolve(records, student);
       if (!record) return;
       AvaliacaoTreinoSync.fromFicha(student, record, infoGuiasAtuais[infoGuiaAtivaIndex], previous);
       localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
@@ -9462,12 +9485,21 @@ window.AvaliacaoTreinoSync = (function () {
     student.infoGuias = cloneData(infoGuiasAtuais);
     student.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]);
     var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
-    var record = forceNew ? null : records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
+    var record = forceNew ? null : AvaliacaoTreinoSync.resolve(records, student);
     if (!forceNew && !record && student.avaliacaoId) record = records.find(function (a) { return String(a.id) === String(student.avaliacaoId); });
     if (!forceNew && !record) {
       var ficha = student.infoRelevante || {};
       var matches = records.filter(function (a) { return normalizarNome(a.nome) === normalizarNome(ficha.nomeCompleto || student.nome) && ficha.dataNasc && a.nasc === ficha.dataNasc; });
       if (matches.length === 1) record = matches[0];
+    }
+    if(!forceNew && record) {
+      var prior=records.filter(function(a){return a!==record && normalizarNome(a.nome)===normalizarNome(record.nome) && a.nasc && record.nasc && a.nasc===record.nasc;});
+      if(prior.length===1 && prior[0].avaliacoes && prior[0].avaliacoes.length) {
+        var original=prior[0];
+        // A known person with the same name and birth date keeps both dated histories.
+        if(Number(original.id)<Number(record.id))record=AvaliacaoTreinoSync.join(records,original,record);
+        else record=AvaliacaoTreinoSync.join(records,record,original);
+      }
     }
     if (!record) {
       record = {id:Date.now(), nome:student.nome, sexo:'M', avaliacoes:[]};
@@ -9541,7 +9573,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (student.infoRelevante) student.infoRelevante.whats = value;
     try {
       var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
-      var record = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
+      var record = AvaliacaoTreinoSync.resolve(records, student);
       if (record) {
         record.whatsapp = value;
         localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
@@ -9845,7 +9877,7 @@ window.AvaliacaoTreinoSync = (function () {
 
   function cadastrarAvaliacaoPelaFicha(student) {
     var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
-    var record = records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a, student.student_id); });
+    var record = AvaliacaoTreinoSync.resolve(records, student);
     if (!record) {
       record = {id:Date.now(), nome:student.nome, sexo:'M', avaliacoes:[]};
       while (records.some(function (a) { return a.id === record.id; })) record.id++;
@@ -10570,7 +10602,7 @@ window.AvaliacaoTreinoSync = (function () {
       return copy;
     });
     var students=alunos.map(function (student) {
-      var copy=cloneData(student), record=records.find(function (a) { return AvaliacaoTreinoSync.isLinked(a,student.student_id); });
+      var copy=cloneData(student), record=AvaliacaoTreinoSync.resolve(records, student);
       if(record)copy.avaliacaoId=record.id;
       else {delete copy.avaliacaoId;delete copy.avaliacaoFichaId;}
       return copy;
