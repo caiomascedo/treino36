@@ -76,3 +76,9 @@
 .history-search-row{display:flex;gap:4px;min-width:0}
 .history-search-row input{flex:1;min-width:0;width:0;padding:6px 8px!important;font-size:16px!important}
 #historyStudentDropdownBtn{position:static;transform:none;top:auto;right:auto;flex:0 0 28px;padding:4px;min-height:30px}
+.lista-student-heading{display:flex;align-items:center;gap:6px;width:100%;min-width:0}
+.lista-student-heading>.aluno-nome{flex:1;min-width:0;line-height:1.35}
+.lista-student-heading .lista-select-wrap{padding:0;min-width:18px}
+.lista-student-heading input.lista-select-student{width:15px!important;height:15px!important;min-width:15px!important;flex:none}
+.lista-student-heading .archive-aluno-btn{width:28px;height:28px;flex:0 0 28px;padding:3px!important;margin:0!important;font-size:14px!important;border-radius:6px;border:0}
+#workoutObsDialog #closeObsFocusBtn{display:inline-flex!important;align-items:center;justify-content:center;width:28px;height:28px;padding:3px;margin:0;font-size:16px;flex:0 0 28px;border-radius:6px}

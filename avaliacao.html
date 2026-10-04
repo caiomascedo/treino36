@@ -2,12 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
-<script src="storage-compression.js"></script>
-<script src="storage-adapter.js"></script>
+<script src="storage-compression.js?v=13"></script>
+<script src="storage-adapter.js?v=13"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f2f2f2;color:#1a1a1a;min-height:100vh;padding:20px 15px 30px;position:relative}
@@ -209,9 +208,9 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js"></script>
-<link rel="stylesheet" href="avaliacao-compacta.css">
-<script src="avaliacao-compacta.js"></script>
+<script src="avaliacao-import.js?v=13"></script>
+<link rel="stylesheet" href="avaliacao-compacta.css?v=13">
+<script src="avaliacao-compacta.js?v=13"></script>
 </head>
 <body>
 
@@ -529,15 +528,43 @@ function comprimirImagem(file, maxWidth = 800, maxHeight = 800, qualidade = 0.7)
   });
 }
 
+let bibliotecasPDFPromise;
+function carregarBibliotecasPDF() {
+  if(window.jspdf && window.jspdf.jsPDF.API.autoTable) return Promise.resolve();
+  if(!bibliotecasPDFPromise) bibliotecasPDFPromise=(async()=>{
+    for(const src of ['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js']) {
+      await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;const timer=setTimeout(()=>{script.remove();reject(Error('Não foi possível carregar o PDF. Tente novamente.'));},15000);script.onload=()=>{clearTimeout(timer);resolve();};script.onerror=()=>{clearTimeout(timer);script.remove();reject(Error('Não foi possível carregar o PDF. Tente novamente.'));};document.head.appendChild(script);});
+    }
+  })().catch(error=>{bibliotecasPDFPromise=null;throw error;});
+  return bibliotecasPDFPromise;
+}
 /* PERSISTÊNCIA COM TRY/CATCH */
+function oferecerRecuperacaoInterna() {
+  try {
+    const snapshot=JSON.parse(localStorage.getItem('avaliacao_treino_antes_uniao')||'null');
+    if(!snapshot || !Array.isArray(snapshot.avaliacoes) || !snapshot.avaliacoes.length) return;
+    const missingCount=snapshot.avaliacoes.filter(record=>!alunos.some(a=>String(a.id)===String(record.id))).length;
+    if(!missingCount)return;
+    const button=document.createElement('button');button.type='button';button.id='recoverAssessmentBackupBtn';
+    button.textContent='Recuperar '+missingCount+' cadastro(s) do backup interno';
+    button.onclick=()=>{
+      const current=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+      const missing=snapshot.avaliacoes.filter(record=>!current.some(a=>String(a.id)===String(record.id)));
+      localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(current.concat(missing)));
+      alunos=current.concat(missing);AvaliacaoTreinoSync.syncTraining(alunos);filtrarAlunos();button.remove();
+    };
+    document.getElementById('alunosList').before(button);
+  } catch(error) { /* Não substituir dados se a cópia não puder ser lida. */ }
+}
 function carregarDados(){
   const saved=localStorage.getItem('avaliacao_fisica_alunos');
   if(saved){
-    try{ alunos=JSON.parse(saved); }catch(e){ alunos=[]; notifMsg('⚠️ Erro ao carregar dados'); }
+    try{ alunos=JSON.parse(saved); if(!Array.isArray(alunos))throw Error('Cadastro inválido'); }catch(e){ document.getElementById('alunosList').textContent='Não foi possível ler as avaliações. Seus dados foram preservados. Atualize a página para tentar novamente.'; return; }
   }
   if(!alunos.length && !new URLSearchParams(location.search).get('embed')){
     alunos=[{id:Date.now(),nome:'João Silva',nasc:'',idade:'',altura:'',pesoIni:'',sexo:'M',whatsapp:'',valorPago:'',renovacaoDias:'',pagamentoTipo:'',pagamentoData1:'',pagamentoData2:'',avaliacoes:[]}];
   }
+  oferecerRecuperacaoInterna();
   alunoAtivoId=null;
   alunos.forEach(a => (a.avaliacoes || []).forEach(av => calcularIMCeDobras(a, av.id)));
   salvarDados();
@@ -1390,6 +1417,7 @@ const LINHAS_NEGRITO_PDF = ['% Gordura', '% Massa Gorda'];
 
 /* GERAÇÃO DE PDF — AVALIAÇÃO FÍSICA COM DELTA */
 async function gerarPDFAluno(alunoId, options={}){
+  await carregarBibliotecasPDF();
   const aluno=alunos.find(a=>a.id===alunoId);
   if(!aluno||!aluno.avaliacoes?.length){ notifMsg('⚠️ Nenhuma avaliação!'); return; }
   notifMsg('📄 Gerando PDF...');
@@ -1547,6 +1575,7 @@ async function gerarPDFAluno(alunoId, options={}){
 
 /* GERAÇÃO DE PDF — POSTURAL */
 async function gerarPDFPosturalAluno(alunoId){
+  await carregarBibliotecasPDF();
   const aluno=alunos.find(a=>a.id===alunoId);
   if(!aluno||!aluno.avaliacoes?.length){ notifMsg('⚠️ Nenhuma avaliação!'); return; }
   notifMsg('📸 Gerando PDF Postural...');
