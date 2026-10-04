@@ -13,9 +13,9 @@ with sync_playwright() as p:
  context.route('**/*',route);page=context.new_page();page.goto('http://history.test/')
  def seed(dob,duplicate_link=False):
   page.evaluate("""args=>{
-   const birth=args.dob?'26/03/2002':'';
-   localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana vitoria',avaliacaoId:20,treino:{A:['Agachamento 3x10']},historicoTreinos:[],infoGuias:[{id:'f1',nomeCompleto:'Ana Vitória',dataNasc:birth,peso:'71',idade:'24',altura:'1.75'}]}]));
-   localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:20,nome:'Ana Vitória',nasc:birth,idade:'24',altura:'1.75',sexo:'M',pesoAtual:'71',pesoAtualAvaliacaoId:21,treinoStudentIds:['a'],avaliacoes:[{id:21,data:'03/10/2026',peso:'71',resumo:'Anotação recente',protocolo:'jp7'}]},{id:10,nome:'Ana Vitória',nasc:birth,idade:'24',altura:'1.75',sexo:'F',treinoStudentIds:args.duplicate?['a']:[],avaliacoes:[{id:11,data:'11/07/2026',peso:'74.50',biceps:'30 / 29',triceps:'14',protocolo:'jp7',fotoF:'data:image/png;base64,aW1hZ2U='}]}]));
+   const birth=args.dob?'01/01/2000':'';
+   localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Aluno teste',avaliacaoId:20,treino:{A:['Agachamento 3x10']},historicoTreinos:[],infoGuias:[{id:'f1',nomeCompleto:'Aluno Teste',dataNasc:birth,peso:'71',idade:'24',altura:'1.75'}]}]));
+   localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:20,nome:'Aluno Teste',nasc:birth,idade:'24',altura:'1.75',sexo:'M',pesoAtual:'71',pesoAtualAvaliacaoId:21,treinoStudentIds:['a'],avaliacoes:[{id:21,data:'03/10/2026',peso:'71',resumo:'Anotação recente',protocolo:'jp7'}]},{id:10,nome:'Aluno Teste',nasc:birth,idade:'24',altura:'1.75',sexo:'F',treinoStudentIds:args.duplicate?['a']:[],avaliacoes:[{id:11,data:'11/07/2026',peso:'74.50',biceps:'30 / 29',triceps:'14',protocolo:'jp7',fotoF:'data:image/png;base64,aW1hZ2U='}]}]));
   }""",{'dob':dob,'duplicate':duplicate_link})
   page.reload()
  def assertions():
@@ -36,7 +36,7 @@ with sync_playwright() as p:
   student=page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0]")
   assert student['avaliacaoId']==10 and student['treino']['A']==['Agachamento 3x10']
  seed(True)
- page.locator('#searchName').fill('Ana vitoria');page.locator('#studentEvaluationBtn').click();assertions()
+ page.locator('#searchName').fill('Aluno teste');page.locator('#studentEvaluationBtn').click();assertions()
  page.locator('#closeObsFocusBtn').click();page.locator('#assessmentsLibraryBtn').click()
  library=page.frame_locator('#assessmentLibraryFrame');library.locator('.aluno-nome').click();library.locator('.aluno-content > .assessment-tabs [data-section="avaliacoes"]').click();library.locator('#av-item-11 .av-header').click();library.locator('#av-item-11 .assessment-tabs [data-section="medidas"]').click()
  expect(library.locator('#biceps-10-11')).to_have_value('31 / 30')
@@ -47,5 +47,5 @@ with sync_playwright() as p:
  library.locator('.btn-add-to-training[onclick="adicionarAvaliacaoAoTreino(10)"]').click()
  expect(library.locator('.assessment-training-confirm')).to_be_visible();library.locator('.assessment-training-confirm').check();library.locator('.assessment-training-add').click()
  expect(library.locator('.training-student-picker')).to_have_count(0)
- page.locator('#assessmentLibraryDialog [data-close]').click();page.locator('#searchName').fill('Ana vitoria');page.locator('#studentEvaluationBtn').click();assertions()
+ page.locator('#assessmentLibraryDialog [data-close]').click();page.locator('#searchName').fill('Aluno teste');page.locator('#studentEvaluationBtn').click();assertions()
  browser.close();print('PASS: old/imported and new linked histories reunited; original date/sex/photos/measures retained, current 71kg independent of historical 74.50kg; explicit duplicate-link repair and two-way edits')
