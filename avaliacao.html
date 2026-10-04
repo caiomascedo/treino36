@@ -211,7 +211,7 @@ window.AvaliacaoTreinoSync = (function () {
     student.avaliacaoFichaId = ficha.id;
     var latest = (record.avaliacoes || []).slice(-1)[0];
     var currentWeight=record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId)===String(latest.id)) ? record.pesoAtual : (!record.pesoAtual && number(ficha.peso) ? number(ficha.peso) : (latest ? (latest.peso || '') : (record.pesoIni || '')));
-    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:currentWeight});
+    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:currentWeight, avaliacaoOrigemId:latest?latest.id:null, avaliacaoOrigemData:latest?(latest.data || ''):''});
     student.infoRelevante = Object.assign({}, ficha);
     student.whatsapp = record.whatsapp || '';
     student.avaliacaoId = record.id;

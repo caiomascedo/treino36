@@ -17,6 +17,7 @@ with sync_playwright() as p:
     page.evaluate("""() => {localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',treino:{A:['Agachamento']},infoGuias:[{id:'1',titulo:'Ficha 1',peso:'60',altura:'1.7'},{id:'2',titulo:'Ficha 2',peso:'72',altura:'1.7'}]},{student_id:'b',nome:'Bruno',treino:{A:['Supino']}}]));localStorage.setItem('avaliacao_fisica_alunos','[]');}""")
     page.reload();page.locator('#searchName').fill('Ana');page.locator('#studentEvaluationBtn').click()
     expect(page.locator('#infoTabsList .info-tab-btn.active')).to_contain_text('Ficha 2')
+    expect(page.locator('#fichaAssessmentDate')).not_to_be_visible()
     expect(page.locator('#infoPeso')).to_have_value('72');expect(page.locator('#obsNativeAssessment')).not_to_be_visible()
     assert page.evaluate("AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key)")==[]
     page.locator('#expandObsBtn').click();expect(page.locator('#infoPeso')).to_be_visible()

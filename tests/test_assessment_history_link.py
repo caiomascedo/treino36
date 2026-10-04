@@ -23,6 +23,7 @@ with sync_playwright() as p:
   expect(page.locator('#obsAssessmentDate')).to_have_value('2026-07-11')
   expect(page.locator('#obs-av-peso')).to_have_value('74.50')
   expect(page.locator('#infoPeso')).to_have_value('71')
+  expect(page.locator('#fichaAssessmentDate')).to_have_text('Avaliação: 03/10/2026')
   expect(page.locator('#obsAssessmentSex')).to_have_value('F')
   page.locator('#obsAssessmentHistory').select_option('21');expect(page.locator('#obs-av-peso')).to_have_value('71')
   page.locator('#obsAssessmentHistory').select_option('11')
@@ -43,7 +44,8 @@ with sync_playwright() as p:
  page.locator('#assessmentLibraryDialog [data-close]').click()
  # Without birth dates, no automatic merge. Explicit confirmation also repairs duplicate bindings.
  seed(False,True);page.locator('#assessmentsLibraryBtn').click();library=page.frame_locator('#assessmentLibraryFrame')
- library.locator('[data-aluno-card="10"] .aluno-nome').click()
+ if 'active' not in library.locator('[data-aluno-card="10"]').get_attribute('class').split():
+  library.locator('[data-aluno-card="10"] .aluno-nome').click()
  library.locator('.btn-add-to-training[onclick="adicionarAvaliacaoAoTreino(10)"]').click()
  expect(library.locator('.assessment-training-confirm')).to_be_visible();library.locator('.assessment-training-confirm').check();library.locator('.assessment-training-add').click()
  expect(library.locator('.training-student-picker')).to_have_count(0)

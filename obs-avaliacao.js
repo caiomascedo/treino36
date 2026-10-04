@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=20',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=21',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}

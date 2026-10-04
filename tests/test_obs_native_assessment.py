@@ -36,6 +36,7 @@ with sync_playwright() as p:
     page.reload();page.locator('#searchName').fill('Ana Vitória treino 1');page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click()
     page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
     expect(page.locator('#obs-av-peso')).to_have_value('74.50')
+    expect(page.locator('#fichaAssessmentDate')).to_have_text('Avaliação: 11/07/2026')
     expect(page.locator('#trainingEvaluationPanel')).not_to_be_visible()
     expect(page.locator('#trainingEvaluationFrame')).not_to_be_visible()
     page.locator('#obsNewAssessment').click();expect(page.locator('#obs-av-peso')).to_have_value('73')
@@ -112,6 +113,8 @@ with sync_playwright() as p:
     page.locator('#workoutObsDialog [data-close]').click();page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
     expect(page.locator('#obs-av-peso')).to_have_value('74.50')
     expect(page.locator('#infoPeso')).to_have_value('75')
+    expect(page.locator('#fichaAssessmentDate')).to_have_text('Avaliação: 02/10/2026')
+    assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].infoGuias[0].avaliacaoOrigemData")=='02/10/2026'
     expect(page.locator('#obsContent')).not_to_be_visible()
     expect(page.locator('#mergeEvaluationDialog')).not_to_be_visible()
     assert not errors,errors
