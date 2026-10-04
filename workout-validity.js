@@ -22,6 +22,8 @@ window.WorkoutValidity = (() => {
       '<label id="renewalCustomLabel" for="renewalCustom" hidden>Renovar por quantos dias?</label><input id="renewalCustom" type="number" inputmode="numeric" min="1" step="1" hidden>'+ 
       '<p id="renewalPreview" aria-live="polite"></p><p>A renovação só acontece ao clicar em Renovar agora.</p><p id="validityStatus" role="status"></p>'+ 
       '<button type="button" id="saveWorkoutValidity" class="primary">Salvar validade</button> <button type="button" id="renewWorkoutValidity">Renovar agora</button> <button type="button" data-close>Fechar</button>');
+    const title=dialog.querySelector('#workoutValidityDialogTitle');
+    title.tabIndex=-1;title.setAttribute('autofocus','');
     let studentId,workoutId;
     const $=id=>dialog.querySelector('#'+id);
     function period(value,input){if(value==='none')return null;return value==='custom'?{unit:'days',amount:Number(input.value)}:{unit:value[0]==='m'?'months':'days',amount:Number(value.slice(1))};}
