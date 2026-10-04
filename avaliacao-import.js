@@ -124,6 +124,7 @@
         const plan = prepare(raw, read(), dialog.querySelector('select').value === 'incoming');
         localStorage.setItem('avaliacao_backup_antes_importacao', JSON.stringify(read()));
         localStorage.setItem(KEY, JSON.stringify(plan.records));
+        window.TreinoStorage?.clearAssessmentDrafts();
         dialog.close();
         window.dispatchEvent(new CustomEvent('avaliacoes-importadas'));
         if (onCommitted) onCommitted(plan);

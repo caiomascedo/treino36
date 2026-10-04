@@ -34,7 +34,7 @@ with sync_playwright() as p:
     assessment=context.new_page()
     assessment.goto('http://app.test/treino36/avaliacao.html?embed=treino36-library')
     expect(assessment.locator('[data-aluno-card="1"] .assessment-training-link')).to_have_text('🔗 Treino: Ana treino 1 · Ana treino 2')
-    expect(assessment.locator('[data-aluno-card="2"] .assessment-training-link')).to_have_text('Sem vínculo com treino')
+    expect(assessment.locator('[data-aluno-card="2"] .assessment-training-link')).to_have_text('Sem treino')
     assessment.locator('[data-aluno-card="1"] .aluno-header').click()
     assessment.locator('[data-aluno-card="1"] [data-section="cadastro"]').click()
     results=assessment.evaluate('''() => {
