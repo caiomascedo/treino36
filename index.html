@@ -1377,7 +1377,14 @@ window.AvaliacaoTreinoSync = (function () {
     var m = String(value || '').replace(',', '.').match(/\d+(?:\.\d+)?/);
     return m ? m[0] : '';
   }
+  function history(record) {
+    function date(av) { var value=String(av.data||''),p=value.split('/');return p.length===3?Date.parse(p[2]+'-'+p[1]+'-'+p[0]):Date.parse(value); }
+    return (record.avaliacoes||[]).slice().sort(function(a,b){var da=date(a),db=date(b);return (Number.isFinite(da)&&Number.isFinite(db)?da-db:0)||Number(a.id)-Number(b.id);});
+  }
   function fromFicha(student, record, ficha, previous) {
+    var ordered=history(record),latest=ordered.at(-1);
+    var av=ordered.find(function(item){return String(item.id)===String(ficha.avaliacaoOrigemId);});
+    var isCurrent=!av||av===latest;
     var map = { idade:'idade', altura:'altura', dataNasc:'nasc', nomeCompleto:'nome', whats:'whatsapp', email:'email' };
     Object.keys(map).forEach(function (field) {
       if (previous && ficha[field] === previous[field]) return;
@@ -1385,26 +1392,39 @@ window.AvaliacaoTreinoSync = (function () {
       if (field === 'nomeCompleto' && !value) return;
       if (field === 'altura') { value = number(value); if (Number(value) > 3) value = String(Number(value) / 100); }
       if (field === 'idade') value = number(value);
-      record[map[field]] = value;
+      if(isCurrent)record[map[field]] = value;
+      if(av){av.ficha=Object.assign({},av.ficha);av.ficha[field]=value;}
     });
     if (!previous || ficha.peso !== previous.peso) {
-      record.pesoAtual = number(ficha.peso);
-      record.pesoAtualAvaliacaoId = (record.avaliacoes || []).slice(-1)[0]?.id || null;
-      if (!(record.avaliacoes || []).length) record.pesoIni = number(ficha.peso);
+      var weight=number(ficha.peso);
+      if(av)av.peso=weight;
+      if(isCurrent){record.pesoAtual=weight;record.pesoAtualAvaliacaoId=latest?.id||null;}
+      if (!ordered.length) record.pesoIni = weight;
     }
   }
   function toFicha(student, record) {
-    var guias = student.infoGuias || [];
-    var ficha = guias.find(function (g) { return g.id === student.avaliacaoFichaId; }) || guias[0];
-    if (!ficha) { ficha = Object.assign({id:'1', titulo:'Ficha 1'}, student.infoRelevante || {}); guias.push(ficha); }
-    student.infoGuias = guias;
-    student.avaliacaoFichaId = ficha.id;
-    var latest = (record.avaliacoes || []).slice(-1)[0];
-    var currentWeight=record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId)===String(latest.id)) ? record.pesoAtual : (!record.pesoAtual && number(ficha.peso) ? number(ficha.peso) : (latest ? (latest.peso || '') : (record.pesoIni || '')));
-    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:currentWeight, avaliacaoOrigemId:latest?latest.id:null, avaliacaoOrigemData:latest?(latest.data || ''):''});
-    student.infoRelevante = Object.assign({}, ficha);
-    student.whatsapp = record.whatsapp || '';
-    student.avaliacaoId = record.id;
+    var guias=student.infoGuias||[],ordered=history(record),latest=ordered.at(-1);
+    var legacy=guias.find(function(g){return g.id===student.avaliacaoFichaId;})||guias.find(function(g){return student.infoRelevante&&g.id===student.infoRelevante.id;})||guias.at(-1);
+    var used=new Set(),mapped=[];
+    ordered.forEach(function(av){
+      var ficha=guias.find(function(g){return String(g.avaliacaoOrigemId)===String(av.id);});
+      if(!ficha&&av===latest&&legacy&&!legacy.avaliacaoOrigemId)ficha=legacy;
+      if(!ficha)ficha={id:'av-'+record.id+'-'+av.id};
+      used.add(ficha);
+      var currentWeight=av===latest&&record.pesoAtual&&(!record.pesoAtualAvaliacaoId||String(record.pesoAtualAvaliacaoId)===String(av.id))?record.pesoAtual:(av.peso||'');
+      var common={idade:record.idade||'',altura:record.altura||'',dataNasc:record.nasc||'',nomeCompleto:record.nome||'',whats:record.whatsapp||'',email:record.email||''};
+      Object.assign(ficha,common,av.ficha||{}, {peso:currentWeight,avaliacaoOrigemId:av.id,avaliacaoOrigemData:av.data||'',avaliacaoCadastroId:record.id});
+      mapped.push(ficha);
+    });
+    // Keep old manual fichas. An assessment removed from history no longer leaves a generated ficha.
+    var manual=guias.filter(function(g){return !used.has(g)&&!g.avaliacaoOrigemId;});
+    var all=manual.concat(mapped);
+    if(!all.length){all=[Object.assign({id:'1',titulo:'Ficha 1'},student.infoRelevante||{})];}
+    all.forEach(function(g,i){g.titulo='Ficha '+(i+1);});
+    var ficha=mapped.at(-1)||all.at(-1);
+    if(!ordered.length)Object.assign(ficha,{idade:record.idade||'',altura:record.altura||'',dataNasc:record.nasc||'',nomeCompleto:record.nome||'',whats:record.whatsapp||'',email:record.email||'',peso:record.pesoAtual||ficha.peso||record.pesoIni||'',avaliacaoOrigemId:null,avaliacaoOrigemData:''});
+    student.infoGuias=all;student.avaliacaoFichaId=ficha.id;
+    student.infoRelevante=Object.assign({},ficha);student.whatsapp=record.whatsapp||'';student.avaliacaoId=record.id;
     return ficha;
   }
   // Compare only the fields changed by synchronization, without workout history.
@@ -1423,13 +1443,14 @@ window.AvaliacaoTreinoSync = (function () {
     });
     if (changed) localStorage.setItem('treinoAlunos', JSON.stringify(students));
   }
-  return {key:key, read:read, resolve:resolve, join:join, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, fichaState:fichaState, syncTraining:syncTraining};
+  return {key:key, history:history, read:read, resolve:resolve, join:join, find:find, isLinked:isLinked, link:link, fromFicha:fromFicha, toFicha:toFicha, fichaState:fichaState, syncTraining:syncTraining};
 })();
 
 </script>
 <script src="avaliacao-import.js?v=17"></script>
+<script src="workout-validity.js?v=1"></script>
 <script src="pdf-viewer.js?v=1"></script>
-<script src="obs-avaliacao.js?v=21"></script>
+<script src="obs-avaliacao.js?v=22"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
 </head>
 <body>
@@ -6215,6 +6236,7 @@ window.AvaliacaoTreinoSync = (function () {
       else localStorage.removeItem(ALUNO_SELECIONADO_KEY);
     } catch(e) {}
     renderizarBarraFavoritos();
+    if(typeof validityEditor!=='undefined'&&validityEditor)validityEditor.refresh();
   }
 
   function editarNomeAluno(nomeAtual) {
@@ -8114,13 +8136,14 @@ window.AvaliacaoTreinoSync = (function () {
     return a;
   }
   function snapshotAluno(a) {
-    return {workout_id:a.treino_id,student_id:a.student_id,name:a.treinoNome||a.nome||('Treino de '+a.nome),student_name:a.nome,original_student_name:a.nome,created_at:a.treinoCriadoEm||a.criadoEm||null,activated_at:a.treinoAtivadoEm||a.atualizadoEm||null,archived_at:null,status:'active',treino:cloneData(a.treino),titulos:cloneData(a.titulos||{}),secaoFAtiva:!!a.secaoFAtiva};
+    return {workout_id:a.treino_id,student_id:a.student_id,name:a.treinoNome||a.nome||('Treino de '+a.nome),student_name:a.nome,original_student_name:a.nome,created_at:a.treinoCriadoEm||a.criadoEm||null,activated_at:a.treinoAtivadoEm||a.atualizadoEm||null,archived_at:null,status:'active',validadeTreino:cloneData(WorkoutValidity.get(a)),treino:cloneData(a.treino),titulos:cloneData(a.titulos||{}),secaoFAtiva:!!a.secaoFAtiva};
   }
   function arquivarTreino(a) {
     garantirHistorico(a);
     if(!a.historicoTreinos.some(function(v){return v.workout_id===a.treino_id;})) {
       var old=snapshotAluno(a);old.status='archived';old.archived_at=new Date().toISOString();a.historicoTreinos.push(old);
     }
+    delete a.validadeTreino;
     a.treino_id=novoId('treino');a.treinoCriadoEm=new Date().toISOString();a.treinoAtivadoEm=a.treinoCriadoEm;a.treinoProtegido=false;
   }
   function alunoVinculado() { return alunos.find(function(a){return a.student_id===alunoVinculadoId;})||null; }
@@ -8769,9 +8792,10 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('pasteUndoBtn').onclick=function(){historicoTexto(-1);};document.getElementById('pasteRedoBtn').onclick=function(){historicoTexto(1);};
   document.addEventListener('keydown',function(e){if(e.target.closest('#pasteModal')&&(e.ctrlKey||e.metaKey)&&['z','y'].includes(e.key.toLowerCase())){e.preventDefault();e.stopImmediatePropagation();historicoTexto(e.key.toLowerCase()==='y'||e.shiftKey?1:-1);}else if(e.key==='Escape'&&pasteModal.style.visibility==='visible'&&!document.querySelector('dialog[open]')){e.preventDefault();fecharPasteModal();}},true);
 
-  var toolsRow=document.createElement('div');toolsRow.className='workout-tools';toolsRow.innerHTML='<button id="createWorkoutBtn">＋ Criar treino</button><button id="historyWorkoutBtn">◷ Treinos anteriores</button><button id="compareWorkoutBtn">⇄ Comparar</button>';
+  var toolsRow=document.createElement('div');toolsRow.className='workout-tools';toolsRow.innerHTML='<button id="createWorkoutBtn">＋ Criar treino</button><button id="historyWorkoutBtn">◷ Treinos anteriores</button><button id="compareWorkoutBtn">⇄ Comparar</button><button type="button" id="workoutValidityBtn">📅 Validade</button><span id="workoutValiditySummary" style="font-size:.78rem;color:#475569" hidden></span>';
   document.querySelector('.global-buttons').after(toolsRow);
   document.getElementById('createWorkoutBtn').onclick=function(){abrirGerador();};document.getElementById('historyWorkoutBtn').onclick=function(){abrirHistorico();};document.getElementById('compareWorkoutBtn').onclick=function(){abrirHistorico(null,true);};
+  var validityEditor=WorkoutValidity.mount({createDialog:criarDialogo,selected:alunoNaTela,find:function(id){return alunos.find(function(a){return a.student_id===id;});},save:salvarLocalStorage,message:exibirMensagem,button:document.getElementById('workoutValidityBtn'),summary:document.getElementById('workoutValiditySummary')});
   if(document.getElementById('listIconBtn')) document.getElementById('listIconBtn').onclick=mostrarListaAlunos;
   if(document.getElementById('obsIconBtn')) document.getElementById('obsIconBtn').onclick=function(){abrirObservacoes();};
 
@@ -9156,7 +9180,8 @@ window.AvaliacaoTreinoSync = (function () {
       whats: document.getElementById('infoWhats').value.trim(),
       nivelTreino: infoNivelTreinoAtual,
       avaliacaoOrigemId: previousInfo.avaliacaoOrigemId || null,
-      avaliacaoOrigemData: previousInfo.avaliacaoOrigemData || ''
+      avaliacaoOrigemData: previousInfo.avaliacaoOrigemData || '',
+      avaliacaoCadastroId: previousInfo.avaliacaoCadastroId || null
     };
     sincronizarFichaEditada(previousInfo);
   }
@@ -9204,7 +9229,8 @@ window.AvaliacaoTreinoSync = (function () {
         closeBtn.title = 'Remover esta ficha';
         closeBtn.onclick = function(e) {
           e.stopPropagation();
-          if (confirm('Deseja remover ' + (guia.titulo || 'esta ficha') + '?')) {
+          if (confirm('Deseja remover ' + (guia.titulo || 'esta ficha') + (guia.avaliacaoOrigemId?' e apagar a avaliação de '+(guia.avaliacaoOrigemData||'sem data')+'?':'?'))) {
+            if(guia.avaliacaoOrigemId){apagarFichaDaAvaliacao(guia);return;}
             infoGuiasAtuais.splice(idx, 1);
             if (infoGuiaAtivaIndex >= infoGuiasAtuais.length) {
               infoGuiaAtivaIndex = Math.max(0, infoGuiasAtuais.length - 1);
@@ -9217,6 +9243,7 @@ window.AvaliacaoTreinoSync = (function () {
       btn.onclick = function() {
         if (idx === infoGuiaAtivaIndex) return;
         salvarGuiaInfoAtual();
+        if(obsNativeEditor&&!document.getElementById('obsNativeAssessment').hidden)obsNativeEditor.minimize();
         carregarGuiaInfo(idx);
       };
       list.appendChild(btn);
@@ -9386,7 +9413,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
     var frame=document.getElementById('assessmentLibraryFrame');
-    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=21', location.href).href;
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=22', location.href).href;
     assessmentLibraryDialog.showModal();
     frame.contentWindow.postMessage({type:'treino36-library-refresh'},location.origin);
   }
@@ -9514,6 +9541,7 @@ window.AvaliacaoTreinoSync = (function () {
   function atualizarFichaDaAvaliacao(updatedRecords, selectedStudent, asyncSave) {
     try {
       var records = Array.isArray(updatedRecords) ? updatedRecords : AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+      fichaSyncRecords=records;
       if (selectedStudent) { var selectedRecord = AvaliacaoTreinoSync.resolve(records, selectedStudent); records = selectedRecord ? [selectedRecord] : []; }
       AvaliacaoTreinoSync.read('treinoAlunos').forEach(function (saved) {
         if (saved.student_id && !alunos.some(function (a) { return a.student_id === saved.student_id; })) { garantirHistorico(saved); alunos.push(saved); }
@@ -9529,8 +9557,10 @@ window.AvaliacaoTreinoSync = (function () {
       if (changed) { if(asyncSave) salvarFichasEmSegundoPlano(records); else salvarLocalStorage(); }
       var student = alunoDasObservacoes();
       if (student && obsDialog.open && student.infoGuias) {
+        var previousGuide=infoGuiasAtuais[infoGuiaAtivaIndex],previousCount=infoGuiasAtuais.length;
         infoGuiasAtuais = cloneData(student.infoGuias);
-        carregarGuiaInfo(Math.min(infoGuiaAtivaIndex, infoGuiasAtuais.length - 1));
+        var selectedIndex=previousGuide?infoGuiasAtuais.findIndex(function(g){return g.id===previousGuide.id;}):-1;
+        carregarGuiaInfo(infoGuiasAtuais.length>previousCount||selectedIndex<0?infoGuiasAtuais.length-1:selectedIndex);
       }
     } catch (e) { exibirMensagem(e.message, '#b22222', false); }
   }
@@ -9544,23 +9574,50 @@ window.AvaliacaoTreinoSync = (function () {
       }
     }catch(error){exibirMensagem('A avaliação foi guardada. Não foi possível atualizar a ficha do treino.', '#b22222', false);}
   }
-  function sincronizarFichaEditada(previous) {
-    var student = alunoDasObservacoes();
-    if (!student || !student.avaliacaoFichaId || infoGuiasAtuais[infoGuiaAtivaIndex].id !== student.avaliacaoFichaId) return;
+  function apagarFichaDaAvaliacao(guia) {
     try {
-      var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
-      var record = AvaliacaoTreinoSync.resolve(records, student);
-      if (!record) return;
-      AvaliacaoTreinoSync.fromFicha(student, record, infoGuiasAtuais[infoGuiaAtivaIndex], previous);
-      localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
-      student.infoGuias = cloneData(infoGuiasAtuais);
-      student.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]);
-      salvarLocalStorage();
-      // Atualize também os outros treinos vinculados à mesma pessoa nesta aba.
-      alunos.forEach(function (other) { if (other !== student && AvaliacaoTreinoSync.isLinked(record, other.student_id)) AvaliacaoTreinoSync.toFicha(other, record); });
-      salvarLocalStorage();
-    } catch (e) { exibirMensagem('Não foi possível sincronizar: ' + e.message, '#b22222', false); }
+      var student=alunoDasObservacoes(),records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key),record=AvaliacaoTreinoSync.resolve(records,student);
+      if(!record)return;
+      var draft=TreinoStorage.assessmentOperation(record.id,guia.avaliacaoOrigemId,'delete');
+      TreinoAssessmentJournal.merge(records,[draft]);
+      if(obsNativeEditor&&!document.getElementById('obsNativeAssessment').hidden)obsNativeEditor.minimize();
+      atualizarFichaDaAvaliacao(records,student,true);
+      TreinoStorage.compactAssessments().catch(function(){});
+    }catch(error){exibirMensagem('Não foi possível apagar a ficha: '+error.message,'#b22222',false);}
   }
+  var fichaSyncRecords=null,fichaSyncTimer=null,fichaSyncRevision=0,fichaSyncCompactedRevision=0;
+  async function compactarFichasEditadas(force) {
+    if(fichaSyncRevision===fichaSyncCompactedRevision)return;
+    var revision=fichaSyncRevision;
+    var active=document.activeElement;
+    if(!force&&active&&active.matches('input,textarea,select')&&document.getElementById('infoRelevanteContent').contains(active))return;
+    try {
+      var records=await TreinoStorage.compactAssessments();
+      if(records){fichaSyncCompactedRevision=revision;atualizarFichaDaAvaliacao(records,null,true);if(obsNativeEditor)obsNativeEditor.refresh();}
+    }catch(error){ /* Small durable drafts remain readable if the worker is unavailable. */ }
+  }
+  function sincronizarFichaEditada(previous) {
+    var student=alunoDasObservacoes(),ficha=infoGuiasAtuais[infoGuiaAtivaIndex];
+    if(!student||!ficha.avaliacaoOrigemId)return;
+    try {
+      var records=fichaSyncRecords||(fichaSyncRecords=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key));
+      var record=AvaliacaoTreinoSync.resolve(records,student);
+      var av=record&&(record.avaliacoes||[]).find(function(item){return String(item.id)===String(ficha.avaliacaoOrigemId);});
+      if(!av)return;
+      var keys=['nome','idade','altura','nasc','whatsapp','email','pesoAtual','pesoAtualAvaliacaoId','pesoIni'];
+      var before={};keys.forEach(function(key){before[key]=record[key];});
+      var beforeFields=JSON.stringify([av.peso,av.ficha]);
+      AvaliacaoTreinoSync.fromFicha(student,record,ficha,previous);
+      var personFields={};keys.forEach(function(key){if(before[key]!==record[key])personFields[key]=record[key];});
+      if(beforeFields===JSON.stringify([av.peso,av.ficha])&&!Object.keys(personFields).length)return;
+      TreinoStorage.stageAssessment(record.id,av.id,{peso:av.peso,ficha:av.ficha||{}},personFields);
+      fichaSyncRevision++;
+      student.infoGuias=cloneData(infoGuiasAtuais);student.infoRelevante=cloneData(ficha);
+      clearTimeout(fichaSyncTimer);fichaSyncTimer=setTimeout(compactarFichasEditadas,1200);
+    }catch(error){exibirMensagem('Não foi possível sincronizar: '+error.message,'#b22222',false);}
+  }
+  document.getElementById('infoRelevanteContent').addEventListener('focusout',function(event){if(event.target.closest('#obsNativeAssessment'))return;setTimeout(compactarFichasEditadas,0);});
+  obsDialog.addEventListener('close',function(){compactarFichasEditadas(true);});
   var obsAssessmentSection = null;
   document.querySelectorAll('#obsAssessmentSections [data-assessment-section]').forEach(function (button) {
     button.onclick = function () {
@@ -9623,7 +9680,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirFormularioAvaliacao(student, separatePerson) {
     evaluationPanel.hidden = true;
     definirPainelInformacoes(true);
-    obsNativeEditor.open(student, obsAssessmentSection && obsAssessmentSection.studentId === student.student_id ? obsAssessmentSection.section : 'composicao', separatePerson ? obterCadastroAvaliacaoObs(student, true) : null);
+    obsNativeEditor.open(student, obsAssessmentSection && obsAssessmentSection.studentId === student.student_id ? obsAssessmentSection.section : 'composicao', separatePerson ? obterCadastroAvaliacaoObs(student, true) : null, document.getElementById('obsNativeAssessment').hidden ? infoGuiasAtuais[infoGuiaAtivaIndex]?.avaliacaoOrigemId : null);
   }
   evaluationFrame.addEventListener('load', function () {
     var status = document.getElementById('trainingEvaluationStatus');
@@ -9848,22 +9905,21 @@ window.AvaliacaoTreinoSync = (function () {
 
   document.getElementById('addInfoTabBtn').onclick = function() {
     salvarGuiaInfoAtual();
-    var num = infoGuiasAtuais.length + 1;
-    var nomeAtual = document.getElementById('searchName').value.trim();
-    var aluno = alunoDasObservacoes();
-    infoGuiasAtuais.push({
-      id: String(Date.now()),
-      titulo: 'Ficha ' + num,
-      idade: '',
-      peso: '',
-      altura: '',
-      dataNasc: '',
-      nomeCompleto: aluno ? aluno.nome : nomeAtual,
-      email: '',
-      whats: aluno ? (aluno.whatsapp || '') : '',
-      nivelTreino: 'moderado'
-    });
-    carregarGuiaInfo(infoGuiasAtuais.length - 1);
+    var student=alunoDasObservacoes();
+    if(!student){exibirMensagem('Salve o aluno no treino antes de criar uma ficha.','#b22222',false);return;}
+    try {
+      var base=cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]||{});
+      obterCadastroAvaliacaoObs(student);
+      var records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key),record=AvaliacaoTreinoSync.resolve(records,student);
+      var id=Date.now();while(record.avaliacoes.some(function(av){return av.id===id;}))id++;
+      var fields={};['idade','altura','dataNasc','nomeCompleto','email','whats','nivelTreino'].forEach(function(key){fields[key]=base[key]||'';});
+      var draft=TreinoStorage.assessmentOperation(record.id,id,'add',{id:id,data:new Date().toLocaleDateString('pt-BR'),peso:base.peso||'',protocolo:'jp7',ficha:fields},{avaliacaoPreferidaId:id,avaliacaoSemRegistros:false,pesoAtual:base.peso||'',pesoAtualAvaliacaoId:id});
+      TreinoAssessmentJournal.merge(records,[draft]);
+      if(obsNativeEditor&&!document.getElementById('obsNativeAssessment').hidden)obsNativeEditor.minimize();
+      atualizarFichaDaAvaliacao(records,student,true);
+      carregarGuiaInfo(infoGuiasAtuais.findIndex(function(g){return String(g.avaliacaoOrigemId)===String(id);}));
+      TreinoStorage.compactAssessments().catch(function(){});
+    }catch(error){exibirMensagem('Não foi possível criar a ficha: '+error.message,'#b22222',false);}
   };
 
   document.getElementById('copyImcBtn').onclick = function() {
@@ -10364,6 +10420,7 @@ window.AvaliacaoTreinoSync = (function () {
     if(!student)student=res.student;
     arquivarTreino(student);
     student.treino=cloneData(res.workout.treino);
+    if(res.workout.validadeTreino)student.validadeTreino=Object.assign({},res.workout.validadeTreino,{treinoId:student.treino_id});
     student.titulos=cloneData(res.workout.titulos||{});
     student.secaoFAtiva=!!res.workout.secaoFAtiva;
     var novoNome=(res.workout.name&&!res.workout.name.toLowerCase().startsWith('treino de '))?res.workout.name:(res.workout.treinoNome||('Treino de '+student.nome));
@@ -10632,6 +10689,8 @@ window.AvaliacaoTreinoSync = (function () {
       });
 
       target.treino_id=novoId('treino');
+      var movedValidity=WorkoutValidity.get(source);
+      if(movedValidity)target.validadeTreino=Object.assign({},movedValidity,{treinoId:target.treino_id});else delete target.validadeTreino;
       target.treino=cloneData(source.treino);
       target.titulos=cloneData(source.titulos||{});
       target.secaoFAtiva=!!source.secaoFAtiva;

@@ -107,14 +107,14 @@ with sync_playwright() as p:
     page.locator('#obs-av-cintura').fill('79')
     page.locator('#infoPeso').fill('75');page.locator('#infoPeso').press('Tab')
     state=page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0]")
-    assert state['avaliacoes'][0]['peso']=='74.50' and state['avaliacoes'][1]['peso']=='71',state
+    assert state['avaliacoes'][0]['peso']=='74.50' and state['avaliacoes'][1]['peso']=='75',state
     assert state['avaliacoes'][0]['cintura']=='79' and state['avaliacoes'][1]['cintura']=='78'
     assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].treino.A[0]")=='Agachamento 3x10'
     page.locator('#workoutObsDialog [data-close]').click();page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
-    expect(page.locator('#obs-av-peso')).to_have_value('74.50')
+    expect(page.locator('#obs-av-peso')).to_have_value('75')
     expect(page.locator('#infoPeso')).to_have_value('75')
     expect(page.locator('#fichaAssessmentDate')).to_have_text('Avaliação: 02/10/2026')
-    assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].infoGuias[0].avaliacaoOrigemData")=='02/10/2026'
+    assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].infoGuias.at(-1).avaliacaoOrigemData")=='02/10/2026'
     expect(page.locator('#obsContent')).not_to_be_visible()
     expect(page.locator('#mergeEvaluationDialog')).not_to_be_visible()
     assert not errors,errors
