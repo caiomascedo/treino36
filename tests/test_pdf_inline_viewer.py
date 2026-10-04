@@ -40,7 +40,9 @@ with sync_playwright() as p:
     assert training['type']=='application/pdf'
     with fitz.open(stream=base64.b64decode(training['data']),filetype='pdf') as doc:
         assert doc.page_count>=1 and any('youtube' in a.get('uri','') for p in doc for a in p.get_links())
-    page.locator('#closePdfViewer').click();page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
+    page.evaluate("document.getElementById('searchName').value=''")
+    page.locator('#closePdfViewer').click();expect(page.locator('#searchName')).to_have_value('Ana')
+    page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
     expect(page.locator('#obs-av-peso')).to_have_value('72')
     engine=next(f for f in page.frames if 'treino36-engine' in f.url)
     for index,kind in enumerate(['pdf','postural'],start=2):
@@ -63,5 +65,29 @@ with sync_playwright() as p:
     expect(library.locator('[data-aluno-card="10"]')).to_have_class('aluno-card active');expect(page.locator('#searchName')).to_have_value('Ana')
     library.goto(library.url);expect(library.locator('[data-aluno-card="10"]')).to_have_class('aluno-card active')
     page.reload();expect(page.locator('#searchName')).to_have_value('Ana')
+    # A typed name/unsaved screen also survives PDF close and browser reload.
+    before=page.evaluate("localStorage.getItem('treinoAlunos')")
+    page.locator('#searchName').fill('Nome digitado sem cadastro')
+    page.evaluate("document.querySelector('.sec-a ol').innerHTML='<li>Treino avulso 3x9</li>'")
+    page.locator('#pdfBtn').click();page.locator('#downloadPdfBtn').click()
+    page.wait_for_function('pdfWindows.length===1 && pdfWindows[0].url')
+    page.evaluate("document.getElementById('searchName').value=''")
+    page.locator('#closePdfViewer').click();expect(page.locator('#searchName')).to_have_value('Nome digitado sem cadastro')
+    page.reload();expect(page.locator('#searchName')).to_have_value('Nome digitado sem cadastro')
+    expect(page.locator('.sec-a ol')).to_contain_text('Treino avulso 3x9')
+    assert page.evaluate("localStorage.getItem('treinoAlunos')")==before
+    # Manual clearing and selecting another pupil invalidate the export context.
+    page.locator('#clearNameBtn').click();page.evaluate("window.dispatchEvent(new Event('focus'));window.dispatchEvent(new Event('pageshow'))")
+    expect(page.locator('#searchName')).to_have_value('')
+    assert page.evaluate("sessionStorage.getItem('treino36_pdf_return_context')") is None
+    page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Ana"] .aluno-nome').click()
+    page.locator('#pdfBtn').click();page.locator('#closePdfViewer').click()
+    page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bruno"] .aluno-nome').click();page.reload()
+    expect(page.locator('#searchName')).to_have_value('Bruno')
+    # A newer saved workout from another page must take precedence over an old export.
+    page.locator('#pdfBtn').click();page.locator('#closePdfViewer').click()
+    page.evaluate("""() => {const students=AvaliacaoTreinoSync.read('treinoAlunos');students.find(s=>s.student_id==='b').treino.A=['Remada atual 4x8'];localStorage.setItem('treinoAlunos',JSON.stringify(students));}""")
+    page.reload();expect(page.locator('#searchName')).to_have_value('Bruno')
+    expect(page.locator('.sec-a ol')).to_contain_text('Remada Atual 4x8')
     assert not errors,errors
-    browser.close();print('PASS: real training/evaluation/postural PDFs handed to inline application/pdf viewer; no source navigation; OBS person/history retained; library and workout selection survive reload; training YouTube links retained')
+    browser.close();print('PASS: real training/evaluation/postural PDFs handed to inline application/pdf viewer; no source navigation; OBS person/history retained; library and workout selection survive reload; training YouTube links retained; cleared export name restored; typed unsaved screen retained without data/history writes; explicit clear and pupil switch respected')
