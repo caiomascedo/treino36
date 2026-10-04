@@ -5,7 +5,8 @@
 <head>
 <meta charset="UTF-8">
 <script src="storage-compression.js?v=15"></script>
-<script src="storage-adapter.js?v=15"></script>
+<script src="assessment-journal.js?v=17"></script>
+<script src="storage-adapter.js?v=17"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1426,9 +1427,9 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js?v=15"></script>
-<script src="obs-avaliacao.js?v=16"></script>
-<link rel="stylesheet" href="obs-avaliacao.css?v=15">
+<script src="avaliacao-import.js?v=17"></script>
+<script src="obs-avaliacao.js?v=17"></script>
+<link rel="stylesheet" href="obs-avaliacao.css?v=17">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -9316,8 +9317,9 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
     var frame=document.getElementById('assessmentLibraryFrame');
-    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=15', location.href).href;
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=17', location.href).href;
     assessmentLibraryDialog.showModal();
+    frame.contentWindow.postMessage({type:'treino36-library-refresh'},location.origin);
   }
   var assessmentsButton = document.createElement('button'); assessmentsButton.type = 'button'; assessmentsButton.id = 'assessmentsLibraryBtn'; assessmentsButton.textContent = '📋 Avaliações'; assessmentsButton.onclick = abrirBibliotecaAvaliacoes;
   document.querySelector('.workout-tools').appendChild(assessmentsButton);
@@ -9440,7 +9442,7 @@ window.AvaliacaoTreinoSync = (function () {
       if (mergeOpenAfterConfirm) abrirFormularioAvaliacao(student, false);
     } catch (e) { document.getElementById('mergeEvaluationStatus').textContent = e.message; }
   };
-  function atualizarFichaDaAvaliacao(updatedRecords, selectedStudent) {
+  function atualizarFichaDaAvaliacao(updatedRecords, selectedStudent, asyncSave) {
     try {
       var records = Array.isArray(updatedRecords) ? updatedRecords : AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
       if (selectedStudent) { var selectedRecord = AvaliacaoTreinoSync.resolve(records, selectedStudent); records = selectedRecord ? [selectedRecord] : []; }
@@ -9455,13 +9457,23 @@ window.AvaliacaoTreinoSync = (function () {
         AvaliacaoTreinoSync.toFicha(student, record);
         if (before !== AvaliacaoTreinoSync.fichaState(student)) changed = true;
       });
-      if (changed) salvarLocalStorage();
+      if (changed) { if(asyncSave) salvarFichasEmSegundoPlano(records); else salvarLocalStorage(); }
       var student = alunoDasObservacoes();
       if (student && obsDialog.open && student.infoGuias) {
         infoGuiasAtuais = cloneData(student.infoGuias);
         carregarGuiaInfo(Math.min(infoGuiaAtivaIndex, infoGuiasAtuais.length - 1));
       }
     } catch (e) { exibirMensagem(e.message, '#b22222', false); }
+  }
+  async function salvarFichasEmSegundoPlano(records) {
+    try {
+      for(var attempt=0;attempt<4;attempt++) {
+        var saved=AvaliacaoTreinoSync.read('treinoAlunos');
+        var latestRecords=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+        saved.forEach(function(student){var record=AvaliacaoTreinoSync.resolve(latestRecords,student);if(record)AvaliacaoTreinoSync.toFicha(student,record);});
+        if(await TreinoStorage.writeJSON('treinoAlunos',saved))return;
+      }
+    }catch(error){exibirMensagem('A avaliação foi guardada. Não foi possível atualizar a ficha do treino.', '#b22222', false);}
   }
   function sincronizarFichaEditada(previous) {
     var student = alunoDasObservacoes();
@@ -9494,6 +9506,7 @@ window.AvaliacaoTreinoSync = (function () {
     student.infoGuias = cloneData(infoGuiasAtuais);
     student.infoRelevante = cloneData(infoGuiasAtuais[infoGuiaAtivaIndex]);
     var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);
+    var changed = false;
     var record = forceNew ? null : AvaliacaoTreinoSync.resolve(records, student);
     if (!forceNew && !record && student.avaliacaoId) record = records.find(function (a) { return String(a.id) === String(student.avaliacaoId); });
     if (!forceNew && !record) {
@@ -9504,6 +9517,7 @@ window.AvaliacaoTreinoSync = (function () {
     if(!forceNew && record) {
       var prior=records.filter(function(a){return a!==record && normalizarNome(a.nome)===normalizarNome(record.nome) && a.nasc && record.nasc && a.nasc===record.nasc;});
       if(prior.length===1 && prior[0].avaliacoes && prior[0].avaliacoes.length) {
+        changed = true;
         var original=prior[0];
         // A known person with the same name and birth date keeps both dated histories.
         if(Number(original.id)<Number(record.id))record=AvaliacaoTreinoSync.join(records,original,record);
@@ -9511,18 +9525,20 @@ window.AvaliacaoTreinoSync = (function () {
       }
     }
     if (!record) {
+      changed = true;
       record = {id:Date.now(), nome:student.nome, sexo:'M', avaliacoes:[]};
       while (records.some(function (a) { return a.id === record.id; })) record.id++;
       AvaliacaoTreinoSync.fromFicha(student, record, student.infoRelevante);
       records.push(record);
     }
-    if (!Array.isArray(record.avaliacoes)) record.avaliacoes = [];
-    AvaliacaoTreinoSync.link(record, student.student_id);
-    localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
-    atualizarFichaDaAvaliacao();
+    if (!Array.isArray(record.avaliacoes)) { record.avaliacoes = []; changed = true; }
+    if (!AvaliacaoTreinoSync.isLinked(record,student.student_id)) { AvaliacaoTreinoSync.link(record, student.student_id); changed = true; }
+    if (changed) localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(records));
+    atualizarFichaDaAvaliacao([record], student, true);
     return record;
   }
-  var obsNativeEditor = ObsAssessmentEditor.mount(document.getElementById('obsNativeAssessment'), {ensure:obterCadastroAvaliacaoObs,changed:atualizarFichaDaAvaliacao,minimized:function(){if(obsDialog.classList.contains('assessment-focus'))document.getElementById('expandObsBtn').click();}});
+  var obsNativeEditor = ObsAssessmentEditor.mount(document.getElementById('obsNativeAssessment'), {ensure:obterCadastroAvaliacaoObs,changed:function(records){atualizarFichaDaAvaliacao(records,null,true);},minimized:function(){if(obsDialog.classList.contains('assessment-focus'))document.getElementById('expandObsBtn').click();}});
+  window.addEventListener('avaliacoes-importadas', function(){if(obsNativeEditor)obsNativeEditor.refresh();});
   function abrirSecaoObsDiretamente(student) { abrirFormularioAvaliacao(student, false); }
   document.getElementById('openEvaluationBtn').onclick = function (event) {
     if (!event || event.isTrusted) obsAssessmentSection = null;
@@ -9606,7 +9622,7 @@ window.AvaliacaoTreinoSync = (function () {
     obsStudentId = null;
     obsAssessmentSection = null;
     if (obsNativeEditor) obsNativeEditor.reset();
-    atualizarFichaDaAvaliacao(null, alunoDasObservacoes());
+    atualizarFichaDaAvaliacao(null, alunoDasObservacoes(), true);
     var nome = document.getElementById('searchName').value.trim();
     if (!nome) {
       exibirMensagem('❌ Digite ou selecione um aluno para ver/adicionar observações.', '#b22222', false);
@@ -10690,6 +10706,7 @@ window.AvaliacaoTreinoSync = (function () {
             localStorage.setItem('treinoMobilidades',JSON.stringify(mobilidades));
             if (assessmentPlan) {
               localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(assessmentPlan.records));
+              window.TreinoStorage?.clearAssessmentDrafts();
               if (raw.preferencias && raw.preferencias.notificacoes_avaliacao !== undefined) localStorage.setItem('avaliacao_notificacoes_ativas',raw.preferencias.notificacoes_avaliacao?'1':'0');
               atualizarFichaDaAvaliacao();
             }

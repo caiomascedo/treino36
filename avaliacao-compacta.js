@@ -22,6 +22,13 @@ async function alternarNotificacoesAvaliacao(enabled) {
     } catch(e) { if(notificacoesAvaliacaoAtivas()) document.getElementById('assessmentNotificationsStatus').textContent='Avisos na avaliação ligados'; }
   }
 }
+function carregarFotosDaAvaliacao(panel) {
+  const card=panel.closest('.aluno-card'),item=panel.closest('.av-item');
+  const person=alunos.find(a=>String(a.id)===card?.dataset.alunoCard);
+  const av=person?.avaliacoes?.find(a=>String(a.id)===item?.id.slice('av-item-'.length));
+  if(!av)return;
+  panel.querySelectorAll('img[data-assessment-photo]').forEach(image=>{const src=av[image.dataset.assessmentPhoto];if(src&&image.getAttribute('src')!==src)image.src=src;image.style.display=src?'block':'none';});
+}
 function abasCompactas(host, key, groups, initial) {
   const nav = document.createElement('div'); nav.className = 'assessment-tabs'; nav.setAttribute('role','tablist');
   const current = secoesAvaliacao.get(key) || initial;
@@ -30,7 +37,7 @@ function abasCompactas(host, key, groups, initial) {
     nodes.forEach(node => panel.appendChild(node));
     const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.dataset.section = id; button.setAttribute('role','tab'); button.setAttribute('aria-controls',panel.id);
     button.id = panel.id + '-tab'; panel.setAttribute('aria-labelledby',button.id);
-    button.onclick = () => { secoesAvaliacao.set(key,id); groups.forEach(([other]) => { const p = document.getElementById(key+'-'+other); p.hidden = other !== id; const b = nav.querySelector('[data-section="'+other+'"]'); b.setAttribute('aria-selected',String(other===id)); }); };
+    button.onclick = () => { secoesAvaliacao.set(key,id); groups.forEach(([other]) => { const p = document.getElementById(key+'-'+other); p.hidden = other !== id; if(other===id&&id==='fotos')carregarFotosDaAvaliacao(p); const b = nav.querySelector('[data-section="'+other+'"]'); b.setAttribute('aria-selected',String(other===id)); }); };
     button.setAttribute('aria-selected',String(id===current)); panel.hidden = id !== current;
     nav.appendChild(button); host.appendChild(panel);
   });

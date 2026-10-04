@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
 <script src="storage-compression.js?v=15"></script>
-<script src="storage-adapter.js?v=15"></script>
+<script src="assessment-journal.js?v=17"></script>
+<script src="storage-adapter.js?v=17"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
 
@@ -235,9 +236,9 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js?v=15"></script>
-<link rel="stylesheet" href="avaliacao-compacta.css?v=15">
-<script src="avaliacao-compacta.js?v=15"></script>
+<script src="avaliacao-import.js?v=17"></script>
+<link rel="stylesheet" href="avaliacao-compacta.css?v=17">
+<script src="avaliacao-compacta.js?v=17"></script>
 </head>
 <body>
 
@@ -1746,7 +1747,7 @@ function renderizarAlunos(alunosParaRenderizar){
     card.className=`aluno-card ${isActive?'active':''}`;
     card.setAttribute('data-aluno-card', aluno.id);
     const linkedTraining=trainingStudents.filter(student=>AvaliacaoTreinoSync.isLinked(aluno,student.student_id));
-    const trainingLinkLabel=linkedTraining.length ? '🔗 Treino: '+linkedTraining.map(student=>student.nome).join(' · ') : 'Sem vínculo com treino';
+    const trainingLinkLabel=linkedTraining.length ? '🔗 Treino: '+linkedTraining.map(student=>student.nome).join(' · ') : 'Sem treino';
     const statusRenov=getStatusRenovacao(aluno);
     const statusPagtos=getStatusPagamentos(aluno);
     card.innerHTML=`
@@ -1755,7 +1756,7 @@ function renderizarAlunos(alunosParaRenderizar){
           <span>📌</span>
           <span class="aluno-nome">${escapeHtml(aluno.nome)}</span>
           <span class="aluno-info">📅 ${getUltimaDataAvaliacao(aluno)||'Sem avaliações'} | ${aluno.avaliacoes?.length||0} avals</span>
-          <span class="assessment-training-link" style="font-size:12px;color:#267457;flex-basis:100%">${escapeHtml(trainingLinkLabel)}</span>
+          <span class="assessment-training-link" style="font-size:11px;color:#267457;grid-column:2/-1;min-width:0">${escapeHtml(trainingLinkLabel)}</span>
           ${statusRenov?`<span class="badge-renovacao ${statusRenov.classe}" title="Renovação de avaliação">📋 ${statusRenov.texto}</span>`:''}
           ${statusPagtos.map(p=>`<span class="badge-renovacao ${p.classe}" title="Pagamento">💰 ${p.texto}</span>`).join('')}
         </div>
@@ -1768,7 +1769,7 @@ function renderizarAlunos(alunosParaRenderizar){
           <button class="btn-delete-assessment-client" title="Excluir cadastro da avaliação" onclick="apagarAluno(${aluno.id})">🗑️ Excluir</button>
         </div>
       </div>
-      <div class="aluno-content">
+      ${isActive ? `<div class="aluno-content">
         <div class="card">
           <div class="card-title">👤 Dados do Cliente</div>
           <div class="grid2">
@@ -1824,7 +1825,7 @@ function renderizarAlunos(alunosParaRenderizar){
           <div class="avs-list" id="avaliacoesList-${aluno.id}"></div>
           <button class="btn-add-av" onclick="adicionarAvaliacao(${aluno.id})">➕ Adicionar Avaliação</button>
         </div>
-      </div>`;
+      </div>` : ''}`;
     container.appendChild(card);
 
     if(isActive&&aluno.avaliacoes){
@@ -1900,7 +1901,7 @@ function renderizarAlunos(alunosParaRenderizar){
                 ${[['f','Frontal'],['l','Lateral'],['d','Dorsal']].map(([t,l])=>{
                   const src=av[`foto${t.toUpperCase()}`];
                   return `<div class="foto-box" id="fotobox-${aluno.id}-${t}-${av.id}" onclick="document.getElementById('file-${aluno.id}-${t}-${av.id}').click()">
-                    <img src="${escapeHtml(src||'')}" style="${src?'display:block':'display:none'}">
+                    <img data-assessment-photo="foto${t.toUpperCase()}" style="display:none" alt="${l}">
                     <div class="foto-ph">📷<br>${l}</div>
                     <input type="file" id="file-${aluno.id}-${t}-${av.id}" accept="image/*" onchange="carregarFoto(${aluno.id},${av.id},'${t}',this)">
                     <div class="foto-buttons">${src?`<button class="btn-salvar-foto" onclick="event.stopPropagation();salvarFoto('${l}',alunos.find(a=>a.id===${aluno.id}).avaliacoes.find(v=>v.id===${av.id}).foto${t.toUpperCase()},'${escapeHtml(aluno.nome)}','${escapeHtml(av.data||'')}')">💾 Salvar</button><button class="btn-apagar-foto" onclick="event.stopPropagation();apagarFoto(${aluno.id},${av.id},'${t}')">🗑️ Apagar</button>`:''}</div>
@@ -1908,7 +1909,7 @@ function renderizarAlunos(alunosParaRenderizar){
                 }).join('')}
               </div>
               <div class="sec-label">Observações</div>
-              <div class="grid2">
+              <div class="grid2 assessment-notes-grid">
                 <div class="field"><label>Objetivos</label><textarea onchange="syncAvaliacao(${aluno.id},${av.id},'motivo',this.value)">${escapeHtml(av.motivo||'')}</textarea></div>
                 <div class="field"><label>Análise Postural</label><textarea onchange="syncAvaliacao(${aluno.id},${av.id},'resumo',this.value)">${escapeHtml(av.resumo||'')}</textarea></div>
               </div>
@@ -1956,6 +1957,10 @@ if (['treino36','treino36-library'].includes(avaliacaoParams.get('embed'))) {
   if (avaliacaoParams.get('embed') === 'treino36-library') style.textContent = '.avaliacao-embed .page-header,.avaliacao-embed .btn-topo{display:none}.avaliacao-embed body{padding:8px}';
   document.head.appendChild(style);
 }
+window.addEventListener('message', function(event) {
+  if(event.origin!==location.origin || event.source!==window.parent || event.data?.type!=='treino36-library-refresh')return;
+  try { alunos=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key);filtrarAlunos(); } catch(error) { notifMsg('⚠️ '+error.message); }
+});
 window.addEventListener('storage', function (event) {
   if (avaliacaoParams.get('embed') === 'treino36-engine') return;
   if (event.key === 'treinoAlunos') { filtrarAlunos(); return; }
