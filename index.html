@@ -1401,7 +1401,7 @@ window.AvaliacaoTreinoSync = (function () {
     student.avaliacaoFichaId = ficha.id;
     var latest = (record.avaliacoes || []).slice(-1)[0];
     var currentWeight=record.pesoAtual && (!latest || !record.pesoAtualAvaliacaoId || String(record.pesoAtualAvaliacaoId)===String(latest.id)) ? record.pesoAtual : (!record.pesoAtual && number(ficha.peso) ? number(ficha.peso) : (latest ? (latest.peso || '') : (record.pesoIni || '')));
-    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:currentWeight});
+    Object.assign(ficha, {idade:record.idade || '', altura:record.altura || '', dataNasc:record.nasc || '', nomeCompleto:record.nome || '', whats:record.whatsapp || '', email:record.email || '', peso:currentWeight, avaliacaoOrigemId:latest?latest.id:null, avaliacaoOrigemData:latest?(latest.data || ''):''});
     student.infoRelevante = Object.assign({}, ficha);
     student.whatsapp = record.whatsapp || '';
     student.avaliacaoId = record.id;
@@ -1429,7 +1429,7 @@ window.AvaliacaoTreinoSync = (function () {
 </script>
 <script src="avaliacao-import.js?v=17"></script>
 <script src="pdf-viewer.js?v=1"></script>
-<script src="obs-avaliacao.js?v=20"></script>
+<script src="obs-avaliacao.js?v=21"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
 </head>
 <body>
@@ -8800,6 +8800,7 @@ window.AvaliacaoTreinoSync = (function () {
           '<div id="infoTabsList" class="info-tabs-list"></div>'+
           '<button type="button" id="addInfoTabBtn" class="add-obs-tab-btn">＋ Nova guia da ficha</button>'+
         '</div>'+
+        '<p id="fichaAssessmentDate" style="font-size:.78rem;color:#64748b;margin:4px 0 10px" hidden></p>'+
         '<div id="infoQuickActions" class="info-tools-bar">'+
           '<button type="button" id="copyAllInfoBtn" class="info-tool-btn primary" title="Copiar resumo completo da ficha">📋 Copiar Tudo</button>'+
           '<button type="button" id="autoFillInfoBtn" class="info-tool-btn" title="Preencher automaticamente a partir do texto das observações">⚡ Auto-preencher</button>'+
@@ -9153,7 +9154,9 @@ window.AvaliacaoTreinoSync = (function () {
       nomeCompleto: document.getElementById('infoNomeCompleto').value.trim(),
       email: document.getElementById('infoEmail').value.trim(),
       whats: document.getElementById('infoWhats').value.trim(),
-      nivelTreino: infoNivelTreinoAtual
+      nivelTreino: infoNivelTreinoAtual,
+      avaliacaoOrigemId: previousInfo.avaliacaoOrigemId || null,
+      avaliacaoOrigemData: previousInfo.avaliacaoOrigemData || ''
     };
     sincronizarFichaEditada(previousInfo);
   }
@@ -9162,6 +9165,9 @@ window.AvaliacaoTreinoSync = (function () {
     if (!infoGuiasAtuais[idx]) return;
     infoGuiaAtivaIndex = idx;
     var g = infoGuiasAtuais[idx];
+    var dateLabel=document.getElementById('fichaAssessmentDate');
+    dateLabel.textContent=g.avaliacaoOrigemData?'Avaliação: '+g.avaliacaoOrigemData:'';
+    dateLabel.hidden=!g.avaliacaoOrigemData;
     document.getElementById('infoIdade').value = g.idade || '';
     document.getElementById('infoPeso').value = g.peso || '';
     document.getElementById('infoAltura').value = g.altura || '';
@@ -9380,7 +9386,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
     var frame=document.getElementById('assessmentLibraryFrame');
-    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=20', location.href).href;
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=21', location.href).href;
     assessmentLibraryDialog.showModal();
     frame.contentWindow.postMessage({type:'treino36-library-refresh'},location.origin);
   }
