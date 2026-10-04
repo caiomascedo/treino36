@@ -32,7 +32,7 @@ with sync_playwright() as p:
       localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',treino:{A:['Agachamento 3x10']},avaliacaoId:10,infoGuias:[{id:'f1',idade:'24',altura:'1.70',peso:'72'}],historicoTreinos:[{workout_id:'old-a',name:'Ana antigo',treino:{A:['Agachamento 2x10']},titulos:{A:'A'}}]},{student_id:'b',nome:'Bruno',treino:{A:['Supino 3x10']}},{student_id:'c',nome:'Caio',treino:{A:['Remada 3x12']},arquivadoNaLista:true}]));
       localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Ana',sexo:'F',idade:'24',altura:'1.70',treinoStudentIds:['a'],pagamentoTipo:'2x',pagamentoData1:'11/07/2026',pagamentoData2:'11/08/2026',avaliacoes:[{id:11,data:'11/07/2026',peso:'72',imc:'24.9',peitoral:'95',cintura:'80',quadril:'98',triceps:'10',axilar:'11',torax:'12',abdominal:'13',suprailiaca:'14',subescapular:'15',pregaCoxa:'16',protocolo:'jp7'}]}]));
     }""")
-    page.reload();page.locator('#searchName').fill('Ana');page.locator('#studentEvaluationBtn').click()
+    page.reload();page.locator('#searchName').fill('Ana');page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
     expect(page.locator('#obs-av-peso')).to_have_value('72')
     page.locator('[data-metric="imc"]').click()
     legend=page.locator('.obs-metric-detail:not([hidden]) .gauge-legend-item')
@@ -54,7 +54,7 @@ with sync_playwright() as p:
     page.evaluate("""() => { const read=FileReader.prototype.readAsDataURL; FileReader.prototype.readAsDataURL=function(file){setTimeout(()=>read.call(this,file),800)}; }""")
     page.locator('#obs-av-fotoF').set_input_files({'name':'ana.svg','mimeType':'image/svg+xml','buffer':b'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>'})
     page.locator('#workoutObsDialog [data-close]').click()
-    page.locator('#searchName').fill('Bruno');page.locator('#studentEvaluationBtn').click()
+    page.locator('#searchName').fill('Bruno');page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
     expect(page.locator('#obs-av-peso')).to_be_visible()
     page.wait_for_function("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos')).find(a=>a.id===10).avaliacoes[0].fotoF")
     records=page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))")

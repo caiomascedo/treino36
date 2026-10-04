@@ -18,14 +18,14 @@ with sync_playwright() as p:
  context.route('**/*',route)
  page=context.new_page();page.goto('http://loading.test/')
  page.evaluate("""() => {localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',treino:{A:['Agachamento']},avaliacaoId:10,infoGuias:[{id:'f1',idade:'24',altura:'1.7',peso:'72'}]}]));localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Ana',sexo:'F',idade:'24',altura:'1.7',treinoStudentIds:['a'],avaliacoes:[{id:11,data:'11/07/2026',peso:'72',peitoral:'95'}]}]));}""")
- page.reload();page.locator('#searchName').fill('Ana');page.locator('#studentEvaluationBtn').click()
+ page.reload();page.locator('#searchName').fill('Ana');page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
  expect(page.locator('#obs-av-peso')).to_have_value('72',timeout=5000)
  page.locator('#obsAssessmentSections [data-assessment-section="medidas"]').click()
  expect(page.locator('#obs-av-peitoral')).to_have_value('95',timeout=5000)
  assert not pdf_requests,pdf_requests
  # A tap on the backdrop closes the window; a tap on its fields did not.
  page.mouse.click(2,2);expect(page.locator('#workoutObsDialog')).not_to_be_visible()
- page.locator('#studentEvaluationBtn').click();page.locator('#closeObsFocusBtn').click();expect(page.locator('#workoutObsDialog')).not_to_be_visible()
+ page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click();page.locator('#workoutObsDialog [data-close]').click();expect(page.locator('#workoutObsDialog')).not_to_be_visible()
  page.locator('#listBtn').click()
  check=page.locator('.lista-select-student').bounding_box();name=page.locator('.lista-student-heading .aluno-nome').bounding_box();archive=page.locator('.archive-aluno-btn').bounding_box()
  assert check['width']<=16 and abs((check['y']+check['height']/2)-(name['y']+name['height']/2))<3
@@ -57,7 +57,7 @@ with sync_playwright() as p:
  library.locator('.import-confirm').click()
  expect(library.locator('.aluno-nome',has_text='Ana')).to_be_visible()
  page.locator('#assessmentLibraryDialog [data-close]').click()
- page.locator('#searchName').fill('Ana');page.locator('#studentEvaluationBtn').click()
+ page.locator('#searchName').fill('Ana');page.locator('#studentEvaluationBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
  expect(page.locator('#obs-av-gordura')).to_have_value('28')
  page.locator('#obsAssessmentSections [data-assessment-section="medidas"]').click()
  expect(page.locator('#obs-av-biceps')).to_have_value('30 / 29')
