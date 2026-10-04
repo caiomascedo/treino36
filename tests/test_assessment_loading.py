@@ -33,6 +33,10 @@ with sync_playwright() as p:
  page.locator('#closeModalBtn').click();page.locator('#assessmentsLibraryBtn').click()
  library=page.frame_locator('#assessmentLibraryFrame');expect(library.locator('.aluno-nome')).to_have_text('Ana',timeout=5000)
  assert not pdf_requests
+ before=page.frames[-1].evaluate('performance.timeOrigin')
+ page.mouse.click(2,2);expect(page.locator('#assessmentLibraryDialog')).not_to_be_visible()
+ page.locator('#assessmentsLibraryBtn').click()
+ assert page.frames[-1].evaluate('performance.timeOrigin')==before
  page.mouse.click(2,2);expect(page.locator('#assessmentLibraryDialog')).not_to_be_visible()
  # A previous cached page may have replaced assessments; offer the preserved link snapshot.
  page.evaluate("""() => {const records=JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'));localStorage.setItem('avaliacao_treino_antes_uniao',JSON.stringify({avaliacoes:records}));localStorage.setItem('avaliacao_fisica_alunos','[]');}""")
@@ -45,4 +49,19 @@ with sync_playwright() as p:
  page.goto('http://loading.test/avaliacao.html')
  expect(page.locator('#alunosList')).to_contain_text('Seus dados foram preservados')
  assert page.evaluate("localStorage.getItem('avaliacao_fisica_alunos')")=='broken records'
+ # Reimport the original assessment JSON after loss: detailed sections, history and binding return.
+ page.evaluate("localStorage.setItem('avaliacao_fisica_alunos','[]')")
+ page.goto('http://loading.test/')
+ page.locator('#assessmentsLibraryBtn').click();library=page.frame_locator('#assessmentLibraryFrame')
+ library.locator('#importFile').set_input_files({'name':'avaliacoes.json','mimeType':'application/json','buffer':b'[{"id":10,"nome":"Ana","sexo":"F","idade":"24","altura":"1.7","avaliacoes":[{"id":11,"data":"11/07/2026","peso":"72","gordura":"28","peitoral":"95","biceps":"30 / 29","triceps":"14","protocolo":"jp7"}]}]'})
+ library.locator('.import-confirm').click()
+ expect(library.locator('.aluno-nome',has_text='Ana')).to_be_visible()
+ page.locator('#assessmentLibraryDialog [data-close]').click()
+ page.locator('#searchName').fill('Ana');page.locator('#studentEvaluationBtn').click()
+ expect(page.locator('#obs-av-gordura')).to_have_value('28')
+ page.locator('#obsAssessmentSections [data-assessment-section="medidas"]').click()
+ expect(page.locator('#obs-av-biceps')).to_have_value('30 / 29')
+ page.locator('#obsAssessmentSections [data-assessment-section="dobras"]').click()
+ expect(page.locator('#obs-av-triceps')).to_have_value('14')
+ assert page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].treinoStudentIds.includes('a')")
  browser.close();print('PASS: assessment fields/library independent of PDF network; backdrop/top close; compact inline selection; invalid records preserved')

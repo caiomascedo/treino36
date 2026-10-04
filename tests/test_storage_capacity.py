@@ -33,4 +33,21 @@ with sync_playwright() as p:
  page.reload()
  assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].nome")=='Raynara'
  assert page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0].peso")=='46'
+ # Repeated unchanged reads/writes must not recompress or decompress large values.
+ counters=page.evaluate("""() => {
+   let compress=0,decompress=0;const c=LZString.compressToUTF16,d=LZString.decompressFromUTF16;
+   LZString.compressToUTF16=value=>{compress++;return c(value)};
+   LZString.decompressFromUTF16=value=>{decompress++;return d(value)};
+   const value='Large assessment test '.repeat(10000);
+   localStorage.setItem('treinoPerformanceCheck',value);
+   for(let i=0;i<20;i++){if(localStorage.getItem('treinoPerformanceCheck')!==value)throw Error('Changed content');localStorage.setItem('treinoPerformanceCheck',value);}
+   const first={compress,decompress};
+   rawSet.call(localStorage,'treinoPerformanceCheck','treino36:lz:1:'+c(value+' from another tab'));
+   const changed=localStorage.getItem('treinoPerformanceCheck');
+   localStorage.getItem('treinoPerformanceCheck');
+   localStorage.removeItem('treinoPerformanceCheck');
+   return {first,after:{compress,decompress},changed:changed.endsWith(' from another tab')};
+ }""")
+ assert counters['first']=={'compress':1,'decompress':0},counters
+ assert counters['after']=={'compress':1,'decompress':1} and counters['changed'],counters
  browser.close();print('PASS: lossless migration/reload of large records; extra backup quota does not block adding assessment to training')

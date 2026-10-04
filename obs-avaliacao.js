@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=13',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=14',location.href).href;
       const timer=setTimeout(()=>{enginePromise=null;frame.remove();reject(Error('Não foi possível carregar os campos. Toque em Composição para tentar novamente.'));},12000);
       frame.onload=()=>{clearTimeout(timer);const api=frame.contentWindow.TreinoAssessmentEngine;if(api)resolve(api);else{enginePromise=null;frame.remove();reject(Error('Não foi possível carregar os cálculos.'));}};
       frame.onerror=()=>{clearTimeout(timer);enginePromise=null;frame.remove();reject(Error('Não foi possível carregar os cálculos.'));};document.body.appendChild(frame);
@@ -26,8 +26,8 @@ window.ObsAssessmentEditor = (() => {
       host.querySelectorAll('[data-metric]').forEach(button=>{const key=button.dataset.metric;const label=button.dataset.label;const c=api.classify(label,state.av[key],state.person.sexo);button.textContent=c.texto;button.className='obs-metric '+c.classe;});
       const result=host.querySelector('.obs-skinfold-results');if(result)result.innerHTML=api.skinfoldResults(state.av,state.person);
     }
-    function field(key,label,readonly=false) {
-      const state=current(),wrap=el('div',{class:'info-field'}),id='obs-av-'+key;const input=el('input',{id,'data-av-field':key,type:'text',inputmode:'decimal'});input.value=state.av[key]??'';if(readonly)input.readOnly=true;
+    function field(key,label,readonly=false,renderState) {
+      const state=renderState||current(),wrap=el('div',{class:'info-field'}),id='obs-av-'+key;const input=el('input',{id,'data-av-field':key,type:'text',inputmode:'decimal'});input.value=state.av[key]??'';if(readonly)input.readOnly=true;
       wrap.append(el('label',{for:id},label),input);
       input.oninput=()=>{
         if(key==='biceps'||key==='coxa') {const v=input.value.replace(/\s*\/\s*/g,' / ');if(!v.includes('/')&&/\d\s+/.test(v))input.value=v.replace(/\s+/, ' / ');}
@@ -61,10 +61,10 @@ window.ObsAssessmentEditor = (() => {
         [['F','Feminino'],['M','Masculino']].forEach(([id,label])=>{const option=el('option',{value:id},label);option.selected=id===state.person.sexo;sex.append(option);});
         sex.onchange=()=>{const state=current();state.person.sexo=sex.value;api.calculate(state.person,state.av.id);persist(state);updateResults(state);};sexWrap.append(el('label',{for:sex.id},'Sexo para cálculo'),sex);content.append(sexWrap);
       }
-      if(sections[section])sections[section].forEach(f=>content.append(field(...f)));
+      if(sections[section])sections[section].forEach(f=>content.append(field(f[0],f[1],f[2],state)));
       if(section==='dobras') {
         const select=el('select',{id:'obsAssessmentProtocol','aria-label':'Protocolo de dobras'});[['jp7','Jackson-Pollock · 7 dobras'],['pollock3','Jackson-Pollock · 3 dobras'],['yuhasz6','Yuhasz · 6 dobras']].forEach(([id,label])=>{const option=el('option',{value:id},label);option.selected=id===(state.av.protocolo||'jp7');select.append(option);});select.onchange=()=>{update('protocolo',select.value);render();};content.append(select);
-        api.protocol(state.av.protocolo).campos(state.person.sexo).forEach(key=>content.append(field(key,api.skinfoldLabel(key)+' (mm)')));
+        api.protocol(state.av.protocolo).campos(state.person.sexo).forEach(key=>content.append(field(key,api.skinfoldLabel(key)+' (mm)',false,state)));
         content.append(el('div',{class:'obs-skinfold-results'}));
       }
       if(section==='fotos') {
