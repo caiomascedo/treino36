@@ -1449,6 +1449,8 @@ window.AvaliacaoTreinoSync = (function () {
 </script>
 <script src="avaliacao-import.js?v=17"></script>
 <script src="workout-validity.js?v=2"></script>
+<script src="obs-notes.js?v=1"></script>
+<link rel="stylesheet" href="obs-notes.css?v=1">
 <script src="pdf-viewer.js?v=1"></script>
 <script src="obs-avaliacao.js?v=22"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
@@ -7312,6 +7314,11 @@ window.AvaliacaoTreinoSync = (function () {
   var hint = document.getElementById('doubleTapHint');
   var buttonsHidden = false;
   var doubleTapTimer = null;
+  var BUTTONS_HIDDEN_KEY='treino36_buttons_hidden';
+  function salvarModoBotoes(){try{localStorage.setItem(BUTTONS_HIDDEN_KEY,buttonsHidden?'1':'0');}catch(error){}}
+  try{buttonsHidden=localStorage.getItem(BUTTONS_HIDDEN_KEY)==='1';}catch(error){}
+  mainContainer.classList.toggle('hide-buttons',buttonsHidden);
+  hideBtn.textContent=buttonsHidden?'🔘 Mostrar Botões':'🔘 Esconder Botões';
   hideBtn.onclick = function() {
     if (buttonsHidden) {
       mainContainer.classList.remove('hide-buttons');
@@ -7323,7 +7330,7 @@ window.AvaliacaoTreinoSync = (function () {
       hint.classList.add('show-hint');
       setTimeout(function() { hint.classList.remove('show-hint'); }, 3000);
     }
-    buttonsHidden = !buttonsHidden;
+    buttonsHidden = !buttonsHidden;salvarModoBotoes();
   };
   document.body.addEventListener('touchstart', function() {
     if (!buttonsHidden) return;
@@ -7331,7 +7338,7 @@ window.AvaliacaoTreinoSync = (function () {
       clearTimeout(doubleTapTimer); doubleTapTimer = null;
       mainContainer.classList.remove('hide-buttons');
       hideBtn.textContent = '🔘 Esconder Botões';
-      buttonsHidden = false; hint.classList.remove('show-hint');
+      buttonsHidden = false;salvarModoBotoes(); hint.classList.remove('show-hint');
     } else {
       doubleTapTimer = setTimeout(function() { doubleTapTimer = null; }, 300);
     }
@@ -7340,7 +7347,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (!buttonsHidden) return;
     mainContainer.classList.remove('hide-buttons');
     hideBtn.textContent = '🔘 Esconder Botões';
-    buttonsHidden = false; hint.classList.remove('show-hint');
+    buttonsHidden = false;salvarModoBotoes(); hint.classList.remove('show-hint');
   });
 
   /* ===== EDIÇÃO AMPLIADA E MOVIMENTO ENTRE SEÇÕES ===== */
@@ -8924,7 +8931,7 @@ window.AvaliacaoTreinoSync = (function () {
       '<div id="obsTabsList" class="obs-tabs-list"></div>'+
       '<button type="button" id="addObsTabBtn" class="add-obs-tab-btn">＋ Nova guia</button>'+
     '</div>'+
-    '<textarea id="obsTextarea" placeholder="Digite as observações, restrições articulares, cuidados ou orientações deste aluno..." style="width:100%;box-sizing:border-box;min-height:120px;padding:8px;padding-bottom:max(140px,30vh);border:1px solid #ccc;border-radius:6px;font-family:inherit;font-size:0.88rem;resize:vertical;-webkit-overflow-scrolling:touch;"></textarea>'+
+    '<div id="obsTextarea" class="obs-rich-text" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Observações do aluno"></div>'+
     '</div>'+
     '<div class="dialog-actions" style="margin-top:10px;display:flex;gap:6px;justify-content:flex-end;">'+
       '<button type="button" id="saveObsBtn" class="primary">Salvar Obs e avaliação</button>'+
@@ -8943,6 +8950,28 @@ window.AvaliacaoTreinoSync = (function () {
   var infoGuiasAtuais = [];
   var infoGuiaAtivaIndex = 0;
   var infoNivelTreinoAtual = 'moderado';
+  var obsNotesEditor=ObsNotes.mount({dialog:obsDialog,guide:function(){return obsGuiasAtuais[obsGuiaAtivaIndex];},save:salvarSomenteObservacoes,prescription:function(){
+    var student=alunoDasObservacoes();if(!student)return '';
+    var visible=alunoNaTela(),parts=[];
+    SECOES.forEach(function(sec){
+      var lines;
+      if(visible&&visible.student_id===student.student_id)lines=itensDaLista(sections[sec]).map(function(li){return li.innerText.trim();});
+      else lines=(student.treino[sec]||[]).map(function(html){var div=document.createElement('div');div.innerHTML=html;return div.textContent;});
+      lines=lines.filter(function(line){return line&&!line.includes('Seção vazia')&&!line.includes('Nenhum exercício');});
+      if(lines.length)parts.push((visible&&visible.student_id===student.student_id?getTituloSecao(sec):(student.titulos||{})[sec]||sec)+'\n'+lines.map(function(line){return '• '+line;}).join('\n'));
+    });return parts.join('\n\n');
+  }});
+  function salvarSomenteObservacoes(){
+    var student=alunoDasObservacoes();
+    if(!student){exibirMensagem('Salve o aluno no treino antes de guardar a OBS.','#b22222',false);return;}
+    obsNotesEditor.capture();
+    var previousGuias=student.obsGuias,previousText=student.observacoes;
+    var guia=obsGuiasAtuais[obsGuiaAtivaIndex],previousDate=guia.obsSalvaEm;guia.obsSalvaEm=new Date().toISOString();
+    student.obsGuias=cloneData(obsGuiasAtuais);student.observacoes=obsGuiasAtuais.map(function(g){return (g.texto||'').trim();}).filter(Boolean).join('\n---\n');
+    if(!salvarLocalStorage()){student.obsGuias=previousGuias;student.observacoes=previousText;guia.obsSalvaEm=previousDate;return;}
+    obsNotesEditor.refresh();atualizarIndicadorObs();exibirMensagem('📝 OBS salva.','#1e6f3f',false);
+  }
+
 
   function normalizarDataNasc(dataStr, aceitarAnoCurto) {
     var texto = String(dataStr || '').trim();
@@ -9392,6 +9421,7 @@ window.AvaliacaoTreinoSync = (function () {
       };
       list.appendChild(btn);
     });
+    if(obsNotesEditor)obsNotesEditor.refresh();
   }
 
 
@@ -9995,6 +10025,9 @@ window.AvaliacaoTreinoSync = (function () {
   };
 
   function salvarObservacoes() {
+    if(obsNotesEditor.pending()){exibirMensagem('Aguarde a foto terminar de carregar.','#64748b',false);return;}
+    obsNotesEditor.capture();
+    if(obsGuiasAtuais[obsGuiaAtivaIndex])obsGuiasAtuais[obsGuiaAtivaIndex].obsSalvaEm=new Date().toISOString();
     salvarCampoAvaliacaoAtivo();
     var aluno = alunoDasObservacoes();
     if(obsStudentId && !aluno){exibirMensagem('O aluno desta janela não está mais disponível. Feche e selecione novamente.', '#b22222', false);return;}
@@ -10058,6 +10091,7 @@ window.AvaliacaoTreinoSync = (function () {
     document.getElementById('obsTextarea').value = '';
     if (obsGuiasAtuais[obsGuiaAtivaIndex]) {
       obsGuiasAtuais[obsGuiaAtivaIndex].texto = '';
+      obsGuiasAtuais[obsGuiaAtivaIndex].textoHtml = '';
     }
     var nome = document.getElementById('searchName').value.trim();
     var aluno = alunoDasObservacoes();
@@ -10083,6 +10117,7 @@ window.AvaliacaoTreinoSync = (function () {
     var temObs = false;
     if (aluno) {
       if (aluno.observacoes && aluno.observacoes.trim()) temObs = true;
+      if((aluno.obsGuias||[]).some(function(g){return g.exameFoto||g.exameResultado;}))temObs=true;
       if (Array.isArray(aluno.obsGuias) && aluno.obsGuias.some(function(g) { return g.texto && g.texto.trim(); })) temObs = true;
     }
     var inputDot = document.getElementById('obsInputDot');

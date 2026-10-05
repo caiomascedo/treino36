@@ -30,7 +30,7 @@ with sync_playwright() as p:
     page.locator('#closeModalBtn').click()
     page.locator('#searchName').fill('Ana treino 1')
     page.locator('#obsIconBtn').click()
-    expect(page.locator('#obsTextarea')).to_have_value('Orientações '*8000)
+    expect(page.locator('#obsTextarea')).to_have_text('Orientações '*8000)
     page.evaluate("document.getElementById('workoutObsDialog').close()")
     assessment=context.new_page()
     assessment.goto('http://app.test/treino36/avaliacao.html?embed=treino36-library')
