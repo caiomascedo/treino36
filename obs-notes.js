@@ -54,7 +54,7 @@ window.ObsNotes = (() => {
         const image=document.createElement('img');image.src=photo.src;image.alt='Foto '+(index+1)+' do exame';image.loading='lazy';image.decoding='async';open.append(image);open.onclick=()=>{viewer.querySelector('img').src=photo.src;viewer.showModal();};
         const actions=document.createElement('div');actions.className='obs-exam-photo-actions';
         const save=document.createElement('button');save.type='button';save.className='obs-exam-photo-save';save.textContent='Salvar foto';save.onclick=()=>savePhoto(photo,index);
-        const remove=document.createElement('button');remove.type='button';remove.className='obs-exam-photo-delete';remove.textContent='Apagar foto';remove.onclick=()=>{if(config.guide()!==g)return;storePhotos(g,photosFor(g).filter(item=>item.id!==photo.id));renderPhotos();examIndicator();status.textContent='Foto removida. Salve a OBS para guardar.';};
+        const remove=document.createElement('button');remove.type='button';remove.className='obs-exam-photo-delete';remove.textContent='Apagar foto';remove.onclick=()=>{if(config.guide()!==g)return;if(!confirm('Deseja apagar a foto '+(index+1)+' deste exame?'))return;storePhotos(g,photosFor(g).filter(item=>item.id!==photo.id));renderPhotos();examIndicator();status.textContent='Foto removida. Salve a OBS para guardar.';};
         actions.append(save,remove);card.append(open,actions);gallery.append(card);
       });
     }
