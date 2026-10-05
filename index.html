@@ -7313,7 +7313,7 @@ window.AvaliacaoTreinoSync = (function () {
   var hideBtn = document.getElementById('hideButtonsBtn');
   var hint = document.getElementById('doubleTapHint');
   var buttonsHidden = false;
-  var doubleTapTimer = null;
+  var hiddenTouchStart=null,hiddenLastTap=null,ignoreRevealClicksUntil=0;
   var BUTTONS_HIDDEN_KEY='treino36_buttons_hidden';
   function salvarModoBotoes(){try{localStorage.setItem(BUTTONS_HIDDEN_KEY,buttonsHidden?'1':'0');}catch(error){}}
   try{buttonsHidden=localStorage.getItem(BUTTONS_HIDDEN_KEY)==='1';}catch(error){}
@@ -7332,22 +7332,35 @@ window.AvaliacaoTreinoSync = (function () {
     }
     buttonsHidden = !buttonsHidden;salvarModoBotoes();
   };
-  document.body.addEventListener('touchstart', function() {
-    if (!buttonsHidden) return;
-    if (doubleTapTimer) {
-      clearTimeout(doubleTapTimer); doubleTapTimer = null;
-      mainContainer.classList.remove('hide-buttons');
-      hideBtn.textContent = '🔘 Esconder Botões';
-      buttonsHidden = false;salvarModoBotoes(); hint.classList.remove('show-hint');
-    } else {
-      doubleTapTimer = setTimeout(function() { doubleTapTimer = null; }, 300);
-    }
-  });
-  document.body.addEventListener('dblclick', function() {
-    if (!buttonsHidden) return;
+  function mostrarBotoesSemClique(event){
+    if(event&&event.cancelable)event.preventDefault();
+    if(event)event.stopImmediatePropagation();
+    ignoreRevealClicksUntil=performance.now()+500;
     mainContainer.classList.remove('hide-buttons');
-    hideBtn.textContent = '🔘 Esconder Botões';
-    buttonsHidden = false;salvarModoBotoes(); hint.classList.remove('show-hint');
+    hideBtn.textContent='🔘 Esconder Botões';
+    buttonsHidden=false;salvarModoBotoes();hint.classList.remove('show-hint');
+    hiddenTouchStart=null;hiddenLastTap=null;
+  }
+  // O gesto só revela os controles depois que o segundo toque terminou.
+  // O clique sintetizado pelo navegador não pode atingir os botões recém-exibidos.
+  document.addEventListener('touchstart',function(event){
+    if(!buttonsHidden||event.touches.length!==1){hiddenTouchStart=null;return;}
+    var touch=event.touches[0];hiddenTouchStart={x:touch.clientX,y:touch.clientY,at:performance.now()};
+  },{capture:true,passive:true});
+  document.addEventListener('touchend',function(event){
+    if(!buttonsHidden||!hiddenTouchStart||event.touches.length){hiddenTouchStart=null;return;}
+    var touch=event.changedTouches[0],start=hiddenTouchStart,now=performance.now();hiddenTouchStart=null;
+    if(!touch||now-start.at>350||Math.hypot(touch.clientX-start.x,touch.clientY-start.y)>12){hiddenLastTap=null;return;}
+    if(hiddenLastTap&&now-hiddenLastTap.at<300&&Math.hypot(touch.clientX-hiddenLastTap.x,touch.clientY-hiddenLastTap.y)<24){mostrarBotoesSemClique(event);return;}
+    hiddenLastTap={x:touch.clientX,y:touch.clientY,at:now};
+  },{capture:true,passive:false});
+  document.addEventListener('touchcancel',function(){hiddenTouchStart=null;hiddenLastTap=null;},{capture:true,passive:true});
+  document.addEventListener('dblclick',function(event){if(buttonsHidden)mostrarBotoesSemClique(event);},true);
+  ['click','dblclick','pointerdown','touchstart'].forEach(function(type){
+    document.addEventListener(type,function(event){
+      if(performance.now()>=ignoreRevealClicksUntil)return;
+      if(event.cancelable)event.preventDefault();event.stopImmediatePropagation();
+    },{capture:true,passive:false});
   });
 
   /* ===== EDIÇÃO AMPLIADA E MOVIMENTO ENTRE SEÇÕES ===== */
