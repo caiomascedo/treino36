@@ -7,3 +7,5 @@
 #workoutObsDialog .dialog-actions{flex-wrap:nowrap!important;gap:4px!important}#workoutObsDialog .dialog-actions>button{flex:1 1 auto;min-width:0;margin:0;padding:8px 5px;font-size:.72rem;white-space:nowrap}
 
 #workoutObsDialog #obsExamToggle{flex:0 1 auto;width:auto;padding:5px 7px;font-size:.72rem;font-weight:500;background:#f3f6f7;color:#596875;gap:8px}#obsExamToggle .panel-toggle-action{font-size:.65rem}#obsExamToggle .info-arrow{font-size:.65rem}.obs-exam-gallery{display:flex;flex-wrap:wrap;gap:8px}.obs-exam-photo{flex-direction:column;align-items:center;gap:4px;margin:8px 0;max-width:112px}.obs-exam-photo-actions{display:flex;flex-direction:column;gap:3px;width:100%}.obs-exam-photo-actions button{font-size:.68rem;padding:5px 6px}
+
+#workoutObsDialog .obs-rich-text{line-height:1.4}#workoutObsDialog .obs-rich-text :is(p,div,ol,ul,li,b,strong,span){font-family:inherit;font-size:inherit!important;line-height:inherit;color:inherit}#workoutObsDialog .obs-rich-text li::marker{font-family:inherit;font-size:1em;color:inherit}
