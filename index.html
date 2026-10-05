@@ -1449,7 +1449,7 @@ window.AvaliacaoTreinoSync = (function () {
 </script>
 <script src="avaliacao-import.js?v=17"></script>
 <script src="workout-validity.js?v=2"></script>
-<script src="obs-notes.js?v=4"></script>
+<script src="obs-notes.js?v=5"></script>
 <link rel="stylesheet" href="obs-notes.css?v=4">
 <script src="pdf-viewer.js?v=1"></script>
 <script src="obs-avaliacao.js?v=22"></script>
@@ -9429,7 +9429,6 @@ window.AvaliacaoTreinoSync = (function () {
         renderizarAbasObs();
         if (area) {
           area.value = (obsGuiasAtuais[idx] && obsGuiasAtuais[idx].texto) || '';
-          area.focus();
         }
       };
       list.appendChild(btn);
@@ -9850,8 +9849,10 @@ window.AvaliacaoTreinoSync = (function () {
     definirPainelInformacoes(false);
     definirPainelObservacoes(true);
 
+    var obsSelection=window.getSelection();
+    if(obsSelection&&obsSelection.rangeCount&&obsDialog.contains(obsSelection.anchorNode))obsSelection.removeAllRanges();
     obsDialog.showModal();
-    document.getElementById('obsTextarea').focus({preventScroll:true});
+    obsDialog.querySelector('h3').focus({preventScroll:true});
     obsDialog.scrollTop = 0;
   }
 
@@ -10033,7 +10034,6 @@ window.AvaliacaoTreinoSync = (function () {
     renderizarAbasObs();
     if (area) {
       area.value = '';
-      area.focus();
     }
   };
 

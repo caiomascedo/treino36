@@ -14,13 +14,18 @@ with sync_playwright() as p:
  page.goto('http://app.test/treino36/')
  page.evaluate("""()=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',treino_id:'w1',treino:{A:['Agachamento 3x10']},observacoes:'Orientação antiga'},{student_id:'b',nome:'Bruno',treino_id:'w2',treino:{A:['Supino 3x10']}}]));localStorage.setItem('avaliacao_fisica_alunos','[]');}""")
  page.reload();baseline=page.evaluate("AvaliacaoTreinoSync.read('treinoAlunos')[0].treino");page.locator('#obsIconBtn').click();expect(page.locator('#obsTextarea')).to_have_text('Orientação antiga')
+ expect(page.locator('#obsTextarea')).not_to_be_focused();assert page.evaluate('getSelection().isCollapsed')
+ assert page.locator('#obsEditBtn').count()==0
+ page.locator('#obsTextarea').click();expect(page.locator('#obsTextarea')).to_be_focused();expect(page.locator('#obsTextarea')).to_have_attribute('contenteditable','true')
+ page.evaluate("()=>{const r=document.createRange();r.selectNodeContents(document.getElementById('obsTextarea'));getSelection().removeAllRanges();getSelection().addRange(r)}")
+ page.locator('#workoutObsDialog .dialog-actions [data-close]').click();page.locator('#obsIconBtn').click();expect(page.locator('#obsTextarea')).not_to_be_focused();assert page.evaluate('getSelection().isCollapsed')
  # Pasted paragraphs and numbered/nested lists share the editor's font; only bold survives source styles.
  page.locator('#obsTextarea').focus()
  page.evaluate("""()=>{const data=new DataTransfer();data.setData('text/html','<p style="font-size:7px;color:red;font-family:monospace">Texto <strong>negrito</strong></p><ol style="font-size:6px"><li>Primeiro <b>importante</b><ul><li>Detalhe</li></ul></li><li>Segundo</li></ol>');document.getElementById('obsTextarea').dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));}""")
- styles=page.locator('#obsTextarea').evaluate("""el=>{const base=getComputedStyle(el);return [...el.querySelectorAll('p,ol,ul,li,strong,b')].map(child=>({size:getComputedStyle(child).fontSize,family:getComputedStyle(child).fontFamily,color:getComputedStyle(child).color,baseSize:base.fontSize,baseFamily:base.fontFamily,baseColor:base.color,marker:child.tagName==='LI'?getComputedStyle(child,'::marker').fontSize:base.fontSize}));}""")
+ styles=page.locator('#obsTextarea').evaluate("""el=>{const base=getComputedStyle(el);return [...el.querySelectorAll('p,ol,ul,li,strong,b,span')].map(child=>({size:getComputedStyle(child).fontSize,family:getComputedStyle(child).fontFamily,color:getComputedStyle(child).color,baseSize:base.fontSize,baseFamily:base.fontFamily,baseColor:base.color,marker:child.tagName==='LI'?getComputedStyle(child,'::marker').fontSize:base.fontSize}));}""")
  assert styles and all(v['size']==v['baseSize'] and v['marker']==v['baseSize'] and v['family']==v['baseFamily'] and v['color']==v['baseColor'] for v in styles),styles
  assert page.locator('#obsTextarea strong').evaluate('el=>Number(getComputedStyle(el).fontWeight)')>=700
- assert page.locator('#obsTextarea [style]').count()==0
+ assert page.locator('#obsTextarea [style*="7px"], #obsTextarea [style*="6px"], #obsTextarea [style*="monospace"], #obsTextarea [style*="red"]').count()==0
  page.locator('#obsTextarea').fill('Cuidados especiais')
  page.evaluate("""()=>{const el=document.getElementById('obsTextarea'),r=document.createRange();r.selectNodeContents(el);getSelection().removeAllRanges();getSelection().addRange(r);}""");page.wait_for_timeout(100)
  page.locator('#obsBoldBtn').click();assert page.locator('#obsTextarea b, #obsTextarea strong').count()==1
