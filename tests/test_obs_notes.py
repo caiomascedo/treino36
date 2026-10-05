@@ -21,6 +21,10 @@ with sync_playwright() as p:
  page.locator('#obsRedoBtn').click();assert page.locator('#obsTextarea b, #obsTextarea strong').count()==1
  page.locator('#obsCopyPrescriptionBtn').click();expect(page.locator('#obsTextarea')).to_contain_text('Cuidados especiais');expect(page.locator('#obsTextarea')).to_contain_text('Agachamento 3x10')
  expect(page.locator('#obsExamBody')).not_to_be_visible();expect(page.locator('#obsExamBadge')).not_to_be_visible()
+ footer_buttons=page.locator('#workoutObsDialog .dialog-actions>button')
+ boxes=[footer_buttons.nth(i).bounding_box() for i in range(footer_buttons.count())]
+ assert len(boxes)==4 and max(b['y'] for b in boxes)-min(b['y'] for b in boxes)<2
+ assert boxes[-1]['x']+boxes[-1]['width']<=page.locator('#workoutObsDialog').bounding_box()['x']+page.locator('#workoutObsDialog').bounding_box()['width']
  stored_before=page.evaluate('JSON.stringify(localStorage)')
  assert page.locator('#obsCopyPrescriptionBtn').evaluate("el=>el.parentElement.classList.contains('obs-exam-header')")
  page.locator('#obsExamToggle').click();expect(page.locator('#obsExamToggle')).to_have_attribute('aria-expanded','true')

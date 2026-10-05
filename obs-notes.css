@@ -3,3 +3,5 @@
 .obs-exam-badge{display:inline-block;width:8px;height:8px;margin-left:5px;border-radius:50%;background:#e53935;vertical-align:middle}.obs-exam-badge[hidden],#obsExamBody[hidden]{display:none}
 
 .obs-exam-header{display:flex;align-items:stretch;gap:6px}.obs-exam-header .toggle-info-btn{flex:1;min-width:0;margin:0;gap:4px}.obs-exam-header #obsCopyPrescriptionBtn{font-size:.75rem;max-width:125px;white-space:normal;margin:0;padding:8px}.obs-exam-header .panel-toggle-action{font-size:.7rem}
+
+#workoutObsDialog .dialog-actions{flex-wrap:nowrap!important;gap:4px!important}#workoutObsDialog .dialog-actions>button{flex:1 1 auto;min-width:0;margin:0;padding:8px 5px;font-size:.72rem;white-space:nowrap}
