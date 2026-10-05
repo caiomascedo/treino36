@@ -22,7 +22,7 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto('http://app.test/treino36/')
     page.evaluate("""() => {
-      localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'t1',nome:'Cliente treino 1',whatsapp:'86999999999',treino:{A:['Agachamento 3x10']},titulos:{A:'A. Pernas'},avaliacaoId:10,avaliacaoFichaId:'f1',infoGuias:[{id:'f1',idade:'30',peso:'70',altura:'1.70',whats:'86999999999'}],obsGuias:[{id:'o1',texto:'Cuidados com joelho'}],historicoTreinos:[{workout_id:'old1',name:'Treino anterior',treino:{A:['Supino 4x8']},titulos:{A:'A. Superior'}}]}]));
+      localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'t1',nome:'Cliente treino 1',whatsapp:'86999999999',treino:{A:['Agachamento 3x10']},titulos:{A:'A. Pernas'},avaliacaoId:10,avaliacaoFichaId:'f1',infoGuias:[{id:'f1',idade:'30',peso:'70',altura:'1.70',whats:'86999999999'}],obsGuias:[{id:'o1',texto:'Cuidados com joelho',exameResultado:'Resultado salvo',exameFotos:[{id:'photo1',src:'data:image/jpeg;base64,cGhvdG8x',name:'exame1.jpg'},{id:'photo2',src:'data:image/jpeg;base64,cGhvdG8y',name:'exame2.jpg'}]}],historicoTreinos:[{workout_id:'old1',name:'Treino anterior',treino:{A:['Supino 4x8']},titulos:{A:'A. Superior'}}]}]));
       localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Cliente completo',whatsapp:'86999999999',idade:'30',altura:'1.70',sexo:'M',treinoStudentId:'t1',treinoStudentIds:['t1'],avaliacoes:[{id:11,data:'03/10/2026',peso:'70',protocolo:'jp7',triceps:'10',axilar:'11',torax:'12',abdominal:'13',suprailiaca:'14',subescapular:'15',pregaCoxa:'16',cintura:'80',quadril:'100',fotoF:'data:image/png;base64,aGVsbG8=',motivo:'Objetivo salvo',resumo:'Postura salva'}]}]));
       localStorage.setItem('treinoMobilidades',JSON.stringify([{id:'m1',nome:'Mobilidade',texto:'Mobilidade de quadril'}]));localStorage.setItem('avaliacao_notificacoes_ativas','1');
     }""")
@@ -33,6 +33,7 @@ with sync_playwright() as p:
     assert backup['avaliacoes'][0]['avaliacoes'][0]['fotoF']=='data:image/png;base64,aGVsbG8='
     assert backup['avaliacoes'][0]['avaliacoes'][0]['pregaCoxa']=='16'
     assert backup['alunos'][0]['obsGuias'][0]['texto']=='Cuidados com joelho'
+    assert len(backup['alunos'][0]['obsGuias'][0]['exameFotos'])==2
     assert backup['alunos'][0]['historicoTreinos'][0]['treino']['A']==['Supino 4x8']
     assert backup['preferencias']['notificacoes_avaliacao'] is True
     # Restore into an empty browser and confirm the paired records in the preview.
@@ -46,6 +47,7 @@ with sync_playwright() as p:
     page.locator('#confirmCompleteBackupImport').click()
     records=page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))")
     students=page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))")
+    assert students[0]['obsGuias']==backup['alunos'][0]['obsGuias']
     assert records[0]['treinoStudentIds']==['t1'] and students[0]['avaliacaoId']==10
     assert records[0]['avaliacoes'][0]['fotoF']=='data:image/png;base64,aGVsbG8='
     assert students[0]['treino']['A']==['Agachamento 3x10'] and students[0]['historicoTreinos'][0]['treino']['A']==['Supino 4x8']

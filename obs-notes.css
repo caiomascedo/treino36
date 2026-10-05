@@ -2,6 +2,8 @@
 
 .obs-exam-badge{display:inline-block;width:8px;height:8px;margin-left:5px;border-radius:50%;background:#e53935;vertical-align:middle}.obs-exam-badge[hidden],#obsExamBody[hidden]{display:none}
 
-.obs-exam-header{display:flex;align-items:stretch;gap:6px}.obs-exam-header .toggle-info-btn{flex:1;min-width:0;margin:0;gap:4px}.obs-exam-header #obsCopyPrescriptionBtn{font-size:.75rem;max-width:125px;white-space:normal;margin:0;padding:8px}.obs-exam-header .panel-toggle-action{font-size:.7rem}
+.obs-exam-header{display:flex;align-items:stretch;gap:6px}.obs-exam-header .toggle-info-btn{flex:1;min-width:0;margin:0;gap:4px}#obsExamBody #obsCopyPrescriptionBtn{font-size:.72rem;margin:8px 0;padding:6px 8px}.obs-exam-header .panel-toggle-action{font-size:.7rem}
 
 #workoutObsDialog .dialog-actions{flex-wrap:nowrap!important;gap:4px!important}#workoutObsDialog .dialog-actions>button{flex:1 1 auto;min-width:0;margin:0;padding:8px 5px;font-size:.72rem;white-space:nowrap}
+
+#workoutObsDialog #obsExamToggle{flex:0 1 auto;width:auto;padding:5px 7px;font-size:.72rem;font-weight:500;background:#f3f6f7;color:#596875;gap:8px}#obsExamToggle .panel-toggle-action{font-size:.65rem}#obsExamToggle .info-arrow{font-size:.65rem}.obs-exam-gallery{display:flex;flex-wrap:wrap;gap:8px}.obs-exam-photo{flex-direction:column;align-items:center;gap:4px;margin:8px 0;max-width:112px}.obs-exam-photo-actions{display:flex;flex-direction:column;gap:3px;width:100%}.obs-exam-photo-actions button{font-size:.68rem;padding:5px 6px}
