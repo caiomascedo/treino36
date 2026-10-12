@@ -6,7 +6,8 @@
 <meta charset="UTF-8">
 <script src="storage-compression.js?v=15"></script>
 <script src="assessment-journal.js?v=17"></script>
-<script src="storage-adapter.js?v=17"></script>
+<script src="obs-autosave-journal.js?v=1"></script>
+<script src="storage-adapter.js?v=18"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1449,10 +1450,11 @@ window.AvaliacaoTreinoSync = (function () {
 </script>
 <script src="avaliacao-import.js?v=17"></script>
 <script src="workout-validity.js?v=2"></script>
-<script src="obs-notes.js?v=5"></script>
-<link rel="stylesheet" href="obs-notes.css?v=4">
+<script src="obs-notes.js?v=6"></script>
+<script src="obs-autosave.js?v=1"></script>
+<link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=1"></script>
-<script src="obs-avaliacao.js?v=22"></script>
+<script src="obs-avaliacao.js?v=23"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
 </head>
 <body>
@@ -8953,7 +8955,7 @@ window.AvaliacaoTreinoSync = (function () {
     '</div>'
   );
 
-  var obsStudentId = null;
+  var obsStudentId = null,obsAutosaveOpening=false;
   function alunoDasObservacoes() {
     if (obsDialog.open && obsStudentId) return alunos.find(function(a){return a.student_id===obsStudentId;}) || null;
     return alunoNaTela() || buscarAluno(document.getElementById('searchName').value.trim());
@@ -8963,7 +8965,7 @@ window.AvaliacaoTreinoSync = (function () {
   var infoGuiasAtuais = [];
   var infoGuiaAtivaIndex = 0;
   var infoNivelTreinoAtual = 'moderado';
-  var obsNotesEditor=ObsNotes.mount({dialog:obsDialog,guide:function(){return obsGuiasAtuais[obsGuiaAtivaIndex];},save:salvarSomenteObservacoes,prescription:function(){
+  var obsNotesEditor=ObsNotes.mount({dialog:obsDialog,guide:function(){return obsGuiasAtuais[obsGuiaAtivaIndex];},student:alunoParaAutosaveObs,changed:function(guide,options){if(obsAutoSaver)obsAutoSaver.notesChanged(guide,options);},save:salvarSomenteObservacoes,prescription:function(){
     var student=alunoDasObservacoes();if(!student)return '';
     var visible=alunoNaTela(),parts=[];
     SECOES.forEach(function(sec){
@@ -8974,6 +8976,13 @@ window.AvaliacaoTreinoSync = (function () {
       if(lines.length)parts.push((visible&&visible.student_id===student.student_id?getTituloSecao(sec):(student.titulos||{})[sec]||sec)+'\n'+lines.map(function(line){return '• '+line;}).join('\n'));
     });return parts.join('\n\n');
   }});
+  function alunoParaAutosaveObs(){
+    var student=alunoDasObservacoes();if(student||obsAutosaveOpening||!obsDialog.open)return student;
+    var nome=document.getElementById('searchName').value.trim();if(!nome)return null;
+    var draft=capturarTreinoAtual();student=garantirHistorico({nome:nome,treino:cloneData(draft.treino||{}),titulos:cloneData(draft.titulos||{}),secaoFAtiva:!!draft.secaoFAtiva,criadoEm:new Date().toISOString()});
+    try{TreinoStorage.stageObs(student.student_id,{createStudent:student});alunos.push(student);obsStudentId=student.student_id;registrarAlunoSelecionado(student.nome);return student;}catch(error){document.getElementById('obsAutoSaveStatus').textContent='Não foi possível salvar automaticamente. '+error.message;return null;}
+  }
+  var obsAutoSaver=ObsAutoSave.mount({dialog:obsDialog,student:alunoDasObservacoes,ensureStudent:alunoParaAutosaveObs,opening:function(){return obsAutosaveOpening;},state:function(){return {obs:obsGuiasAtuais,obsIndex:obsGuiaAtivaIndex,info:infoGuiasAtuais,infoIndex:infoGuiaAtivaIndex};},indicator:atualizarIndicadorObs});
   function salvarSomenteObservacoes(){
     var student=alunoDasObservacoes();
     if(!student){exibirMensagem('Salve o aluno no treino antes de guardar a OBS.','#b22222',false);return;}
@@ -9226,6 +9235,7 @@ window.AvaliacaoTreinoSync = (function () {
       avaliacaoCadastroId: previousInfo.avaliacaoCadastroId || null
     };
     sincronizarFichaEditada(previousInfo);
+    if(obsAutoSaver)obsAutoSaver.infoChanged(previousInfo);
   }
 
   function carregarGuiaInfo(idx) {
@@ -9415,6 +9425,7 @@ window.AvaliacaoTreinoSync = (function () {
             renderizarAbasObs();
             var area = document.getElementById('obsTextarea');
             if (area) area.value = (obsGuiasAtuais[obsGuiaAtivaIndex] && obsGuiasAtuais[obsGuiaAtivaIndex].texto) || '';
+            if(obsAutoSaver)obsAutoSaver.notesChanged();
           }
         };
         btn.appendChild(closeBtn);
@@ -9455,7 +9466,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
     var frame=document.getElementById('assessmentLibraryFrame');
-    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=22', location.href).href;
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=23', location.href).href;
     assessmentLibraryDialog.showModal();
     frame.contentWindow.postMessage({type:'treino36-library-refresh'},location.origin);
   }
@@ -9593,7 +9604,7 @@ window.AvaliacaoTreinoSync = (function () {
         var record = AvaliacaoTreinoSync.resolve(records, student);
         if (!record) return;
         var before = AvaliacaoTreinoSync.fichaState(student);
-        AvaliacaoTreinoSync.toFicha(student, record);
+        AvaliacaoTreinoSync.toFicha(student, record);TreinoStorage.pruneObsInfo(student.student_id,(student.infoGuias||[]).map(function(g){return g.id;}));
         if (before !== AvaliacaoTreinoSync.fichaState(student)) changed = true;
       });
       if (changed) { if(asyncSave) salvarFichasEmSegundoPlano(records); else salvarLocalStorage(); }
@@ -9789,6 +9800,7 @@ window.AvaliacaoTreinoSync = (function () {
   };
 
   function abrirObservacoes() {
+    obsAutosaveOpening=true;
     obsStudentId = null;
     obsAssessmentSection = null;
     if (obsNativeEditor) obsNativeEditor.reset();
@@ -9798,7 +9810,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (!nome) {
       exibirMensagem('❌ Digite ou selecione um aluno para ver/adicionar observações.', '#b22222', false);
       document.getElementById('searchName').focus();
-      return;
+      obsAutosaveOpening=false;return;
     }
     var aluno = alunoDasObservacoes();
     obsStudentId = aluno ? aluno.student_id : null;
@@ -9853,7 +9865,7 @@ window.AvaliacaoTreinoSync = (function () {
     if(obsSelection&&obsSelection.rangeCount&&obsDialog.contains(obsSelection.anchorNode))obsSelection.removeAllRanges();
     obsDialog.showModal();
     obsDialog.querySelector('h3').focus({preventScroll:true});
-    obsDialog.scrollTop = 0;
+    obsDialog.scrollTop = 0;obsAutosaveOpening=false;
   }
 
   var closeObsFocusButton = document.createElement('button');
@@ -9922,6 +9934,7 @@ window.AvaliacaoTreinoSync = (function () {
   });
 
   ['infoAltura', 'infoDataNasc', 'infoNomeCompleto', 'infoEmail', 'infoWhats'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', salvarGuiaInfoAtual);
     document.getElementById(id).addEventListener('change', salvarGuiaInfoAtual);
   });
 
@@ -10035,6 +10048,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (area) {
       area.value = '';
     }
+    obsAutoSaver.notesChanged();
   };
 
   function salvarObservacoes() {

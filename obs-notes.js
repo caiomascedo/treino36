@@ -25,16 +25,16 @@ window.ObsNotes = (() => {
     Object.defineProperty(area,'value',{get(){return text(area);},set(value){const g=config.guide();area.innerHTML=g&&g.texto===value&&g.textoHtml?clean(g.textoHtml):'';if(!area.innerHTML)area.textContent=value||'';}});
     function snapshot(){return [area.innerHTML,result.innerHTML];}
     function history(){const g=config.guide();if(!g)return null;let h=histories.get(g);if(!h){h={items:[snapshot()],at:0};histories.set(g,h);}return h;}
-    function record(){const h=history();if(!h)return;const s=snapshot();if(JSON.stringify(h.items[h.at])!==JSON.stringify(s)){h.items.splice(h.at+1);h.items.push(s);if(h.items.length>80)h.items.shift();h.at=h.items.length-1;}capture();buttons();}
+    function record(){const h=history();if(!h)return;const s=snapshot();if(JSON.stringify(h.items[h.at])!==JSON.stringify(s)){h.items.splice(h.at+1);h.items.push(s);if(h.items.length>80)h.items.shift();h.at=h.items.length-1;}capture();buttons();if(config.changed)config.changed(config.guide());}
     function buttons(){const h=history();document.getElementById('obsUndoBtn').disabled=!h||h.at===0;document.getElementById('obsRedoBtn').disabled=!h||h.at===h.items.length-1;}
     function refresh(){const g=config.guide()||{};if(displayedGuide!==g){setExamExpanded(false);displayedGuide=g;}examIndicator();area.value=g.texto||'';result.innerHTML=clean(g.exameResultadoHtml||'');if(!result.innerHTML)result.textContent=g.exameResultado||'';date.textContent=g.obsSalvaEm?'OBS salva em '+new Date(g.obsSalvaEm).toLocaleString('pt-BR'):'';renderPhotos();file.value='';range=null;editing=area;buttons();}
     [area,result].forEach(editor=>{editor.addEventListener('focus',()=>{editing=editor;history();});editor.addEventListener('input',record);editor.addEventListener('paste',event=>{event.preventDefault();const html=event.clipboardData.getData('text/html'),plain=event.clipboardData.getData('text/plain');if(html)document.execCommand('insertHTML',false,clean(html));else if(/\*\*[^*]+\*\*/.test(plain)){const escaped=document.createElement('div');escaped.textContent=plain;document.execCommand('insertHTML',false,escaped.innerHTML.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'));}else document.execCommand('insertText',false,plain);record();});editor.addEventListener('keydown',event=>{if(!(event.ctrlKey||event.metaKey))return;const key=event.key.toLowerCase();if(key==='b'){event.preventDefault();bold();}if(key==='z'||key==='y'){event.preventDefault();move(key==='y'||event.shiftKey?1:-1);}});});
     document.addEventListener('selectionchange',()=>{if(!dialog.open)return;const sel=getSelection();if(!sel.rangeCount)return;const r=sel.getRangeAt(0);if(editing.contains(r.commonAncestorContainer))range=r.cloneRange();});
     function restore(){editing.focus({preventScroll:true});if(range&&editing.contains(range.commonAncestorContainer)){const sel=getSelection();sel.removeAllRanges();sel.addRange(range);}}
     function bold(){restore();document.execCommand('bold',false,null);record();}
-    function move(step){const h=history();if(!h||!h.items[h.at+step])return;h.at+=step;if(result.innerHTML!==h.items[h.at][1])setExamExpanded(true);[area.innerHTML,result.innerHTML]=h.items[h.at];range=null;capture();buttons();editing.focus({preventScroll:true});}
+    function move(step){const h=history();if(!h||!h.items[h.at+step])return;h.at+=step;if(result.innerHTML!==h.items[h.at][1])setExamExpanded(true);[area.innerHTML,result.innerHTML]=h.items[h.at];range=null;capture();buttons();if(config.changed)config.changed(config.guide());editing.focus({preventScroll:true});}
     [['obsBoldBtn',bold],['obsUndoBtn',()=>move(-1)],['obsRedoBtn',()=>move(1)]].forEach(([id,fn])=>{const b=document.getElementById(id);b.addEventListener('pointerdown',e=>e.preventDefault());b.onclick=fn;});
-    document.getElementById('obsCopyPrescriptionBtn').onclick=()=>{history();const prescription=config.prescription();if(!prescription){status.textContent='Não há prescrição neste treino.';return;}const separator=document.createTextNode(text(area).trim()?'\n\n':'');area.append(separator,document.createTextNode(prescription));editing=area;record();status.textContent='Prescrição adicionada à OBS. Toque em Salvar somente OBS para guardar.';};
+    document.getElementById('obsCopyPrescriptionBtn').onclick=()=>{history();const prescription=config.prescription();if(!prescription){status.textContent='Não há prescrição neste treino.';return;}const separator=document.createTextNode(text(area).trim()?'\n\n':'');area.append(separator,document.createTextNode(prescription));editing=area;record();status.textContent='Prescrição adicionada à OBS. ';};
     const gallery=document.getElementById('obsExamGallery');
     const viewer=document.createElement('dialog');viewer.className='app-dialog obs-exam-viewer';viewer.innerHTML='<button type="button">Fechar foto</button><img alt="Exame ampliado">';document.body.append(viewer);viewer.querySelector('button').onclick=()=>viewer.close();
     function photosFor(g){return Array.isArray(g.exameFotos)?g.exameFotos.filter(p=>p&&p.src):g.exameFoto?[{id:'legacy',src:g.exameFoto,name:'exame.jpg'}]:[];}
@@ -55,7 +55,7 @@ window.ObsNotes = (() => {
         const image=document.createElement('img');image.src=photo.src;image.alt='Foto '+(index+1)+' do exame';image.loading='lazy';image.decoding='async';open.append(image);open.onclick=()=>{viewer.querySelector('img').src=photo.src;viewer.showModal();};
         const actions=document.createElement('div');actions.className='obs-exam-photo-actions';
         const save=document.createElement('button');save.type='button';save.className='obs-exam-photo-save';save.textContent='Salvar foto';save.onclick=()=>savePhoto(photo,index);
-        const remove=document.createElement('button');remove.type='button';remove.className='obs-exam-photo-delete';remove.textContent='Apagar foto';remove.onclick=()=>{if(config.guide()!==g)return;if(!confirm('Deseja apagar a foto '+(index+1)+' deste exame?'))return;storePhotos(g,photosFor(g).filter(item=>item.id!==photo.id));renderPhotos();examIndicator();status.textContent='Foto removida. Salve a OBS para guardar.';};
+        const remove=document.createElement('button');remove.type='button';remove.className='obs-exam-photo-delete';remove.textContent='Apagar foto';remove.onclick=()=>{if(config.guide()!==g)return;if(!confirm('Deseja apagar a foto '+(index+1)+' deste exame?'))return;storePhotos(g,photosFor(g).filter(item=>item.id!==photo.id));if(config.changed)config.changed(g,{photos:true});renderPhotos();examIndicator();status.textContent='Foto removida.';};
         actions.append(save,remove);card.append(open,actions);gallery.append(card);
       });
     }
@@ -67,9 +67,9 @@ window.ObsNotes = (() => {
       return {id:crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random(),src,name:selected.name};
     }
     file.onchange=async()=>{
-      const selected=[...file.files],g=config.guide();if(!selected.length||!g)return;pending++;file.disabled=true;let added=0;
-      try{for(const image of selected){if(config.guide()===g)status.textContent='Preparando foto '+(added+1)+' de '+selected.length+'…';const photo=await compressPhoto(image);storePhotos(g,[...photosFor(g),photo]);added++;if(config.guide()===g){renderPhotos();examIndicator();}}
-        if(config.guide()===g)status.textContent=added+' foto(s) adicionada(s). Salve a OBS para guardar.';
+      const selected=[...file.files],g=config.guide(),owner=config.student&&config.student();if(!selected.length||!g)return;if(config.changed)config.changed(g,{student:owner});pending++;file.disabled=true;let added=0;
+      try{for(const image of selected){if(config.guide()===g)status.textContent='Preparando foto '+(added+1)+' de '+selected.length+'…';const photo=await compressPhoto(image);storePhotos(g,[...photosFor(g),photo]);if(config.changed)config.changed(g,{student:owner,photos:true});added++;if(config.guide()===g){renderPhotos();examIndicator();}}
+        if(config.guide()===g)status.textContent=added+' foto(s) adicionada(s).';
       }catch(error){status.textContent='Não foi possível carregar todas as fotos: '+error.message;}
       finally{pending--;file.disabled=false;file.value='';}
     };
