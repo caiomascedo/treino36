@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=23',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=24',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -59,6 +59,7 @@ window.ObsAssessmentEditor = (() => {
     window.addEventListener('pagehide',flush);
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush();});
     function updateResults(state) {
+      CompositionExtras.refreshValues(state.person.id,state.av.id);
       sections.composicao.filter(f=>f[2]).forEach(([key])=>{const input=host.querySelector('[data-av-field="'+key+'"]');if(input)input.value=state.av[key]??'';});
       host.querySelectorAll('[data-metric]').forEach(button=>{const key=button.dataset.metric;const label=button.dataset.label;const c=api.classify(label,state.av[key],state.person.sexo);button.textContent=c.texto;button.className='obs-metric '+c.classe;});
       const result=host.querySelector('.obs-skinfold-results');if(result)result.innerHTML=api.skinfoldResults(state.av,state.person);
@@ -111,6 +112,12 @@ window.ObsAssessmentEditor = (() => {
         sex.onchange=()=>{if(!flush())return;const state=current();state.person.sexo=sex.value;api.calculate(state.person,state.av.id);stage(state,{}, {sexo:sex.value});updateResults(state);};sexWrap.append(el('label',{for:sex.id},'Sexo para cálculo'),sex);content.append(sexWrap);
       }
       if(sections[section])sections[section].forEach(f=>content.append(field(f[0],f[1],f[2],state)));
+      if(section==='composicao'){
+        const tools=el('div',{class:'composition-extras-tools'});host.insertBefore(tools,content);
+        CompositionExtras.mount(tools,content,{prefix:'obs-av-',fieldClass:'info-field',getState:current,input:(key,value)=>update(key,value),select:keys=>{
+          const state=current();const draft=TreinoStorage.assessmentOperation(state.person.id,null,'person',{}, {composicaoExtras:keys});TreinoAssessmentJournal.merge(state.records,[draft]);status.textContent='Campos salvos para este aluno.';clearTimeout(saveTimer);saveTimer=setTimeout(compact,1200);
+        },error:error=>{status.textContent='Não foi possível salvar: '+error.message;}});
+      }
       if(section==='dobras') {
         const select=el('select',{id:'obsAssessmentProtocol','aria-label':'Protocolo de dobras'});[['jp7','Jackson-Pollock · 7 dobras'],['pollock3','Jackson-Pollock · 3 dobras'],['yuhasz6','Yuhasz · 6 dobras']].forEach(([id,label])=>{const option=el('option',{value:id},label);option.selected=id===(state.av.protocolo||'jp7');select.append(option);});select.onchange=()=>{update('protocolo',select.value);render();};content.append(select);
         api.protocol(state.av.protocolo).campos(state.person.sexo).forEach(key=>content.append(field(key,api.skinfoldLabel(key)+' (mm)',false,state)));
