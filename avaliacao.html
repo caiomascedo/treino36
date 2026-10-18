@@ -4,10 +4,10 @@
   <meta charset="UTF-8"/>
 <script src="storage-compression.js?v=15"></script>
 <script src="assessment-journal.js?v=18"></script>
-<script src="composition-extras.js?v=1"></script>
-<link rel="stylesheet" href="composition-extras.css?v=1">
+<script src="composition-extras.js?v=2"></script>
+<link rel="stylesheet" href="composition-extras.css?v=2">
 <script src="obs-autosave-journal.js?v=1"></script>
-<script src="storage-adapter.js?v=19"></script>
+<script src="storage-adapter.js?v=20"></script>
 <script src="pdf-viewer.js?v=1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
@@ -260,7 +260,7 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js?v=18"></script>
+<script src="avaliacao-import.js?v=19"></script>
 <link rel="stylesheet" href="avaliacao-compacta.css?v=17">
 <script src="avaliacao-compacta.js?v=17"></script>
 </head>
@@ -1494,8 +1494,8 @@ async function gerarPDFAluno(alunoId, options={}){
   if(!['auto','medidas-dobras','medidas-composicao','completo'].includes(mode)) throw Error('Escolha um conteúdo válido para o PDF.');
   const filled=value=>value!==undefined&&value!==null&&String(value).trim()!==''&&!['NaN','—','undefined'].includes(String(value));
   const has=fields=>aluno.avaliacoes.some(av=>fields.some(key=>filled(av[key])));
-  const includeComposition=mode==='completo'||mode==='medidas-composicao'||(mode==='auto'&&(has(['peso','gordura','visceral','massamuscular','proteina','agua','tmb','imc'])||CompositionExtras.pdfRows(aluno,aluno.avaliacoes).length>0));
-  const includeMeasures=mode!=='auto'||has(['peitoral','biceps','barriga','cintura','quadril','coxa']);
+  const includeComposition=mode==='completo'||mode==='medidas-composicao'||(mode==='auto'&&CompositionExtras.hasValues(aluno,aluno.avaliacoes));
+  const includeMeasures=mode!=='auto'||CompositionExtras.hasValues(aluno,aluno.avaliacoes,'medidas');
   const includeSkinfolds=mode==='completo'||mode==='medidas-dobras'||(mode==='auto'&&has(['triceps','axilar','torax','abdominal','suprailiaca','subescapular','pregaCoxa','panturrilha']));
   if(!includeComposition&&!includeMeasures&&!includeSkinfolds) throw Error('Preencha a composição, medidas ou dobras para gerar o PDF automático.');
   const pdfRows=rows=>rows.map(row=>row.map(value=>String(value).replace(/\bNaN\b/g,'—'))).filter(row=>mode!=='auto'||row.slice(1).some(filled));
@@ -1538,7 +1538,7 @@ async function gerarPDFAluno(alunoId, options={}){
   const extraRows=CompositionExtras.pdfRows(aluno,avs,formatDelta);
   if(extraRows.some(row=>row[0]==='Altura (cm)'))compRows.splice(0,1);
   compRows.push(...extraRows);
-  doc.autoTable({startY:53,head:[headers],body:pdfRows(compRows),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
+  doc.autoTable({startY:53,head:[headers],body:pdfRows(CompositionExtras.filterBaseRows(aluno,compRows)),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
     didParseCell:function(data){
       if(data.section==='body' && LINHAS_NEGRITO_PDF.includes(data.row.raw[0])){
         data.cell.styles.fontStyle='bold';
@@ -1572,7 +1572,7 @@ async function gerarPDFAluno(alunoId, options={}){
       return delta ? `${valor}\n${delta}` : valor;
     })]
   ];
-  doc.autoTable({startY:yPos,head:[headers],body:pdfRows(medidasRows),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10}});
+  doc.autoTable({startY:yPos,head:[headers],body:pdfRows([...CompositionExtras.filterBaseRows(aluno,medidasRows,'medidas'),...CompositionExtras.pdfRows(aluno,avs,formatDelta,'medidas',formatDeltaCoxaBiceps)]),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10}});
   yPos=doc.lastAutoTable.finalY+8;
 
   }
@@ -1905,7 +1905,7 @@ function renderizarAlunos(alunosParaRenderizar){
                 <div class="field"><label>Data</label><input type="text" value="${escapeHtml(av.data||'')}" placeholder="DD/MM/AAAA" onchange="syncAvaliacao(${aluno.id},${av.id},'data',this.value)"></div>
               </div>
               <div class="sec-label">Composição Corporal <small style="text-transform:none;font-weight:400;color:#bbb">(toque no rótulo abaixo do valor para ver a análise)</small></div>
-              <div class="composition-extras-tools" data-extra-record="${aluno.id}" data-extra-av="${av.id}"></div>
+              <div class="composition-extras-tools" data-extra-section="composicao" data-extra-record="${aluno.id}" data-extra-av="${av.id}"></div>
               <div class="grid3">
                 <div class="field"><label>Peso (kg)</label><input type="text" id="peso-input-${aluno.id}-${av.id}" value="${escapeHtml(av.peso||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'peso',this.value)"><span class="badge clickable ${clsPeso.classe}" id="peso-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','peso','peso-input-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','Peso (kg)')">${clsPeso.texto}</span></div>
                 <div class="field"><label>IMC</label><input type="text" id="imc-${aluno.id}-${av.id}" readonly value="${escapeHtml(av.imc||'')}"><span class="badge clickable ${clsIMC.classe}" id="imc-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','imc','imc-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','IMC')">${clsIMC.texto}</span></div>
@@ -1919,6 +1919,7 @@ function renderizarAlunos(alunosParaRenderizar){
               </div>
               <div class="gauge-panel" id="metric-panel-comp-${aluno.id}-${av.id}"></div>
               <div class="sec-label">Medidas (cm)</div>
+              <div class="composition-extras-tools" data-extra-section="medidas" data-extra-record="${aluno.id}" data-extra-av="${av.id}"></div>
               <div class="grid3">
                 <div class="field"><label>Peitoral</label><input type="text" value="${escapeHtml(av.peitoral||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'peitoral',this.value)"></div>
                 <div class="field"><label>Bíceps D/E</label><input type="text" id="biceps-${aluno.id}-${av.id}" value="${escapeHtml(av.biceps||'')}" onblur="formatarBicepsCoxa(this);syncAvaliacao(${aluno.id},${av.id},'biceps',this.value)"></div>
@@ -1967,7 +1968,8 @@ function renderizarAlunos(alunosParaRenderizar){
   });
   container.querySelectorAll('[data-extra-record]').forEach(root=>{
     const person=alunos.find(a=>String(a.id)===root.dataset.extraRecord),av=person.avaliacoes.find(a=>String(a.id)===root.dataset.extraAv);
-    CompositionExtras.mount(root,root.nextElementSibling,{prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value)=>{av[key]=value;TreinoStorage.stageAssessment(person.id,av.id,{[key]:value});consolidarExtras();},select:keys=>{person.composicaoExtras=keys;TreinoStorage.assessmentOperation(person.id,null,'person',{}, {composicaoExtras:keys});consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
+    const section=root.dataset.extraSection;
+    CompositionExtras.mount(root,root.nextElementSibling,{section,prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value)=>{av[key]=value;TreinoStorage.stageAssessment(person.id,av.id,{[key]:value});consolidarExtras();},select:(keys,baseKeys)=>{const prefs=CompositionExtras.preferenceKeys(section),settings={[prefs.extra]:keys,[prefs.base]:baseKeys};Object.assign(person,settings);TreinoStorage.assessmentOperation(person.id,null,'person',{},settings);consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
   });
   compactarAvaliacoes();
 }

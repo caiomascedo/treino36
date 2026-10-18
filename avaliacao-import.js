@@ -37,11 +37,12 @@
           clean[field] = person[field];
         }
       });
-      if (Object.hasOwn(person, 'composicaoExtras')) {
-        const allowed = new Set(['pesoGordura','musculoEsqueleticoPct','musculoEsqueleticoKg','massaMuscularPct','pesoAgua','metabolismoInformado','alturaCm','idadeReal']);
-        if (!Array.isArray(person.composicaoExtras) || person.composicaoExtras.some(key => !allowed.has(key))) throw Error('Campos extras inválidos no cadastro de ' + person.nome + '.');
-        clean.composicaoExtras = [...new Set(person.composicaoExtras)];
-      }
+      const choices={composicaoExtras:['pesoGordura','musculoEsqueleticoPct','musculoEsqueleticoKg','massaMuscularPct','pesoAgua','metabolismoInformado','alturaCm','idadeReal'],composicaoCampos:['peso','imc','gordura','visceral','massamuscular','proteina','agua','tmb','idadeMetabolica'],medidasCampos:['peitoral','biceps','barriga','cintura','quadril','coxa'],medidasExtras:['pescoco','panturrilhaMedida']};
+      Object.entries(choices).forEach(([key,allowed])=>{
+        if (!Object.hasOwn(person,key)) return;
+        if (!Array.isArray(person[key]) || person[key].some(value=>!allowed.includes(value))) throw Error('Campos selecionados inválidos no cadastro de '+person.nome+'.');
+        clean[key]=[...new Set(person[key])];
+      });
       clean.id = id; clean.nome = person.nome.trim();
       if (clean.sexo && !['M','F'].includes(clean.sexo)) throw Error('Sexo inválido no cadastro de ' + person.nome + '.');
       clean.avaliacoes = person.avaliacoes.map(av => {
@@ -72,7 +73,7 @@
         if (!Object.hasOwn(person, field) || field === 'id') return;
         if (preferImported || target[field] === undefined || target[field] === null || target[field] === '') target[field] = person[field];
       });
-      if (Object.hasOwn(person, 'composicaoExtras') && (preferImported || !Array.isArray(target.composicaoExtras))) target.composicaoExtras = person.composicaoExtras.slice();
+      ['composicaoExtras','composicaoCampos','medidasExtras','medidasCampos'].forEach(key=>{if(Object.hasOwn(person,key)&&(preferImported||!Array.isArray(target[key])))target[key]=person[key].slice();});
       if (!Array.isArray(target.avaliacoes)) target.avaliacoes = [];
       person.avaliacoes.forEach(av => {
         if (owners.has(av.id) && owners.get(av.id) !== person.id) throw Error('O ID de uma avaliação está associado a outra pessoa. Confira o arquivo antes de importar.');

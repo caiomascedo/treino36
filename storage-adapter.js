@@ -117,7 +117,8 @@
     assessmentOperation(recordId,avId,operation,fields={},personFields={}) {
       const drafts = JSON.parse(unpack(originalGet.call(localStorage,journalKey)) || '[]');
       const kept = drafts.filter(item => String(item.recordId) !== String(recordId) || String(item.avId) !== String(avId));
-      const draft = {recordId,avId,operation,fields,personFields}; kept.push(draft);
+      const previous = operation==='person' ? drafts.find(item=>String(item.recordId)===String(recordId)&&String(item.avId)===String(avId)&&item.operation==='person') : null;
+      const draft = {recordId,avId,operation,fields,personFields:{...previous?.personFields,...personFields}}; kept.push(draft);
       originalSet.call(localStorage,journalKey,JSON.stringify(kept));
       return draft;
     },
