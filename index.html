@@ -1000,6 +1000,26 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 }
 #pdfBody .pdf-title { font-size: 12pt; font-weight: bold; text-align: center; color: #b22222; margin-bottom: 2px; }
 #pdfBody .pdf-subtitle { font-size: 7.5pt; text-align: center; color: #555; margin-bottom: 4px; }
+#pdfBody .pdf-start-btn { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 2px; 
+  background: #16a34a; 
+  color: #fff !important; 
+  border: none; 
+  border-radius: 3px; 
+  padding: 1px 6px; 
+  font-size: 6.5pt; 
+  font-weight: bold; 
+  text-decoration: none !important; 
+  white-space: nowrap; 
+  vertical-align: middle; 
+}
+#pdfBody .pdf-start-btn:hover { 
+  background: #15803d; 
+  color: #fff !important; 
+  text-decoration: none !important; 
+}
 #pdfBody .pdf-sec { margin-bottom: 5px; border-left: 2px solid #ccc; padding-left: 5px; }
 #pdfBody .pdf-sec-title { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
 #pdfBody .pdf-ex-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px; border-bottom: 0.5px solid #f0f0f0; padding-bottom: 1px; }
@@ -5059,9 +5079,10 @@ window.AvaliacaoTreinoSync = (function () {
     const nomeAluno = document.getElementById('searchName').value.trim() || 'Aluno';
     const footer = document.querySelector('.footer') ? document.querySelector('.footer').innerText.trim() : 'Personal Caio Macêdo';
     const hoje = new Date().toLocaleDateString('pt-BR');
+    const startUrl = iniciarTreinoUrl(nomeAluno);
 
     let html = '<div class="pdf-title">Treino — ' + escHtml(nomeAluno) + '</div>';
-    html += '<div class="pdf-subtitle">Gerado em ' + escHtml(hoje) + ' | ' + escHtml(footer) + '</div>';
+    html += '<div class="pdf-subtitle">Gerado em ' + escHtml(hoje) + ' | ' + escHtml(footer) + ' &nbsp;·&nbsp; <a href="' + escAttr(startUrl) + '" target="_blank" rel="noopener" class="pdf-start-btn">▶ Iniciar Treino</a></div>';
 
     for (let sec of SECOES) {
       let titulo = getTituloSecao(sec);
@@ -5174,7 +5195,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
     win.document.open();
     win.document.write('<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Treino PDF</title><style>' +
-      'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px}.yt-link{background:#e00;color:white;text-decoration:none;border-radius:3px;padding:2px 5px;font-size:10px;font-weight:bold;white-space:nowrap}.yt-link svg{display:none}@media print{a[href]:after{content:""}}' +
+      'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px}.yt-link{background:#e00;color:white;text-decoration:none;border-radius:3px;padding:2px 5px;font-size:10px;font-weight:bold;white-space:nowrap}.yt-link svg{display:none}.pdf-start-btn{background:#16a34a;color:white;text-decoration:none;border-radius:3px;padding:2px 6px;font-size:10px;font-weight:bold;display:inline-block;margin-left:6px;vertical-align:middle}@media print{a[href]:after{content:""}}' +
       '</style></head><body>' + pdfBody.innerHTML + '<script>setTimeout(function(){window.print();},300);<\/script></body></html>');
     win.document.close();
   }
@@ -6515,44 +6536,227 @@ window.AvaliacaoTreinoSync = (function () {
   }
   
   function importarJSON() {
-    var input = document.createElement('input'); input.type = 'file'; input.accept = '.json,application/json';
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
     input.onchange = function(e) {
-      var file = e.target.files[0]; if (!file) return;
+      var file = e.target.files[0];
+      if (!file) return;
       var reader = new FileReader();
       reader.onload = function(ev) {
         try {
-          var dados = JSON.parse(ev.target.result);
-          var lista = Array.isArray(dados) ? dados : (dados && Array.isArray(dados.alunos) ? dados.alunos : null);
-          if (!lista) throw new Error();
-          lista.forEach(function(item) {
-            if (!item.nome || !item.treino) throw new Error();
-            if (!item.titulos) item.titulos = {};
-            if (item.secaoFAtiva === undefined) item.secaoFAtiva = false;
-            ['A','B','C','D','E','F'].forEach(function(s) { 
-              if (!item.treino[s]) item.treino[s] = [];
-              if (!item.titulos[s]) item.titulos[s] = s + ". TREINO";
+          var raw = JSON.parse(ev.target.result);
+          if (typeof AvaliacoesJSON !== 'undefined' && AvaliacoesJSON && AvaliacoesJSON.isAssessmentPayload(raw)) {
+            AvaliacoesJSON.preview(raw, function() {
+              if (typeof atualizarFichaDaAvaliacao === 'function') atualizarFichaDaAvaliacao();
+              exibirMensagem('Somente avaliações importadas. Treinos mantidos.', '#1e6f3f', false);
             });
+            return;
+          }
+          if (typeof concluirAutoSave === 'function') concluirAutoSave();
+
+          // 1. Extrair lista de alunos de qualquer formato
+          var rawList = null;
+          if (Array.isArray(raw)) {
+            rawList = raw;
+          } else if (raw && typeof raw === 'object') {
+            if (Array.isArray(raw.alunos)) rawList = raw.alunos;
+            else if (Array.isArray(raw.treinos)) rawList = raw.treinos;
+            else if (Array.isArray(raw.data)) rawList = raw.data;
+            else if (Array.isArray(raw.students)) rawList = raw.students;
+            else {
+              var vals = Object.values(raw);
+              if (vals.length && vals.every(function(v) { return v && typeof v === 'object' && (v.treino || v.nome); })) {
+                rawList = vals;
+              } else if (raw.nome && raw.treino) {
+                rawList = [raw];
+              }
+            }
+          }
+
+          if (!rawList || !rawList.length) {
+            throw new Error('Nenhum aluno encontrado no arquivo JSON.');
+          }
+
+          var usedIds = new Set();
+          alunos.forEach(function(a) { if (a && a.student_id) usedIds.add(a.student_id); });
+
+          // 2. Sanitizar cada aluno tolerando variações de dados
+          var alunosSanitizados = [];
+          rawList.forEach(function(item, idx) {
+            if (!item || typeof item !== 'object') return;
+            var nome = String(item.nome || item.name || item.aluno || item.student_name || '').trim();
+            if (!nome) nome = 'Aluno ' + (idx + 1);
+
+            var sId = (typeof item.student_id === 'string' && item.student_id && !usedIds.has(item.student_id))
+              ? item.student_id
+              : novoId('aluno');
+            usedIds.add(sId);
+
+            var treinoObj = (item.treino && typeof item.treino === 'object' && !Array.isArray(item.treino)) ? item.treino : {};
+            var titulosObj = (item.titulos && typeof item.titulos === 'object' && !Array.isArray(item.titulos)) ? item.titulos : {};
+            var cleanTreino = {};
+            var cleanTitulos = {};
+
+            ['A', 'B', 'C', 'D', 'E', 'F'].forEach(function(s) {
+              var arr = Array.isArray(treinoObj[s]) ? treinoObj[s] : [];
+              cleanTreino[s] = arr.map(function(ex) {
+                if (typeof ex === 'string') return ex;
+                if (ex && typeof ex === 'object') return String(ex.nome || ex.exercicio || ex.texto || ex.text || JSON.stringify(ex));
+                return String(ex != null ? ex : '');
+              }).filter(function(ex) { return ex.trim().length > 0; });
+
+              cleanTitulos[s] = (typeof titulosObj[s] === 'string' && titulosObj[s].trim())
+                ? titulosObj[s].trim()
+                : (s + '. TREINO');
+            });
+
+            var historicoArr = Array.isArray(item.historicoTreinos) ? item.historicoTreinos : [];
+            var cleanHistorico = [];
+            historicoArr.forEach(function(v) {
+              if (!v || typeof v !== 'object') return;
+              var vTreinoObj = (v.treino && typeof v.treino === 'object' && !Array.isArray(v.treino)) ? v.treino : {};
+              var vTitulosObj = (v.titulos && typeof v.titulos === 'object' && !Array.isArray(v.titulos)) ? v.titulos : {};
+              var vCleanTreino = {};
+              var vCleanTitulos = {};
+              ['A', 'B', 'C', 'D', 'E', 'F'].forEach(function(s) {
+                var vArr = Array.isArray(vTreinoObj[s]) ? vTreinoObj[s] : [];
+                vCleanTreino[s] = vArr.map(function(ex) {
+                  if (typeof ex === 'string') return ex;
+                  if (ex && typeof ex === 'object') return String(ex.nome || ex.exercicio || ex.texto || '');
+                  return String(ex != null ? ex : '');
+                }).filter(function(ex) { return ex.trim().length > 0; });
+
+                vCleanTitulos[s] = (typeof vTitulosObj[s] === 'string' && vTitulosObj[s].trim())
+                  ? vTitulosObj[s].trim()
+                  : (s + '. TREINO');
+              });
+              cleanHistorico.push({
+                workout_id: (typeof v.workout_id === 'string' && v.workout_id) ? v.workout_id : novoId('treino'),
+                student_id: sId,
+                name: String(v.name || v.treinoNome || 'Treino anterior'),
+                student_name: nome,
+                original_student_name: String(v.original_student_name || nome),
+                created_at: v.created_at || v.criadoEm || null,
+                activated_at: v.activated_at || v.atualizadoEm || null,
+                archived_at: v.archived_at || null,
+                status: v.status || 'archived',
+                treino: vCleanTreino,
+                titulos: vCleanTitulos,
+                secaoFAtiva: !!v.secaoFAtiva
+              });
+            });
+
+            var alunoSan = {
+              nome: nome,
+              student_id: sId,
+              whatsapp: typeof item.whatsapp === 'string' ? item.whatsapp : '',
+              treino_id: (typeof item.treino_id === 'string' && item.treino_id) ? item.treino_id : novoId('treino'),
+              treinoNome: (typeof item.treinoNome === 'string' && item.treinoNome) ? item.treinoNome : ('Treino de ' + nome),
+              treinoCriadoEm: item.treinoCriadoEm || item.criadoEm || new Date().toISOString(),
+              treinoAtivadoEm: item.treinoAtivadoEm || item.atualizadoEm || new Date().toISOString(),
+              treinoProtegido: item.treinoProtegido !== undefined ? !!item.treinoProtegido : true,
+              secaoFAtiva: !!item.secaoFAtiva,
+              treino: cleanTreino,
+              titulos: cleanTitulos,
+              historicoTreinos: cleanHistorico
+            };
+            if (item.avaliacaoId) alunoSan.avaliacaoId = item.avaliacaoId;
+            if (item.favorito !== undefined) alunoSan.favorito = !!item.favorito;
+            if (typeof garantirHistorico === 'function') garantirHistorico(alunoSan);
+
+            alunosSanitizados.push(alunoSan);
           });
-          concluirAutoSave();
+
+          if (!alunosSanitizados.length) {
+            throw new Error('Nenhum aluno válido encontrado no arquivo.');
+          }
+
+          // 3. Mesclar ou substituir na lista global 'alunos'
           var nomeAntesImportacao = document.getElementById('searchName').value.trim();
-          alunos = lista;
-          carregarFavoritos();
-          if (!Array.isArray(dados) && Array.isArray(dados.favoritos)) {
-            dados.favoritos.forEach(function(f) {
-              if (f && f.nome && !isFavorito(f.nome)) {
-                favoritos.push({ student_id: f.student_id || null, nome: f.nome });
+          if (!alunos || !alunos.length) {
+            alunos = alunosSanitizados;
+          } else {
+            alunosSanitizados.forEach(function(imported) {
+              var keyImported = normalizarNome(imported.nome);
+              var existingIdx = alunos.findIndex(function(x) {
+                return (imported.student_id && x.student_id === imported.student_id) ||
+                       (normalizarNome(x.nome) === keyImported);
+              });
+              if (existingIdx !== -1) {
+                var existing = alunos[existingIdx];
+                var versMap = new Map();
+                (existing.historicoTreinos || []).forEach(function(v) { versMap.set(v.workout_id, v); });
+                (imported.historicoTreinos || []).forEach(function(v) { versMap.set(v.workout_id, v); });
+                imported.historicoTreinos = Array.from(versMap.values());
+                if (!imported.whatsapp && existing.whatsapp) imported.whatsapp = existing.whatsapp;
+                alunos[existingIdx] = imported;
+              } else {
+                alunos.push(imported);
               }
             });
-            salvarFavoritos();
           }
+
+          // 4. Restaurar favoritos
+          if (Array.isArray(raw.favoritos)) {
+            raw.favoritos.forEach(function(f) {
+              var fNome = typeof f === 'string' ? f : (f && f.nome ? f.nome : '');
+              if (fNome && !isFavorito(fNome)) {
+                favoritos.push({ student_id: (f && f.student_id) || null, nome: fNome });
+              }
+            });
+          }
+          alunosSanitizados.forEach(function(a) {
+            if (a.favorito && !isFavorito(a.nome)) {
+              favoritos.push({ student_id: a.student_id, nome: a.nome });
+            }
+          });
+          if (typeof salvarFavoritos === 'function') salvarFavoritos();
+
+          // 5. Restaurar mobilidades se presentes
+          if (Array.isArray(raw.mobilidades) && raw.mobilidades.length) {
+            var mobMap = new Map();
+            (mobilidades || []).forEach(function(m) { if (m && m.id) mobMap.set(m.id, m); });
+            raw.mobilidades.forEach(function(m) {
+              if (m && typeof m === 'object' && m.texto) {
+                var mId = m.id || ('mob-' + Math.random().toString(36).slice(2, 9));
+                mobMap.set(mId, { id: mId, nome: m.nome || m.texto, texto: m.texto });
+              }
+            });
+            mobilidades = Array.from(mobMap.values());
+            localStorage.setItem('treinoMobilidades', JSON.stringify(mobilidades));
+          }
+
+          // 6. Restaurar avaliações se backup completo
+          if (Array.isArray(raw.avaliacoes) && raw.avaliacoes.length && typeof AvaliacaoTreinoSync !== 'undefined' && AvaliacaoTreinoSync.key) {
+            try {
+              var prevAvs = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key) || [];
+              var avMap = new Map();
+              prevAvs.forEach(function(av) { avMap.set(String(av.id), av); });
+              raw.avaliacoes.forEach(function(av) { avMap.set(String(av.id), av); });
+              localStorage.setItem(AvaliacaoTreinoSync.key, JSON.stringify(Array.from(avMap.values())));
+              if (typeof atualizarFichaDaAvaliacao === 'function') atualizarFichaDaAvaliacao();
+            } catch(eAv) {
+              console.warn('Aviso ao sincronizar avaliações:', eAv);
+            }
+          }
+
+          // 7. Salvar e renderizar interface
           salvarLocalStorage();
           renderizarBarraFavoritos();
-          exibirMensagem('📂 JSON carregado! ' + alunos.length + ' aluno(s) e ' + favoritos.length + ' favorito(s).', '#1e6f3f', false);
-          if (alunos.length) carregarTreinoAluno(buscarAluno(nomeAntesImportacao) || alunos[0]);
-          else registrarAlunoSelecionado('');
-          pushState();
-        } catch(err) { 
-          exibirMensagem('❌ JSON inválido.', '#b22222', false);
+
+          var alunoParaCarregar = buscarAluno(nomeAntesImportacao) || (alunosSanitizados[0] ? buscarAluno(alunosSanitizados[0].nome) : alunos[0]);
+          if (alunoParaCarregar) {
+            carregarTreinoAluno(alunoParaCarregar);
+          } else {
+            registrarAlunoSelecionado('');
+          }
+          if (typeof pushState === 'function') pushState();
+
+          exibirMensagem('📂 ' + alunosSanitizados.length + ' aluno(s) carregados com sucesso! Total: ' + alunos.length, '#1e6f3f', false);
+        } catch(err) {
+          console.error('Erro na importação:', err);
+          exibirMensagem('❌ Não foi possível carregar o arquivo: ' + (err.message || 'JSON inválido'), '#b22222', false);
         }
       };
       reader.readAsText(file, 'UTF-8');
@@ -10989,69 +11193,7 @@ window.AvaliacaoTreinoSync = (function () {
     ['A','B','C','D','E','F'].forEach(function(s){if(v.treino[s]===undefined)v.treino[s]=[];if(!Array.isArray(v.treino[s])||v.treino[s].some(function(x){return typeof x!=='string';}))throw Error('Exercícios inválidos.');if(v.titulos[s]!==undefined&&typeof v.titulos[s]!=='string')throw Error('Título inválido.');if(!v.titulos[s])v.titulos[s]=s+'. TREINO';});
     v.secaoFAtiva=!!v.secaoFAtiva;
   }
-  function importarJSON(){
-    var input=document.createElement('input');input.type='file';input.accept='.json,application/json';
-    input.onchange=function(){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(){
-      try{
-        var raw=JSON.parse(reader.result);
-        if (AvaliacoesJSON.isAssessmentPayload(raw)) { AvaliacoesJSON.preview(raw, function () { atualizarFichaDaAvaliacao(); exibirMensagem('Somente avaliações importadas. Treinos mantidos.', '#1e6f3f', false); }); return; }
-        concluirAutoSave();
-        var data=Array.isArray(raw)?raw:raw.alunos,library=Array.isArray(raw)?mobilidades:(raw.mobilidades||[]);
-        if(!Array.isArray(data)||!Array.isArray(library))throw Error('Formato de backup inválido.');
-        var names=new Set(),ids=new Set();
-        data.forEach(function(a){if(!a||typeof a.nome!=='string'||!a.nome.trim())throw Error('Nome de aluno inválido.');validarTreinoImportado(a);if(a.historicoTreinos!==undefined&&!Array.isArray(a.historicoTreinos))throw Error('Histórico inválido.');
-          var key=normalizarNome(a.nome);if(names.has(key))throw Error('Há alunos duplicados no arquivo.');names.add(key);
-          var existing=alunos.find(function(x){return a.student_id&&a.student_id===x.student_id;})||alunos.find(function(x){return normalizarNome(x.nome)===key;});
-          if(existing&&!a.student_id)a.student_id=existing.student_id;garantirHistorico(a);if(ids.has(a.student_id))throw Error('IDs repetidos.');ids.add(a.student_id);
-          a.historicoTreinos.forEach(function(v){validarTreinoImportado(v);if(typeof v.workout_id!=='string'||typeof v.name!=='string')throw Error('Versão inválida.');});
-          if(existing){var versions=new Map();existing.historicoTreinos.forEach(function(v){versions.set(v.workout_id,v);});if(diferencaDados(existing,a)){var old=snapshotAluno(existing);old.status='archived';old.archived_at=new Date().toISOString();versions.set(old.workout_id,old);if(a.treino_id===existing.treino_id)a.treino_id=novoId('treino');}a.historicoTreinos.forEach(function(v){if(!versions.has(v.workout_id))versions.set(v.workout_id,v);});a.historicoTreinos=Array.from(versions.values());}
-        });
-        library.forEach(function(m){if(!m||typeof m.id!=='string'||typeof m.nome!=='string'||typeof m.texto!=='string')throw Error('Biblioteca de mobilidades inválida.');});
-        var complete = raw.tipo === 'treino36-completo';
-        if (complete) prepararAvaliacoesBackupCompleto(raw, data);
-        function aplicarBackup() {
-          var assessmentPlan = complete ? prepararAvaliacoesBackupCompleto(raw, data) : null;
-          concluirAutoSave();
-          var previous=alunos,previousLibrary=mobilidades,oldName=document.getElementById('searchName').value;
-          var keys=['treinoAlunos','treinoMobilidades',AvaliacaoTreinoSync.key,'avaliacao_notificacoes_ativas'];
-          var snapshot={}; keys.forEach(function (key) { snapshot[key]=localStorage.getItem(key); });
-          var merged=alunos.filter(function(a){return !data.some(function(x){return x.student_id===a.student_id||normalizarNome(x.nome)===normalizarNome(a.nome);});}).concat(data);
-          var mergedLibrary=new Map(mobilidades.map(function(m){return[m.id,m];}));library.forEach(function(m){mergedLibrary.set(m.id,m);});
-          try {
-            if (complete) localStorage.setItem('treino36_backup_antes_importacao',JSON.stringify(snapshot));
-            alunos=merged;mobilidades=Array.from(mergedLibrary.values());
-            if(!salvarLocalStorage())throw Error('Não foi possível salvar os alunos.');
-            localStorage.setItem('treinoMobilidades',JSON.stringify(mobilidades));
-            if (assessmentPlan) {
-              localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(assessmentPlan.records));
-              window.TreinoStorage?.clearAssessmentDrafts();
-              if (raw.preferencias && raw.preferencias.notificacoes_avaliacao !== undefined) localStorage.setItem('avaliacao_notificacoes_ativas',raw.preferencias.notificacoes_avaliacao?'1':'0');
-              atualizarFichaDaAvaliacao();
-            }
-          } catch (e) {
-            alunos=previous;mobilidades=previousLibrary;
-            keys.forEach(function (key) { if(snapshot[key]===null)localStorage.removeItem(key);else localStorage.setItem(key,snapshot[key]); });
-            throw e;
-          }
-          if(alunos.length)carregarTreinoAluno(buscarAluno(oldName)||alunos[0]);else registrarAlunoSelecionado('');
-          exibirMensagem(complete?'Backup completo carregado: treinos, avaliações e vínculos.':'JSON carregado com histórico e mobilidades.','#1e6f3f',false);
-        }
-        if (!complete) { aplicarBackup(); return; }
-        var preview=criarDialogo('completeBackupImportDialog','💾 Importar backup completo',
-          '<p id="completeBackupSummary"></p><p>Os vínculos entre treinos e avaliações salvos neste arquivo serão restaurados. Cadastros e históricos que não estão no arquivo serão mantidos.</p><p id="completeBackupImportStatus" role="status"></p><button type="button" id="confirmCompleteBackupImport" class="primary">Importar tudo</button> <button type="button" data-close>Cancelar</button>');
-        document.getElementById('completeBackupSummary').textContent=data.length+' aluno(s) do treino · '+raw.avaliacoes.length+' cadastro(s) de avaliação · '+raw.avaliacoes.reduce(function(n,a){return n+a.avaliacoes.length;},0)+' avaliação(ões), incluindo fotos e medidas.';
-        var initialSnapshot=JSON.stringify([localStorage.getItem('treinoAlunos'),localStorage.getItem(AvaliacaoTreinoSync.key)]);
-        preview.addEventListener('close',function(){preview.remove();},{once:true});
-        document.getElementById('confirmCompleteBackupImport').onclick=function(){
-          try {
-            if(initialSnapshot!==JSON.stringify([localStorage.getItem('treinoAlunos'),localStorage.getItem(AvaliacaoTreinoSync.key)]))throw Error('Os dados mudaram em outra tela. Importe o arquivo novamente para conferir a prévia atualizada.');
-            aplicarBackup();preview.close();
-          } catch (e) { document.getElementById('completeBackupImportStatus').textContent='Não foi possível importar: '+e.message; }
-        };
-        preview.showModal();
-      }catch(e){exibirMensagem('Não foi possível importar: '+escHtml(e.message),'#b22222',false);}
-    };reader.readAsText(file,'UTF-8');};input.click();
-  }
+  // importarJSON() consolidado e resiliente na linha 6537.
 
   /* Ajustes em lote são uma única edição; só linhas modificadas são renderizadas. */
   var bulkDialog=criarDialogo('bulkPrescriptionDialog','Ajustar séries e repetições',
