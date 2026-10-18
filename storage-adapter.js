@@ -58,7 +58,7 @@
   const jobs = new Map();
   function runWorker(data) {
     if (!worker) {
-      worker = new Worker(new URL('storage-worker.js?v=18', location.href));
+      worker = new Worker(new URL('storage-worker.js?v=19', location.href));
       worker.onmessage = ({data}) => {
         const job = jobs.get(data.id); if (!job) return;
         jobs.delete(data.id); clearTimeout(job.timer);

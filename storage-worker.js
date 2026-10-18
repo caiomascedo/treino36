@@ -1,5 +1,5 @@
 /* Compression and serialization must not block the keyboard on the page. */
-importScripts('storage-compression.js?v=15', 'assessment-journal.js?v=17','obs-autosave-journal.js?v=1');
+importScripts('storage-compression.js?v=15', 'assessment-journal.js?v=18','obs-autosave-journal.js?v=1');
 const prefix = 'treino36:lz:1:';
 self.onmessage = ({data}) => {
   try {

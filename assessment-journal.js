@@ -5,6 +5,7 @@ globalThis.TreinoAssessmentJournal = {
     for (const draft of drafts) {
       const person = records.find(record => String(record.id) === String(draft.recordId));
       if (!person) continue;
+      if(draft.operation==='person'){Object.assign(person,draft.personFields||{});continue;}
       if (draft.operation === 'delete') {
         person.avaliacoes = (person.avaliacoes || []).filter(item => String(item.id) !== String(draft.avId));
         const latest = person.avaliacoes.at(-1);

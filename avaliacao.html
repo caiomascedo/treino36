@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8"/>
 <script src="storage-compression.js?v=15"></script>
-<script src="assessment-journal.js?v=17"></script>
+<script src="assessment-journal.js?v=18"></script>
+<script src="composition-extras.js?v=1"></script>
+<link rel="stylesheet" href="composition-extras.css?v=1">
 <script src="obs-autosave-journal.js?v=1"></script>
-<script src="storage-adapter.js?v=18"></script>
+<script src="storage-adapter.js?v=19"></script>
 <script src="pdf-viewer.js?v=1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
@@ -258,7 +260,7 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js?v=17"></script>
+<script src="avaliacao-import.js?v=18"></script>
 <link rel="stylesheet" href="avaliacao-compacta.css?v=17">
 <script src="avaliacao-compacta.js?v=17"></script>
 </head>
@@ -1138,6 +1140,7 @@ function trocarProtocoloDobras(alunoId, avId, valor){
 }
 
 function atualizarCamposCalculados(aluno, avId){
+  CompositionExtras.refreshValues(aluno.id,avId);
   const av=aluno.avaliacoes.find(a=>a.id===avId);
   if(!av) return;
   const aId=aluno.id;
@@ -1491,7 +1494,7 @@ async function gerarPDFAluno(alunoId, options={}){
   if(!['auto','medidas-dobras','medidas-composicao','completo'].includes(mode)) throw Error('Escolha um conteúdo válido para o PDF.');
   const filled=value=>value!==undefined&&value!==null&&String(value).trim()!==''&&!['NaN','—','undefined'].includes(String(value));
   const has=fields=>aluno.avaliacoes.some(av=>fields.some(key=>filled(av[key])));
-  const includeComposition=mode==='completo'||mode==='medidas-composicao'||(mode==='auto'&&has(['peso','gordura','visceral','massamuscular','proteina','agua','tmb','imc']));
+  const includeComposition=mode==='completo'||mode==='medidas-composicao'||(mode==='auto'&&(has(['peso','gordura','visceral','massamuscular','proteina','agua','tmb','imc'])||CompositionExtras.pdfRows(aluno,aluno.avaliacoes).length>0));
   const includeMeasures=mode!=='auto'||has(['peitoral','biceps','barriga','cintura','quadril','coxa']);
   const includeSkinfolds=mode==='completo'||mode==='medidas-dobras'||(mode==='auto'&&has(['triceps','axilar','torax','abdominal','suprailiaca','subescapular','pregaCoxa','panturrilha']));
   if(!includeComposition&&!includeMeasures&&!includeSkinfolds) throw Error('Preencha a composição, medidas ou dobras para gerar o PDF automático.');
@@ -1532,6 +1535,9 @@ async function gerarPDFAluno(alunoId, options={}){
     ['TMB (kcal)', ...avs.map((av, idx) => `${av.tmb||'—'}${idx===0 ? '' : formatDelta(av.tmb, avs[idx-1].tmb)}`)],
     ['Idade Metabólica', ...avs.map((av, idx) => `${av.idadeMetabolica||'—'}${idx===0 ? '' : formatDelta(av.idadeMetabolica, avs[idx-1].idadeMetabolica)}`)]
   ];
+  const extraRows=CompositionExtras.pdfRows(aluno,avs,formatDelta);
+  if(extraRows.some(row=>row[0]==='Altura (cm)'))compRows.splice(0,1);
+  compRows.push(...extraRows);
   doc.autoTable({startY:53,head:[headers],body:pdfRows(compRows),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:[230,57,57],textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
     didParseCell:function(data){
       if(data.section==='body' && LINHAS_NEGRITO_PDF.includes(data.row.raw[0])){
@@ -1899,6 +1905,7 @@ function renderizarAlunos(alunosParaRenderizar){
                 <div class="field"><label>Data</label><input type="text" value="${escapeHtml(av.data||'')}" placeholder="DD/MM/AAAA" onchange="syncAvaliacao(${aluno.id},${av.id},'data',this.value)"></div>
               </div>
               <div class="sec-label">Composição Corporal <small style="text-transform:none;font-weight:400;color:#bbb">(toque no rótulo abaixo do valor para ver a análise)</small></div>
+              <div class="composition-extras-tools" data-extra-record="${aluno.id}" data-extra-av="${av.id}"></div>
               <div class="grid3">
                 <div class="field"><label>Peso (kg)</label><input type="text" id="peso-input-${aluno.id}-${av.id}" value="${escapeHtml(av.peso||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'peso',this.value)"><span class="badge clickable ${clsPeso.classe}" id="peso-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','peso','peso-input-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','Peso (kg)')">${clsPeso.texto}</span></div>
                 <div class="field"><label>IMC</label><input type="text" id="imc-${aluno.id}-${av.id}" readonly value="${escapeHtml(av.imc||'')}"><span class="badge clickable ${clsIMC.classe}" id="imc-badge-${aluno.id}-${av.id}" onclick="toggleMetricGaugeLive('metric-panel-comp-${aluno.id}-${av.id}','imc','imc-${aluno.id}-${av.id}','${aluno.sexo}','idade-${aluno.id}','IMC')">${clsIMC.texto}</span></div>
@@ -1958,9 +1965,14 @@ function renderizarAlunos(alunosParaRenderizar){
       }
     }
   });
+  container.querySelectorAll('[data-extra-record]').forEach(root=>{
+    const person=alunos.find(a=>String(a.id)===root.dataset.extraRecord),av=person.avaliacoes.find(a=>String(a.id)===root.dataset.extraAv);
+    CompositionExtras.mount(root,root.nextElementSibling,{prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value)=>{av[key]=value;TreinoStorage.stageAssessment(person.id,av.id,{[key]:value});consolidarExtras();},select:keys=>{person.composicaoExtras=keys;TreinoStorage.assessmentOperation(person.id,null,'person',{}, {composicaoExtras:keys});consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
+  });
   compactarAvaliacoes();
 }
-
+let extrasSaveTimer;
+function consolidarExtras(){clearTimeout(extrasSaveTimer);extrasSaveTimer=setTimeout(()=>TreinoStorage.compactAssessments().catch(error=>notifMsg('⚠️ '+error.message)),1000);}
 
 /* Integração com o Treino36; IDs persistentes evitam vínculos trocados ao renomear. */
 let avaliacaoEmbedId = null;
