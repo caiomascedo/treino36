@@ -991,21 +991,19 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 /* CONTEUDO DO PDF */
 #pdfBody {
   font-family: 'Arial Narrow', Arial, sans-serif;
-  padding: 2px 4px;
+  padding: 4px 6px;
   width: 100%;
   max-width: 210mm;
   margin: 0 auto;
-  font-size: 7.8pt;
-  line-height: 1.18;
+  font-size: 8.5pt;
+  line-height: 1.25;
 }
-#pdfBody .pdf-title { font-size: 11pt; font-weight: bold; text-align: center; color: #b22222; margin-bottom: 1px; }
-#pdfBody .pdf-subtitle { font-size: 6.8pt; text-align: center; color: #555; margin-bottom: 2px; }
-#pdfBody .pdf-start { display: inline-flex; align-items: center; gap: 3px; background: #16a34a; color: #ffffff !important; font-size: 6.5pt; font-weight: bold; text-decoration: none; padding: 1.5px 7px; border-radius: 10px; letter-spacing: 0.2px; vertical-align: middle; margin-left: 3px; }
-#pdfBody .pdf-start:hover { background: #15803d; color: #ffffff !important; text-decoration: none; }
-#pdfBody .pdf-sec { margin-bottom: 2.5px; border-left: 2px solid #ccc; padding-left: 4px; }
-#pdfBody .pdf-sec-title { font-size: 7.8pt; font-weight: bold; text-transform: uppercase; margin-bottom: 1px; }
-#pdfBody .pdf-ex-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 0.5px; border-bottom: 0.5px solid #f0f0f0; padding-bottom: 0.5px; }
-#pdfBody .pdf-ex-name { font-size: 7.1pt; flex: 1; color: #222; line-height: 1.15; }
+#pdfBody .pdf-title { font-size: 12pt; font-weight: bold; text-align: center; color: #b22222; margin-bottom: 2px; }
+#pdfBody .pdf-subtitle { font-size: 7.5pt; text-align: center; color: #555; margin-bottom: 4px; }
+#pdfBody .pdf-sec { margin-bottom: 5px; border-left: 2px solid #ccc; padding-left: 5px; }
+#pdfBody .pdf-sec-title { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+#pdfBody .pdf-ex-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px; border-bottom: 0.5px solid #f0f0f0; padding-bottom: 1px; }
+#pdfBody .pdf-ex-name { font-size: 7.5pt; flex: 1; color: #222; line-height: 1.2; }
 #pdfBody .pdf-ex-name span { font-weight: bold; }
 #pdfBody .yt-link { 
   display: inline-flex; 
@@ -1015,8 +1013,8 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
   color: #fff; 
   border: none; 
   border-radius: 3px; 
-  padding: 1px 3.5px; 
-  font-size: 5.8pt; 
+  padding: 1px 4px; 
+  font-size: 6.5pt; 
   font-weight: bold; 
   text-decoration: none; 
   white-space: nowrap; 
@@ -1027,26 +1025,11 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
   text-decoration: none; 
 }
 #pdfBody .yt-link svg { 
-  width: 7.5px; 
-  height: 7.5px; 
+  width: 8px; 
+  height: 8px; 
   fill: white; 
 }
-#pdfBody .pdf-footer { text-align: center; font-size: 6pt; color: #888; margin-top: 3px; border-top: 0.5px solid #eee; padding-top: 2px; }
-
-/* Compactação inteligente para treinos com mais exercícios caberem sem cortes na página */
-#pdfBody.pdf-dense { font-size: 7.2pt; line-height: 1.12; }
-#pdfBody.pdf-dense .pdf-sec { margin-bottom: 1.5px; }
-#pdfBody.pdf-dense .pdf-sec-title { font-size: 7.4pt; margin-bottom: 0.5px; }
-#pdfBody.pdf-dense .pdf-ex-row { margin-bottom: 0; padding-bottom: 0; }
-#pdfBody.pdf-dense .pdf-ex-name { font-size: 6.7pt; line-height: 1.12; }
-#pdfBody.pdf-dense .yt-link { font-size: 5.5pt; padding: 0.5px 3px; }
-
-#pdfBody.pdf-ultra-dense { font-size: 6.8pt; line-height: 1.08; }
-#pdfBody.pdf-ultra-dense .pdf-sec { margin-bottom: 1px; }
-#pdfBody.pdf-ultra-dense .pdf-sec-title { font-size: 7.1pt; margin-bottom: 0; }
-#pdfBody.pdf-ultra-dense .pdf-ex-row { margin-bottom: 0; padding-bottom: 0; }
-#pdfBody.pdf-ultra-dense .pdf-ex-name { font-size: 6.3pt; line-height: 1.08; }
-#pdfBody.pdf-ultra-dense .yt-link { font-size: 5.2pt; padding: 0.5px 2.5px; }
+#pdfBody .pdf-footer { text-align: center; font-size: 6.5pt; color: #888; margin-top: 5px; border-top: 0.5px solid #eee; padding-top: 3px; }
 .sec-a-color { color: #b22222; border-color: #b22222 !important; }
 .sec-b-color { color: #b8860b; border-color: #b8860b !important; }
 .sec-c-color { color: #2e8b57; border-color: #2e8b57 !important; }
@@ -5076,15 +5059,9 @@ window.AvaliacaoTreinoSync = (function () {
     const nomeAluno = document.getElementById('searchName').value.trim() || 'Aluno';
     const footer = document.querySelector('.footer') ? document.querySelector('.footer').innerText.trim() : 'Personal Caio Macêdo';
     const hoje = new Date().toLocaleDateString('pt-BR');
-    const startUrl = iniciarTreinoUrl(nomeAluno, 'Treino de ' + nomeAluno);
-
-    let totalExercicios = 0;
-    for (let sec of SECOES) {
-      totalExercicios += getExerciciosSecao(sec).length;
-    }
 
     let html = '<div class="pdf-title">Treino — ' + escHtml(nomeAluno) + '</div>';
-    html += '<div class="pdf-subtitle">Gerado em ' + escHtml(hoje) + ' | ' + escHtml(footer) + ' &nbsp;·&nbsp; <a href="' + escAttr(startUrl) + '" target="_blank" rel="noopener" class="pdf-start">▶ Iniciar Treino</a></div>';
+    html += '<div class="pdf-subtitle">Gerado em ' + escHtml(hoje) + ' | ' + escHtml(footer) + '</div>';
 
     for (let sec of SECOES) {
       let titulo = getTituloSecao(sec);
@@ -5106,14 +5083,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
     html += '<div class="pdf-footer">' + escHtml(footer) + ' — ' + escHtml(hoje) + '</div>';
 
-    const pdfBodyEl = document.getElementById('pdfBody');
-    pdfBodyEl.className = '';
-    if (totalExercicios > 34) {
-      pdfBodyEl.classList.add('pdf-ultra-dense');
-    } else if (totalExercicios > 25) {
-      pdfBodyEl.classList.add('pdf-dense');
-    }
-    pdfBodyEl.innerHTML = html;
+    document.getElementById('pdfBody').innerHTML = html;
     document.getElementById('pdfViewerModal').classList.add('open');
   }
 
@@ -5129,10 +5099,10 @@ window.AvaliacaoTreinoSync = (function () {
     const nomeAluno = safeFileName(document.getElementById('searchName').value.trim() || 'treino');
     
     const opt = {
-      margin: [3, 6, 3, 6],
+      margin: [5, 8, 5, 8],
       filename: 'treino_' + nomeAluno + '.pdf',
       image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 1.8, useCORS: true, logging: false, letterRendering: true, windowWidth: 1024 },
+      html2canvas: { scale: 1.8, useCORS: true, logging: false, letterRendering: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
       pagebreak: { mode: 'avoid-all' },
       enableLinks: true
@@ -5204,7 +5174,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
     win.document.open();
     win.document.write('<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Treino PDF</title><style>' +
-      'body{font-family:Arial,sans-serif;margin:6mm;color:#222}.pdf-title{font-size:15px;font-weight:bold;text-align:center;color:#b22222;margin-bottom:1px}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:10px;margin-bottom:3px}.pdf-start{display:inline-block;background:#16a34a;color:#fff!important;text-decoration:none;border-radius:10px;padding:2px 8px;font-size:9px;font-weight:bold;vertical-align:middle;margin-left:4px}.pdf-sec{margin:4px 0;border-left:2px solid #ccc;padding-left:6px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:2px;font-size:11px}.pdf-ex-row{display:flex;justify-content:space-between;gap:6px;border-bottom:1px solid #eee;padding:1px 0}.pdf-ex-name{font-size:10.5px}.yt-link{background:#e00;color:white;text-decoration:none;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:bold;white-space:nowrap}.yt-link svg{display:none}@media print{a[href]:after{content:""}}' +
+      'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px}.yt-link{background:#e00;color:white;text-decoration:none;border-radius:3px;padding:2px 5px;font-size:10px;font-weight:bold;white-space:nowrap}.yt-link svg{display:none}@media print{a[href]:after{content:""}}' +
       '</style></head><body>' + pdfBody.innerHTML + '<script>setTimeout(function(){window.print();},300);<\/script></body></html>');
     win.document.close();
   }
