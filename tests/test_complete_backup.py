@@ -23,7 +23,7 @@ with sync_playwright() as p:
     page.goto('http://app.test/treino36/')
     page.evaluate("""() => {
       localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'t1',nome:'Cliente treino 1',whatsapp:'86999999999',treino:{A:['Agachamento 3x10']},titulos:{A:'A. Pernas'},avaliacaoId:10,avaliacaoFichaId:'f1',infoGuias:[{id:'f1',idade:'30',peso:'70',altura:'1.70',whats:'86999999999'}],obsGuias:[{id:'o1',texto:'Cuidados com joelho',exameResultado:'Resultado salvo',exameFotos:[{id:'photo1',src:'data:image/jpeg;base64,cGhvdG8x',name:'exame1.jpg'},{id:'photo2',src:'data:image/jpeg;base64,cGhvdG8y',name:'exame2.jpg'}]}],historicoTreinos:[{workout_id:'old1',name:'Treino anterior',treino:{A:['Supino 4x8']},titulos:{A:'A. Superior'}}]}]));
-      localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Cliente completo',whatsapp:'86999999999',idade:'30',altura:'1.70',sexo:'M',composicaoExtras:['pesoGordura','musculoEsqueleticoPct'],treinoStudentId:'t1',treinoStudentIds:['t1'],avaliacoes:[{id:11,data:'03/10/2026',peso:'70',pesoGordura:'20,8',musculoEsqueleticoPct:'34,1',protocolo:'jp7',triceps:'10',axilar:'11',torax:'12',abdominal:'13',suprailiaca:'14',subescapular:'15',pregaCoxa:'16',cintura:'80',quadril:'100',fotoF:'data:image/png;base64,aGVsbG8=',motivo:'Objetivo salvo',resumo:'Postura salva'}]}]));
+      localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Cliente completo',whatsapp:'86999999999',idade:'30',altura:'1.70',sexo:'M',composicaoExtras:['pesoGordura','musculoEsqueleticoPct'],composicaoCampos:['peso','imc'],medidasCampos:[],medidasExtras:['pescoco','panturrilhaMedida'],treinoStudentId:'t1',treinoStudentIds:['t1'],avaliacoes:[{id:11,data:'03/10/2026',peso:'70',pesoGordura:'20,8',pescoco:'34',panturrilhaMedida:'36 / 35',panturrilha:'12',musculoEsqueleticoPct:'34,1',protocolo:'jp7',triceps:'10',axilar:'11',torax:'12',abdominal:'13',suprailiaca:'14',subescapular:'15',pregaCoxa:'16',cintura:'80',quadril:'100',fotoF:'data:image/png;base64,aGVsbG8=',motivo:'Objetivo salvo',resumo:'Postura salva'}]}]));
       localStorage.setItem('treinoMobilidades',JSON.stringify([{id:'m1',nome:'Mobilidade',texto:'Mobilidade de quadril'}]));localStorage.setItem('avaliacao_notificacoes_ativas','1');
     }""")
     page.reload(); page.locator('#moreOptions > summary').click()
@@ -53,6 +53,9 @@ with sync_playwright() as p:
     assert records[0]['treinoStudentIds']==['t1'] and students[0]['avaliacaoId']==10
     assert records[0]['avaliacoes'][0]['fotoF']=='data:image/png;base64,aGVsbG8='
     assert records[0]['composicaoExtras']==['pesoGordura','musculoEsqueleticoPct']
+    assert records[0]['composicaoCampos']==['peso','imc'] and records[0]['medidasCampos']==[]
+    assert records[0]['medidasExtras']==['pescoco','panturrilhaMedida']
+    assert records[0]['avaliacoes'][0]['panturrilhaMedida']=='36 / 35' and records[0]['avaliacoes'][0]['panturrilha']=='12'
     assert records[0]['avaliacoes'][0]['musculoEsqueleticoPct']=='34,1'
     assert students[0]['treino']['A']==['Agachamento 3x10'] and students[0]['historicoTreinos'][0]['treino']['A']==['Supino 4x8']
     assert page.evaluate("localStorage.getItem('avaliacao_notificacoes_ativas')")=='1'
