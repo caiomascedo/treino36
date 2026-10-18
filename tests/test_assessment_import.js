@@ -32,3 +32,10 @@ assert.equal(restored.pesoAtualAvaliacaoId,302);
 assert.equal(restored.avaliacoes[0].peso,'74.5');
 assert.equal(restored.avaliacoes[1].peso,'71');
 console.log('PASS: JSON preserva peso atual da ficha e pesos históricos separados');
+
+const forearm = api.prepare([{id:400,nome:'Antebraço',medidasExtras:['antebraco'],medidasCampos:[],avaliacoes:[{id:401,data:'18/10/2026',antebraco:'28 / 27',panturrilha:'12'}]}],[],true).records[0];
+assert.equal(forearm.medidasExtras.join(','),'antebraco');
+assert.equal(forearm.medidasCampos.length,0);
+assert.equal(forearm.avaliacoes[0].antebraco,'28 / 27');
+assert.equal(forearm.avaliacoes[0].panturrilha,'12');
+console.log('PASS: JSON preserva antebraço D/E e seleção de medidas');

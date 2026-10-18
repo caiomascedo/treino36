@@ -28,19 +28,19 @@ with sync_playwright() as p:
  page.locator('.composition-extras-add').click();page.locator('[data-extra-key="peso"]').check();expect(page.locator('#obs-av-peso')).to_have_value('58.7');page.locator('.composition-extras-choices button').click()
  page.locator('#obsAssessmentSections [data-assessment-section="medidas"]').click();page.locator('.composition-extras-add').click()
  for key in ['peitoral','biceps','barriga','cintura','quadril','coxa']:expect(page.locator('[data-extra-key="'+key+'"]').first).to_be_checked()
- expect(page.locator('[data-extra-key="pescoco"]')).not_to_be_checked();expect(page.locator('[data-extra-key="panturrilhaMedida"]')).not_to_be_checked()
- page.locator('[data-extra-key="pescoco"]').check();page.locator('[data-extra-key="panturrilhaMedida"]').check();page.locator('[data-extra-key="peitoral"]').uncheck();page.locator('.composition-extras-choices button').click()
+ expect(page.locator('[data-extra-key="pescoco"]')).not_to_be_checked();expect(page.locator('[data-extra-key="panturrilhaMedida"]')).not_to_be_checked();expect(page.locator('[data-extra-key="antebraco"]')).not_to_be_checked()
+ page.locator('[data-extra-key="antebraco"]').check();page.locator('[data-extra-key="pescoco"]').check();page.locator('[data-extra-key="panturrilhaMedida"]').check();page.locator('[data-extra-key="peitoral"]').uncheck();page.locator('.composition-extras-choices button').click()
  expect(page.locator('#obs-av-peitoral')).not_to_be_visible();assert page.locator('#obs-av-panturrilhaMedida').get_attribute('inputmode')=='text'
  cdp=context.new_cdp_session(page);cdp.send('Emulation.setCPUThrottlingRate',{'rate':4});page.evaluate("""()=>{window.compressionCalls=0;const original=LZString.compressToUTF16;LZString.compressToUTF16=function(...args){window.compressionCalls++;return original.apply(this,args);};}""")
- page.locator('#obs-av-pescoco').fill('34,5');page.locator('#obs-av-panturrilhaMedida').press_sequentially('36 35',delay=20);expect(page.locator('#obs-av-panturrilhaMedida')).to_have_value('36 / 35')
+ page.locator('#obs-av-antebraco').press_sequentially('28 27',delay=20);expect(page.locator('#obs-av-antebraco')).to_have_value('28 / 27');assert page.locator('#obs-av-antebraco').get_attribute('inputmode')=='text';page.locator('#obs-av-pescoco').fill('34,5');page.locator('#obs-av-panturrilhaMedida').press_sequentially('36 35',delay=20);expect(page.locator('#obs-av-panturrilhaMedida')).to_have_value('36 / 35')
  assert page.evaluate('window.compressionCalls')==0
- page.reload();section('medidas');expect(page.locator('#obs-av-pescoco')).to_have_value('34,5');expect(page.locator('#obs-av-panturrilhaMedida')).to_have_value('36 / 35');expect(page.locator('#obs-av-peitoral')).not_to_be_visible()
+ page.reload();section('medidas');expect(page.locator('#obs-av-antebraco')).to_have_value('28 / 27');expect(page.locator('#obs-av-pescoco')).to_have_value('34,5');expect(page.locator('#obs-av-panturrilhaMedida')).to_have_value('36 / 35');expect(page.locator('#obs-av-peitoral')).not_to_be_visible()
  # Hiding a populated measure omits its PDF row but retains its underlying value.
  page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click();page.locator('.composition-extras-add').click();page.locator('[data-extra-key="massamuscular"]').uncheck();page.locator('.composition-extras-choices button').click()
  with page.expect_download() as download:page.locator('#obsAssessment-pdf').click()
  text=re.sub(r'\s+',' ',' '.join(pg.get_text() for pg in fitz.open(download.value.path())))
  assert '% Gordura' not in text and 'Massa Muscular (kg)' not in text,text
- for expected in ['Pescoço','Panturrilha D / E','34,5','36 / 35','Peso (kg)']:assert expected in text,(expected,text)
+ for expected in ['Antebraço D / E','28 / 27','Pescoço','Panturrilha D / E','34,5','36 / 35','Peso (kg)']:assert expected in text,(expected,text)
  # Existing pupil preference is local to that pupil; default choices remain for the other.
  page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Bia')");page.reload();section('composicao');expect(page.locator('#obs-av-gordura')).to_be_visible();expect(page.locator('#obs-av-massamuscular')).to_be_visible()
  page.locator('#obsAssessmentSections [data-assessment-section="medidas"]').click();expect(page.locator('#obs-av-peitoral')).to_be_visible();expect(page.locator('#obs-av-pescoco')).to_have_count(0)
@@ -50,7 +50,7 @@ with sync_playwright() as p:
  # Use DOM to check synchronization of historical cards even when collapsed.
  assert library.locator('[data-extra-section="composicao"] [data-extra-key="gordura"]').evaluate_all('(nodes)=>nodes.every(node=>node.checked)')
  library.locator('#av-item-12 .av-content > .assessment-tabs [data-section="medidas"]').click()
- expect(library.locator('#library-extra-10-12-pescoco')).to_have_value('34,5');expect(library.locator('#library-extra-10-12-panturrilhaMedida')).to_have_value('36 / 35')
+ expect(library.locator('#library-extra-10-12-antebraco')).to_have_value('28 / 27');expect(library.locator('#library-extra-10-12-pescoco')).to_have_value('34,5');expect(library.locator('#library-extra-10-12-panturrilhaMedida')).to_have_value('36 / 35')
  library.locator('#library-extra-10-12-panturrilhaMedida').fill('37 36');expect(library.locator('#library-extra-10-12-panturrilhaMedida')).to_have_value('37 / 36')
  library.close();page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Danyelle')");page.reload();section('medidas');expect(page.locator('#obs-av-panturrilhaMedida')).to_have_value('37 / 36')
  page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click();expect(page.locator('#obs-av-gordura')).to_have_value('35.4')
@@ -59,4 +59,4 @@ with sync_playwright() as p:
  page.reload();section('composicao');expect(page.locator('#obs-av-peso')).not_to_be_visible();expect(page.locator('#obs-av-imc')).to_be_visible();expect(page.locator('#obs-av-gordura')).not_to_be_visible()
  page.locator('#obsAssessmentSections [data-assessment-section="medidas"]').click();expect(page.locator('#obs-av-biceps')).not_to_be_visible();expect(page.locator('#obs-av-coxa')).to_be_visible();expect(page.locator('#obs-av-pescoco')).to_have_value('34,5')
  assert not errors,errors
- browser.close();print('PASS: original fields selected by default, per-pupil durable visibility and PDF filtering, neck and paired calf values, CPU4 typing without compression, no cross-pupil leakage, synchronized library/history, hidden values retained')
+ browser.close();print('PASS: original fields selected by default, per-pupil durable visibility and PDF filtering, neck and paired forearm/calf values, CPU4 typing without compression, no cross-pupil leakage, synchronized library/history, hidden values retained')
