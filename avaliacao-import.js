@@ -37,7 +37,7 @@
           clean[field] = person[field];
         }
       });
-      const choices={composicaoExtras:['pesoGordura','musculoEsqueleticoPct','musculoEsqueleticoKg','massaMuscularPct','pesoAgua','metabolismoInformado','alturaCm','idadeReal'],composicaoCampos:['peso','imc','gordura','visceral','massamuscular','proteina','agua','tmb','idadeMetabolica'],medidasCampos:['peitoral','biceps','barriga','cintura','quadril','coxa'],medidasExtras:['pescoco','panturrilhaMedida']};
+      const choices={composicaoExtras:['pesoGordura','musculoEsqueleticoPct','musculoEsqueleticoKg','massaMuscularPct','pesoAgua','metabolismoInformado','alturaCm','idadeReal'],composicaoCampos:['peso','imc','gordura','visceral','massamuscular','proteina','agua','tmb','idadeMetabolica'],medidasCampos:['peitoral','biceps','barriga','cintura','quadril','coxa'],medidasExtras:['pescoco','panturrilhaMedida','antebraco']};
       Object.entries(choices).forEach(([key,allowed])=>{
         if (!Object.hasOwn(person,key)) return;
         if (!Array.isArray(person[key]) || person[key].some(value=>!allowed.includes(value))) throw Error('Campos selecionados inválidos no cadastro de '+person.nome+'.');

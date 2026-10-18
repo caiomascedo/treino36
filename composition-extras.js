@@ -14,7 +14,7 @@ window.CompositionExtras=(()=>{
     composicao:[{key:'peso',label:'Peso (kg)',pdf:'Peso (kg)'},{key:'imc',label:'IMC',pdf:'IMC'},{key:'gordura',label:'Gordura (%)',pdf:'% Gordura'},{key:'visceral',label:'Gordura visceral',pdf:'Gordura Visceral'},{key:'massamuscular',label:'Massa muscular (kg)',pdf:'Massa Muscular (kg)'},{key:'proteina',label:'Proteína (%)',pdf:'% Proteína'},{key:'agua',label:'Água (%)',pdf:'% Água'},{key:'tmb',label:'TMB (kcal)',pdf:'TMB (kcal)'},{key:'idadeMetabolica',label:'Idade metabólica',pdf:'Idade Metabólica'}],
     medidas:[{key:'peitoral',label:'Peitoral',pdf:'Peitoral'},{key:'biceps',label:'Bíceps D / E',pdf:'Bíceps D/E'},{key:'barriga',label:'Barriga',pdf:'Abdômen'},{key:'cintura',label:'Cintura',pdf:'Cintura'},{key:'quadril',label:'Quadril',pdf:'Quadril'},{key:'coxa',label:'Coxa D / E',pdf:'Coxa D/E'}]
   };
-  const measureFields=[{key:'pescoco',label:'Pescoço'},{key:'panturrilhaMedida',label:'Panturrilha D / E',paired:true}];
+  const measureFields=[{key:'antebraco',label:'Antebraço D / E',paired:true},{key:'pescoco',label:'Pescoço'},{key:'panturrilhaMedida',label:'Panturrilha D / E',paired:true}];
   const preferenceKeys=section=>section==='medidas'?{base:'medidasCampos',extra:'medidasExtras'}:{base:'composicaoCampos',extra:'composicaoExtras'};
   const catalog=section=>section==='medidas'?measureFields:fields;
   const selectedBase=(person,section='composicao')=>{const allowed=baseFields[section].map(f=>f.key),saved=person[preferenceKeys(section).base];return Array.isArray(saved)?[...new Set(saved.filter(key=>allowed.includes(key)))]:allowed;};
