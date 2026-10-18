@@ -830,8 +830,6 @@ body { font-family: 'Arial Narrow', Arial, sans-serif; background: #fff; margin:
 .search-bar > #ocrImageBtn { background: #8b5a2b; }
 .search-bar button.save { background: #1e6f3f; }
 .search-bar button.list { background: #8b5a2b; }
-.search-bar button.start { background: #16a34a; }
-.search-bar button.start:hover { background: #15803d; }
 .search-bar button.copy { background: #b8860b; }
 .search-bar button.delete { background: #b22222; }
 .search-bar button.export { background: #2c3e50; }
@@ -991,22 +989,21 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 /* CONTEUDO DO PDF */
 #pdfBody {
   font-family: 'Arial Narrow', Arial, sans-serif;
-  padding: 4px 6px;
+  padding: 2px 4px;
   width: 100%;
   max-width: 210mm;
   margin: 0 auto;
-  font-size: 8.5pt;
-  line-height: 1.25;
+  font-size: 7.8pt;
+  line-height: 1.18;
 }
-#pdfBody .pdf-title { font-size: 12pt; font-weight: bold; text-align: center; color: #b22222; margin-bottom: 2px; }
-#pdfBody .pdf-subtitle { font-size: 7.5pt; text-align: center; color: #555; margin-bottom: 4px; }
-#pdfBody .pdf-start-wrap { text-align: center; margin: 3px 0 6px; }
-#pdfBody .pdf-start { display: inline-flex; align-items: center; justify-content: center; gap: 4px; background: #16a34a; color: #ffffff !important; font-size: 7.5pt; font-weight: bold; text-decoration: none; padding: 3px 12px; border-radius: 14px; letter-spacing: 0.2px; }
+#pdfBody .pdf-title { font-size: 11pt; font-weight: bold; text-align: center; color: #b22222; margin-bottom: 1px; }
+#pdfBody .pdf-subtitle { font-size: 6.8pt; text-align: center; color: #555; margin-bottom: 2px; }
+#pdfBody .pdf-start { display: inline-flex; align-items: center; gap: 3px; background: #16a34a; color: #ffffff !important; font-size: 6.5pt; font-weight: bold; text-decoration: none; padding: 1.5px 7px; border-radius: 10px; letter-spacing: 0.2px; vertical-align: middle; margin-left: 3px; }
 #pdfBody .pdf-start:hover { background: #15803d; color: #ffffff !important; text-decoration: none; }
-#pdfBody .pdf-sec { margin-bottom: 5px; border-left: 2px solid #ccc; padding-left: 5px; }
-#pdfBody .pdf-sec-title { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
-#pdfBody .pdf-ex-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px; border-bottom: 0.5px solid #f0f0f0; padding-bottom: 1px; }
-#pdfBody .pdf-ex-name { font-size: 7.5pt; flex: 1; color: #222; line-height: 1.2; }
+#pdfBody .pdf-sec { margin-bottom: 2.5px; border-left: 2px solid #ccc; padding-left: 4px; }
+#pdfBody .pdf-sec-title { font-size: 7.8pt; font-weight: bold; text-transform: uppercase; margin-bottom: 1px; }
+#pdfBody .pdf-ex-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 0.5px; border-bottom: 0.5px solid #f0f0f0; padding-bottom: 0.5px; }
+#pdfBody .pdf-ex-name { font-size: 7.1pt; flex: 1; color: #222; line-height: 1.15; }
 #pdfBody .pdf-ex-name span { font-weight: bold; }
 #pdfBody .yt-link { 
   display: inline-flex; 
@@ -1016,8 +1013,8 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
   color: #fff; 
   border: none; 
   border-radius: 3px; 
-  padding: 1px 4px; 
-  font-size: 6.5pt; 
+  padding: 1px 3.5px; 
+  font-size: 5.8pt; 
   font-weight: bold; 
   text-decoration: none; 
   white-space: nowrap; 
@@ -1028,11 +1025,26 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
   text-decoration: none; 
 }
 #pdfBody .yt-link svg { 
-  width: 8px; 
-  height: 8px; 
+  width: 7.5px; 
+  height: 7.5px; 
   fill: white; 
 }
-#pdfBody .pdf-footer { text-align: center; font-size: 6.5pt; color: #888; margin-top: 5px; border-top: 0.5px solid #eee; padding-top: 3px; }
+#pdfBody .pdf-footer { text-align: center; font-size: 6pt; color: #888; margin-top: 3px; border-top: 0.5px solid #eee; padding-top: 2px; }
+
+/* Compactação inteligente para treinos com mais exercícios caberem sem cortes na página */
+#pdfBody.pdf-dense { font-size: 7.2pt; line-height: 1.12; }
+#pdfBody.pdf-dense .pdf-sec { margin-bottom: 1.5px; }
+#pdfBody.pdf-dense .pdf-sec-title { font-size: 7.4pt; margin-bottom: 0.5px; }
+#pdfBody.pdf-dense .pdf-ex-row { margin-bottom: 0; padding-bottom: 0; }
+#pdfBody.pdf-dense .pdf-ex-name { font-size: 6.7pt; line-height: 1.12; }
+#pdfBody.pdf-dense .yt-link { font-size: 5.5pt; padding: 0.5px 3px; }
+
+#pdfBody.pdf-ultra-dense { font-size: 6.8pt; line-height: 1.08; }
+#pdfBody.pdf-ultra-dense .pdf-sec { margin-bottom: 1px; }
+#pdfBody.pdf-ultra-dense .pdf-sec-title { font-size: 7.1pt; margin-bottom: 0; }
+#pdfBody.pdf-ultra-dense .pdf-ex-row { margin-bottom: 0; padding-bottom: 0; }
+#pdfBody.pdf-ultra-dense .pdf-ex-name { font-size: 6.3pt; line-height: 1.08; }
+#pdfBody.pdf-ultra-dense .yt-link { font-size: 5.2pt; padding: 0.5px 2.5px; }
 .sec-a-color { color: #b22222; border-color: #b22222 !important; }
 .sec-b-color { color: #b8860b; border-color: #b8860b !important; }
 .sec-c-color { color: #2e8b57; border-color: #2e8b57 !important; }
@@ -1130,9 +1142,8 @@ li, li * { font-size: 0.72rem !important; line-height: 1.4; color: #222; }
 #copyPreviewExercises li { padding: 8px 3px; border-bottom: 1px solid #eee; overflow-wrap: anywhere; }
 @media print { #copyPreviewDialog { display: none !important; } }
 
-.search-bar > #startWorkoutBtn { grid-column: span 3; }
-.search-bar > #pdfBtn { grid-column: span 3; }
-#moreOptions { grid-column: span 2; position: relative; min-width: 0; }
+.search-bar > #pdfBtn { grid-column: span 4; }
+#moreOptions { grid-column: span 4; position: relative; min-width: 0; }
 #moreOptions summary { list-style: none; padding: 4px; min-height: 24px; border-radius: 8px; background: #52616e; color: #fff; text-align: center; font-size: .62rem; font-weight: bold; line-height: 1.6; cursor: pointer; }
 #moreOptions summary::-webkit-details-marker { display: none; }
 .more-options-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1250; width: 176px; padding: 6px; display: grid; gap: 5px; background: #fff; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 8px 22px #0003; }
@@ -1512,7 +1523,6 @@ window.AvaliacaoTreinoSync = (function () {
     <button type="button" id="expandTreinoBtn">⛶ Ampliar</button>
     <button id="copyBtn" class="copy">📑 Copiar</button>
     <button id="deleteBtn" class="delete">🗑️ Apagar</button>
-    <button type="button" id="startWorkoutBtn" class="start" title="Iniciar treino e registrar presença no painel">▶ Iniciar</button>
     <button id="pdfBtn" class="pdf">📄 PDF com YouTube</button>
     <button id="screenshotBtn" class="screenshot">📸 Print</button>
     <details id="moreOptions">
@@ -5066,9 +5076,13 @@ window.AvaliacaoTreinoSync = (function () {
     const hoje = new Date().toLocaleDateString('pt-BR');
     const startUrl = iniciarTreinoUrl(nomeAluno, 'Treino de ' + nomeAluno);
 
+    let totalExercicios = 0;
+    for (let sec of SECOES) {
+      totalExercicios += getExerciciosSecao(sec).length;
+    }
+
     let html = '<div class="pdf-title">Treino — ' + escHtml(nomeAluno) + '</div>';
-    html += '<div class="pdf-subtitle">Gerado em ' + escHtml(hoje) + ' | ' + escHtml(footer) + '</div>';
-    html += '<div class="pdf-start-wrap"><a href="' + escAttr(startUrl) + '" target="_blank" rel="noopener" class="pdf-start">▶ Iniciar Treino</a></div>';
+    html += '<div class="pdf-subtitle">Gerado em ' + escHtml(hoje) + ' | ' + escHtml(footer) + ' &nbsp;·&nbsp; <a href="' + escAttr(startUrl) + '" target="_blank" rel="noopener" class="pdf-start">▶ Iniciar Treino</a></div>';
 
     for (let sec of SECOES) {
       let titulo = getTituloSecao(sec);
@@ -5090,7 +5104,14 @@ window.AvaliacaoTreinoSync = (function () {
     }
     html += '<div class="pdf-footer">' + escHtml(footer) + ' — ' + escHtml(hoje) + '</div>';
 
-    document.getElementById('pdfBody').innerHTML = html;
+    const pdfBodyEl = document.getElementById('pdfBody');
+    pdfBodyEl.className = '';
+    if (totalExercicios > 34) {
+      pdfBodyEl.classList.add('pdf-ultra-dense');
+    } else if (totalExercicios > 25) {
+      pdfBodyEl.classList.add('pdf-dense');
+    }
+    pdfBodyEl.innerHTML = html;
     document.getElementById('pdfViewerModal').classList.add('open');
   }
 
@@ -5106,10 +5127,10 @@ window.AvaliacaoTreinoSync = (function () {
     const nomeAluno = safeFileName(document.getElementById('searchName').value.trim() || 'treino');
     
     const opt = {
-      margin: [5, 8, 5, 8],
+      margin: [3, 6, 3, 6],
       filename: 'treino_' + nomeAluno + '.pdf',
       image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 1.8, useCORS: true, logging: false, letterRendering: true },
+      html2canvas: { scale: 1.8, useCORS: true, logging: false, letterRendering: true, windowWidth: 1024 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
       pagebreak: { mode: 'avoid-all' },
       enableLinks: true
@@ -5181,7 +5202,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
     win.document.open();
     win.document.write('<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Treino PDF</title><style>' +
-      'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-start-wrap{text-align:center;margin:6px 0 10px}.pdf-start{display:inline-block;background:#16a34a;color:#fff!important;text-decoration:none;border-radius:16px;padding:4px 14px;font-size:11px;font-weight:bold}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px}.yt-link{background:#e00;color:white;text-decoration:none;border-radius:3px;padding:2px 5px;font-size:10px;font-weight:bold;white-space:nowrap}.yt-link svg{display:none}@media print{a[href]:after{content:""}}' +
+      'body{font-family:Arial,sans-serif;margin:6mm;color:#222}.pdf-title{font-size:15px;font-weight:bold;text-align:center;color:#b22222;margin-bottom:1px}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:10px;margin-bottom:3px}.pdf-start{display:inline-block;background:#16a34a;color:#fff!important;text-decoration:none;border-radius:10px;padding:2px 8px;font-size:9px;font-weight:bold;vertical-align:middle;margin-left:4px}.pdf-sec{margin:4px 0;border-left:2px solid #ccc;padding-left:6px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:2px;font-size:11px}.pdf-ex-row{display:flex;justify-content:space-between;gap:6px;border-bottom:1px solid #eee;padding:1px 0}.pdf-ex-name{font-size:10.5px}.yt-link{background:#e00;color:white;text-decoration:none;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:bold;white-space:nowrap}.yt-link svg{display:none}@media print{a[href]:after{content:""}}' +
       '</style></head><body>' + pdfBody.innerHTML + '<script>setTimeout(function(){window.print();},300);<\/script></body></html>');
     win.document.close();
   }
@@ -7031,18 +7052,6 @@ window.AvaliacaoTreinoSync = (function () {
       salvarLocalStorage();
       exibirMensagem('📱 WhatsApp salvo.', '#1e6f3f', false);
     }
-  });
-  document.getElementById('startWorkoutBtn').addEventListener('click', function() {
-    var nome = document.getElementById('searchName').value.trim();
-    if (!nome) {
-      exibirMensagem('❌ Selecione ou digite o nome do aluno primeiro.', '#b22222', false);
-      return;
-    }
-    var aluno = buscarAluno(nome);
-    var desc = aluno && aluno.treinoNome ? aluno.treinoNome : 'Treino de ' + nome;
-    var url = iniciarTreinoUrl(nome, desc);
-    window.open(url, '_blank', 'noopener');
-    exibirMensagem('💪 Treino iniciado! Registrado no painel.', '#16a34a', false);
   });
   document.getElementById('copyBtn').addEventListener('click', copiarTreinoEntreAlunos);
   document.getElementById('deleteBtn').addEventListener('click', apagarAlunoAtual);

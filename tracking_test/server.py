@@ -117,11 +117,11 @@ def record_open(path, token, ip, agent, clock=time.time):
         now = clock()
         last_seen = db.execute('SELECT MAX(last_seen) FROM pdf_links WHERE student_name=?', (row['student_name'],)).fetchone()[0]
         counted = last_seen is None or now - last_seen >= 60
-        sync_student(db, row['student_name'], row['whatsapp'], row['workout_name'], datetime.fromtimestamp(now, TZ).isoformat(timespec='seconds'), int(counted))
         if counted:
             db.execute('INSERT INTO pdf_events(student_id,student_name,workout_id,workout_name,token,event_type,opened_at,ip,user_agent,whatsapp) VALUES(?,?,?,?,?,?,?,?,?,?)',
                        (row['student_id'], row['student_name'], row['workout_id'], row['workout_name'], token,
                         'PDF aberto', datetime.fromtimestamp(now, TZ).isoformat(timespec='seconds'), ip, (agent or '')[:1024], row['whatsapp']))
+        sync_student(db, row['student_name'], row['whatsapp'], row['workout_name'], datetime.fromtimestamp(now, TZ).isoformat(timespec='seconds'), int(counted))
         db.execute('UPDATE pdf_links SET last_seen=? WHERE token=?', (now, token))
     return True
 
@@ -195,6 +195,17 @@ def create_app(db_path, password, network_guard=False):
     @admin
     def javascript():
         return Response((ROOT / 'tracking_test/client.js').read_text(), mimetype='application/javascript')
+
+    @app.get('/<path:filename>')
+    def static_files(filename):
+        target = (ROOT / filename).resolve()
+        if (target.is_file() and target.is_relative_to(ROOT) and
+            not any(p.startswith('.') for p in target.relative_to(ROOT).parts) and
+            not target.name.endswith('.db') and target.name != 'index.html'):
+            import mimetypes
+            mime = mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
+            return Response(target.read_bytes(), mimetype=mime)
+        abort(404)
 
     @app.post('/api/test/pdf')
     @admin
@@ -288,13 +299,20 @@ def create_app(db_path, password, network_guard=False):
 <body>
   <div class="card">
     <div class="emoji">💪🔥</div>
-    <h1>Treino Iniciado!</h1>
-    <p>Bom treino, <strong>{{ aluno }}</strong>!<br>Seu treinador foi avisado.</p>
-    <button class="btn" onclick="window.close(); history.back();">Voltar ao PDF</button>
-    <div class="hint">Pode fechar esta aba e acompanhar seus exercícios</div>
+    <h1>Presença Confirmada!</h1>
+    <p>Bom treino, <strong>{{ aluno }}</strong>!<br>Retornando ao PDF em 1 segundo...</p>
+    <button class="btn" onclick="retornarAoPdf();">Voltar ao PDF</button>
+    <div class="hint">Se não retornar automaticamente, toque no botão acima</div>
   </div>
   <script>
-    setTimeout(function() { window.close(); }, 3000);
+    function retornarAoPdf() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.close();
+      }
+    }
+    setTimeout(retornarAoPdf, 1000);
   </script>
 </body>
 </html>''', aluno=aluno, treino=treino)
