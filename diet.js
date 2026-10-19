@@ -48,7 +48,7 @@ window.DietEditor = (() => {
       '<div class="diet-calc-grid"><label>Calorias do dia<input id="diet-calories" inputmode="decimal" placeholder="Automático"></label><label>Proteína (g)<input id="diet-protein" inputmode="decimal" placeholder="Do texto"></label><label>Carboidratos (g)<input id="diet-carbs" inputmode="decimal" placeholder="Do texto"></label><label>Gorduras (g)<input id="diet-fat" inputmode="decimal" placeholder="Do texto"></label></div><p class="diet-hint">Os valores da OBS são atualizados automaticamente. Deixe a meta vazia para usar a opção selecionada acima; os totais podem vir do texto ou ser corrigidos aqui.</p></details>' +
       '<div id="dietTotals" aria-live="polite"></div><div class="diet-paste-header"><label for="dietText">🧠 Cola inteligente</label><button type="button" id="dietPasteExpandBtn" aria-pressed="false">⛶ Ampliar</button></div>' +
       '<textarea id="dietText" placeholder="Cole a dieta completa aqui. As refeições serão organizadas automaticamente.\n\nCafé da manhã\n2 ovos\n1 fruta\n\nAlmoço\nArroz, feijão e frango"></textarea>' +
-      '<details id="dietPreview"><summary>Refeições · editar</summary><div id="dietPreviewBody"></div></details>' +
+      '<details id="dietPreview"><summary><span>Refeições · editar</span><button type="button" id="dietMealsExpandBtn" aria-pressed="false">⛶ Ampliar</button></summary><div id="dietPreviewBody"></div></details>' +
       '<label class="diet-export-switch"><input type="checkbox" role="switch" id="dietIncludeCalculations"> Incluir TMB e calorias no PDF/foto</label><p id="dietStatus" role="status"></p><div class="dialog-actions"><button type="button" id="dietPdfBtn" class="primary">📄 PDF</button><button type="button" id="dietPhotoBtn">🖼 Ver foto</button><button type="button" data-close>Fechar</button></div>' +
       '<div class="diet-history"><button type="button" id="dietUndoBtn" aria-label="Desfazer edição da dieta">↶</button><button type="button" id="dietRedoBtn" aria-label="Refazer edição da dieta">↷</button></div>');
     const photoViewer=DietPhotoViewer.mount(config.createDialog);
@@ -122,15 +122,22 @@ window.DietEditor = (() => {
     function adjustGoal(delta){const current=C().nutrition(parse(text.value),calculationSettings()).goal;if(current===null){status.textContent='Preencha os dados da TMB ou digite uma meta.';return;}inputs.goal.value=String(Math.max(0,current+delta));change('goal-step',false);}
     dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{button.onclick=()=>{goalMode=button.dataset.dietGoal;inputs.goal.value='';change('goal-preset',false);};});
     dialog.querySelector('#dietGoalMinus').onclick=()=>adjustGoal(-100);dialog.querySelector('#dietGoalPlus').onclick=()=>adjustGoal(100);dialog.querySelector('#dietGoalAuto').onclick=()=>{inputs.goal.value='';change('goal-auto',false);};
-    const pasteExpand=dialog.querySelector('#dietPasteExpandBtn');let pasteScroll=0;
+    const pasteExpand=dialog.querySelector('#dietPasteExpandBtn'),mealsExpand=dialog.querySelector('#dietMealsExpandBtn');let pasteScroll=0,mealsScroll=0;
+    function expandMeals(expanded){
+      if(expanded){mealsScroll=dialog.scrollTop;if(!preview.open)preview.open=true;}
+      dialog.classList.toggle('diet-meals-expanded',expanded);mealsExpand.setAttribute('aria-pressed',String(expanded));mealsExpand.textContent=expanded?'↙ Minimizar':'⛶ Ampliar';dialog.scrollTop=expanded?0:mealsScroll;
+    }
+    mealsExpand.onpointerdown=event=>{if(body.contains(document.activeElement))event.preventDefault();};
+    mealsExpand.onclick=event=>{event.preventDefault();event.stopPropagation();expandMeals(!dialog.classList.contains('diet-meals-expanded'));};
+    preview.addEventListener('toggle',()=>{if(!preview.open&&dialog.classList.contains('diet-meals-expanded'))expandMeals(false);});
     function expandPaste(expanded){
       if(expanded)pasteScroll=dialog.scrollTop;
       dialog.classList.toggle('diet-paste-expanded',expanded);pasteExpand.setAttribute('aria-pressed',String(expanded));pasteExpand.textContent=expanded?'↙ Minimizar':'⛶ Ampliar';dialog.scrollTop=expanded?0:pasteScroll;
     }
     pasteExpand.onpointerdown=event=>{if(document.activeElement===text)event.preventDefault();};
     pasteExpand.onclick=()=>expandPaste(!dialog.classList.contains('diet-paste-expanded'));
-    dialog.addEventListener('cancel',event=>{if(dialog.classList.contains('diet-paste-expanded')){event.preventDefault();expandPaste(false);}});
-    dialog.addEventListener('close',()=>{clearTimeout(timer);expandPaste(false);photoViewer.close();});
+    dialog.addEventListener('cancel',event=>{if(dialog.classList.contains('diet-paste-expanded')){event.preventDefault();expandPaste(false);}else if(dialog.classList.contains('diet-meals-expanded')){event.preventDefault();expandMeals(false);}});
+    dialog.addEventListener('close',()=>{clearTimeout(timer);expandPaste(false);expandMeals(false);photoViewer.close();});
     async function getPDF() {
       if(window.jspdf?.jsPDF)return window.jspdf.jsPDF;
       if(!pdfLibrary)pdfLibrary=(async()=>{for(const src of ['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js']){try{await config.loadScript(src);if(window.jspdf?.jsPDF)return window.jspdf.jsPDF;}catch(error){}}throw Error('Não foi possível carregar a exportação. Confira sua conexão e tente novamente.');})().catch(error=>{pdfLibrary=null;throw error;});
@@ -154,7 +161,7 @@ window.DietEditor = (() => {
       if(metrics.macrosFound)lines('Proteína: '+fmt(metrics.protein)+' g | Carbo: '+fmt(metrics.carbs)+' g | Gordura: '+fmt(metrics.fat)+' g',10,false,[36,55,70]);
       y+=5;
       for(const section of sections){if(y>(asPhoto?154:260))addPage();lines(section.title,12,true,[30,111,63]);y+=2;for(const item of section.items)lines((nutrientLine(item)?'':'• ')+item,10.5,false,[36,55,70]);y+=5;}
-      pages.forEach((commands,index)=>{commands.push({text:doc.splitTextToSize(footer,asPhoto?78:160)[0]||'',x:left,y:asPhoto?182:289,size:8,color:[115,125,135]},{text:(index+1)+'/'+pages.length,x:asPhoto?102:194,y:asPhoto?182:289,size:8,color:[115,125,135],align:'right'});});
+      pages.forEach((commands,index)=>{commands.push({text:asPhoto?'':doc.splitTextToSize(footer,160)[0]||'',x:left,y:asPhoto?182:289,size:8,color:[115,125,135]},{text:(index+1)+'/'+pages.length,x:asPhoto?102:194,y:asPhoto?182:289,size:8,color:[115,125,135],align:'right'});});
       return pages;
     }
     function writePDF(doc,pages) {pages.forEach((commands,index)=>{if(index)doc.addPage();for(const command of commands){doc.setFont('helvetica',command.bold?'bold':'normal');doc.setFontSize(command.size);doc.setTextColor(...command.color);doc.text(command.text,command.x,command.y,{align:command.align||'left'});}});}
