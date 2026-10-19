@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=31',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=32',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -18,6 +18,7 @@ window.ObsAssessmentEditor = (() => {
     return enginePromise;
   }
   function mount(host,config) {
+    const postureEditor=PostureEditor.mount();
     let studentId,recordId,avId,section='composicao',api,opening=0,pdfChoice='auto',cachedRecords=null,saveTimer,compacting=false,changedRecords=null;
     const el=(tag,attrs={},text)=>{const node=document.createElement(tag);Object.entries(attrs).forEach(([key,value])=>node.setAttribute(key,value));if(text!==undefined)node.textContent=text;return node;};
     const status=el('p',{class:'obs-assessment-status',role:'status'});
@@ -53,7 +54,8 @@ window.ObsAssessmentEditor = (() => {
         stage(state,{[key]:value,...metadata});
         if(key==='peso'&&state.person.avaliacoes.at(-1)===state.av){state.person.pesoAtual=value;state.person.pesoAtualAvaliacaoId=state.av.id;}
         if(String(state.person.id)===String(recordId)&&String(state.av.id)===String(avId))updateResults(state);
-      } catch(error){status.textContent='Não foi possível salvar: '+error.message;}
+        return true;
+      } catch(error){status.textContent='Não foi possível salvar: '+error.message;return false;}
     }
     host.addEventListener('focusout',()=>{clearTimeout(saveTimer);saveTimer=setTimeout(flush,50);});
     window.addEventListener('pagehide',flush);
@@ -127,8 +129,21 @@ window.ObsAssessmentEditor = (() => {
       if(section==='fotos') {
         [['fotoF','Frontal'],['fotoL','Lateral'],['fotoD','Dorsal']].forEach(([key,label])=>{
           const box=el('div',{class:'obs-assessment-photo'}),input=el('input',{type:'file',accept:'image/*',id:'obs-av-'+key,'aria-label':'Foto '+label}),image=el('img',{alt:'Foto '+label});image.hidden=!state.av[key];if(state.av[key])image.src=state.av[key];
-          input.onchange=async()=>{const file=input.files[0];if(!file)return;const target={recordId,avId};try{const data=await api.compressImage(file,800,800,0.7);update(key,data,target);flush();if(String(recordId)===String(target.recordId)&&String(avId)===String(target.avId)){const currentInput=host.querySelector('#obs-av-'+key),currentImage=currentInput&&currentInput.parentElement.querySelector('img');if(currentImage){currentImage.src=data;currentImage.hidden=false;}}}catch(e){status.textContent='Não foi possível carregar a foto.';}};
-          const remove=el('button',{type:'button',class:'info-tool-btn'},'Apagar foto');remove.onclick=()=>{update(key,null);image.removeAttribute('src');image.hidden=true;input.value='';};box.append(el('label',{for:input.id},label),image,input,remove);content.append(box);
+          const edit=el('button',{type:'button',class:'info-tool-btn','data-posture-edit':key},'Editar'),camera=el('button',{type:'button',class:'info-tool-btn'},'📷 Câmera'),remove=el('button',{type:'button',class:'info-tool-btn'},'Apagar');edit.disabled=remove.disabled=!state.av[key];
+          function openEditor(options={}){
+            const target={recordId,avId},initial=current(target),expected=initial.av[key]||null;
+            postureEditor.open({title:label+' · '+initial.person.nome,source:initial.av[key+'Original']||initial.av[key]||null,settings:initial.av.posturaEdicoes?.[key],compress:file=>api.compressImage(file,1200,1600,.85),...options,save:result=>{
+              const fresh=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).find(person=>String(person.id)===String(target.recordId))?.avaliacoes.find(av=>String(av.id)===String(target.avId));
+              if(!fresh)throw Error('Esta avaliação não está mais disponível.');
+              if((fresh[key]||null)!==expected)throw Error('A foto mudou em outra janela. Feche e abra o editor novamente.');
+              const destination=current(target).av,previous={[key]:destination[key],[key+'Original']:destination[key+'Original'],posturaEdicoes:destination.posturaEdicoes};
+              if(!update(key,result.photo,target,{[key+'Original']:result.original,posturaEdicoes:{...(fresh.posturaEdicoes||{}),[key]:result.settings}})){Object.assign(destination,previous);throw Error('Não foi possível salvar a foto. Sua edição continua aberta.');}
+              flush();if(String(recordId)===String(target.recordId)&&String(avId)===String(target.avId)){const currentBox=host.querySelector('#obs-av-'+key)?.closest('.obs-assessment-photo');if(currentBox){const img=currentBox.querySelector('img');img.src=result.photo;img.hidden=false;currentBox.querySelectorAll('button').forEach(button=>button.disabled=false);}}
+            }});
+          }
+          input.onchange=()=>{const file=input.files[0];input.value='';if(file)openEditor({file});};edit.onclick=()=>openEditor();image.onclick=()=>openEditor();camera.onclick=()=>openEditor({camera:true});
+          remove.onclick=()=>{if(!confirm('Apagar a foto '+label+' e suas marcações desta avaliação?'))return;const state=current(),settings={...(state.av.posturaEdicoes||{})};delete settings[key];if(update(key,null,undefined,{[key+'Original']:null,posturaEdicoes:settings})){image.removeAttribute('src');image.hidden=true;edit.disabled=remove.disabled=true;input.value='';}};
+          const actions=el('div',{class:'posture-photo-actions'});actions.append(camera,edit,remove);box.append(el('label',{for:input.id},label),image,input,actions);content.append(box);
         });
         [['motivo','Objetivo'],['resumo','Análise postural']].forEach(([key,label])=>{const wrap=el('div',{class:'info-field obs-long-text'}),input=el('textarea',{'data-av-field':key,id:'obs-av-'+key});input.value=state.av[key]||'';input.oninput=()=>update(key,input.value);wrap.append(el('label',{for:input.id},label),input);content.append(wrap);});
       }

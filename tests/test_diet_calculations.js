@@ -30,3 +30,8 @@ const synced=C.nutrition([],{sex:'M',age:'99',weight:'100',height:'200',obsTmb:'
 assert.equal(C.nutrition([],{obsTmb:'',obsGoal:'',sex:'M',age:'30',weight:'70',height:'175'}).tmb,null);
 assert.equal(C.nutrition([],{obsTmb:'1536',obsGoal:'2381',goal:'2000'}).goal,2000);
 console.log('PASS: live OBS inputs override diet demographics; missing source stays empty and manual goals are preserved');
+const sample=P(fs.readFileSync('tests/fixtures/diet-menu.txt','utf8')),daily=C.nutrition(sample);
+assert.equal(sample.filter(section=>!section.summary).length,6);assert.equal(sample.filter(section=>section.summary).length,1);
+assert.equal(daily.calories,2000);assert.equal(daily.carbs,235);assert.equal(daily.protein,134);assert.equal(daily.fat,59);assert.equal(daily.count,6);
+assert(!sample.some(section=>JSON.stringify(section).includes('Pesar arroz')||JSON.stringify(section).includes('Os valores podem variar')||section.title.includes('CARDÁPIO')));
+console.log('PASS: full pasted six-meal menu, approximate daily summary detected without duplicate macros, header/weighing/disclaimer excluded');
