@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=32',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=33',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -130,9 +130,17 @@ window.ObsAssessmentEditor = (() => {
         [['fotoF','Frontal'],['fotoL','Lateral'],['fotoD','Dorsal']].forEach(([key,label])=>{
           const box=el('div',{class:'obs-assessment-photo'}),input=el('input',{type:'file',accept:'image/*',id:'obs-av-'+key,'aria-label':'Foto '+label}),image=el('img',{alt:'Foto '+label});image.hidden=!state.av[key];if(state.av[key])image.src=state.av[key];
           const edit=el('button',{type:'button',class:'info-tool-btn','data-posture-edit':key},'Editar'),camera=el('button',{type:'button',class:'info-tool-btn'},'📷 Câmera'),remove=el('button',{type:'button',class:'info-tool-btn'},'Apagar');edit.disabled=remove.disabled=!state.av[key];
+          function deletePhoto(target,expected){
+            const fresh=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).find(person=>String(person.id)===String(target.recordId))?.avaliacoes.find(av=>String(av.id)===String(target.avId));
+            if(!fresh)throw Error('Esta avaliação não está mais disponível.');
+            if((fresh[key]||null)!==expected)throw Error('A foto mudou em outra janela. Feche e abra o editor novamente.');
+            const settings={...(fresh.posturaEdicoes||{})},destination=current(target).av,previous={[key]:destination[key],[key+'Original']:destination[key+'Original'],posturaEdicoes:destination.posturaEdicoes};delete settings[key];
+            if(!update(key,null,target,{[key+'Original']:null,posturaEdicoes:settings})){Object.assign(destination,previous);throw Error('Não foi possível apagar a foto.');}
+            flush();if(String(recordId)===String(target.recordId)&&String(avId)===String(target.avId)){const currentBox=host.querySelector('#obs-av-'+key)?.closest('.obs-assessment-photo');if(currentBox){const img=currentBox.querySelector('img');img.removeAttribute('src');img.hidden=true;currentBox.querySelector('[data-posture-edit]').disabled=true;currentBox.querySelectorAll('button').forEach(button=>{if(button.textContent==='Apagar')button.disabled=true;});currentBox.querySelector('input[type=file]').value='';}}
+          }
           function openEditor(options={}){
             const target={recordId,avId},initial=current(target),expected=initial.av[key]||null;
-            postureEditor.open({title:label+' · '+initial.person.nome,source:initial.av[key+'Original']||initial.av[key]||null,settings:initial.av.posturaEdicoes?.[key],compress:file=>api.compressImage(file,1200,1600,.85),...options,save:result=>{
+            postureEditor.open({title:label+' · '+initial.person.nome,source:initial.av[key+'Original']||initial.av[key]||null,settings:initial.av.posturaEdicoes?.[key],compress:file=>api.compressImage(file,1200,1600,.85),remove:expected?()=>deletePhoto(target,expected):null,...options,save:result=>{
               const fresh=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).find(person=>String(person.id)===String(target.recordId))?.avaliacoes.find(av=>String(av.id)===String(target.avId));
               if(!fresh)throw Error('Esta avaliação não está mais disponível.');
               if((fresh[key]||null)!==expected)throw Error('A foto mudou em outra janela. Feche e abra o editor novamente.');
@@ -142,7 +150,7 @@ window.ObsAssessmentEditor = (() => {
             }});
           }
           input.onchange=()=>{const file=input.files[0];input.value='';if(file)openEditor({file});};edit.onclick=()=>openEditor();image.onclick=()=>openEditor();camera.onclick=()=>openEditor({camera:true});
-          remove.onclick=()=>{if(!confirm('Apagar a foto '+label+' e suas marcações desta avaliação?'))return;const state=current(),settings={...(state.av.posturaEdicoes||{})};delete settings[key];if(update(key,null,undefined,{[key+'Original']:null,posturaEdicoes:settings})){image.removeAttribute('src');image.hidden=true;edit.disabled=remove.disabled=true;input.value='';}};
+          remove.onclick=()=>{if(!confirm('Apagar a foto '+label+' e suas marcações desta avaliação?'))return;try{deletePhoto({recordId,avId},current().av[key]||null);}catch(error){status.textContent=error.message;}};
           const actions=el('div',{class:'posture-photo-actions'});actions.append(camera,edit,remove);box.append(el('label',{for:input.id},label),image,input,actions);content.append(box);
         });
         [['motivo','Objetivo'],['resumo','Análise postural']].forEach(([key,label])=>{const wrap=el('div',{class:'info-field obs-long-text'}),input=el('textarea',{'data-av-field':key,id:'obs-av-'+key});input.value=state.av[key]||'';input.oninput=()=>update(key,input.value);wrap.append(el('label',{for:input.id},label),input);content.append(wrap);});
