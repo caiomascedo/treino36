@@ -50,7 +50,7 @@ Observações:
 - <img src=x onerror=alert(1)>
 '''
  page.locator('#dietText').fill(text);page.locator('#dietPreview > summary').click();expect(page.locator('#dietPreviewBody')).to_contain_text('1.5 bananas');expect(page.locator('#dietPreviewBody')).to_contain_text('30 g de proteína');expect(page.locator('#dietPreviewBody')).to_contain_text('500 kcal');expect(page.locator('#dietPreviewBody')).to_contain_text('16:00 - Lanche da tarde');assert page.locator('#dietPreviewBody img').count()==0
- page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===1');assert page.evaluate("Object.keys(shared[0]).join(',')==='files'&&shared[0].files[0].name==='Dieta_Ana.pdf'")
+ page.locator('#dietPdfBtn').click();expect(page.locator('.pdf-file-send')).to_be_enabled();page.locator('.pdf-file-send').click();page.locator('.pdf-file-close').click();page.wait_for_function('shared.length===1');assert page.evaluate("Object.keys(shared[0]).join(',')==='files'&&shared[0].files[0].name==='Dieta_Ana.pdf'")
  data=page.evaluate("""async()=>{const file=shared[0].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
@@ -64,7 +64,7 @@ Observações:
  long='Almoço\n'+'\n'.join(f'{i} g de alimento de teste' for i in range(1,181))
  cdp=context.new_cdp_session(page);cdp.send('Emulation.setCPUThrottlingRate',{'rate':4});page.evaluate("()=>{window.compressCalls=0;window.compressStacks=[];const oldCompress=LZString.compressToUTF16;LZString.compressToUTF16=function(...args){compressCalls++;compressStacks.push(new Error().stack);return oldCompress.apply(this,args);};}")
  page.locator('#dietText').fill(long);assert page.evaluate('compressCalls')==0,page.evaluate('compressStacks')
- page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===1')
+ page.locator('#dietPdfBtn').click();expect(page.locator('.pdf-file-send')).to_be_enabled();page.locator('.pdf-file-send').click();page.locator('.pdf-file-close').click();page.wait_for_function('shared.length===1')
  data=page.evaluate("""async()=>{const file=shared[0].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   assert doc.page_count>1
