@@ -6,8 +6,10 @@
 <script src="assessment-journal.js?v=18"></script>
 <script src="composition-context.js?v=1"></script>
 <script src="inbody-fields.js?v=1"></script>
-<script src="composition-extras.js?v=9"></script>
-<link rel="stylesheet" href="composition-extras.css?v=8">
+<script src="skinfold-guides.js?v=1"></script>
+<link rel="stylesheet" href="skinfold-guides.css?v=1">
+<script src="composition-extras.js?v=10"></script>
+<link rel="stylesheet" href="composition-extras.css?v=9">
 <script src="obs-autosave-journal.js?v=1"></script>
 <script src="storage-adapter.js?v=20"></script>
 <script src="pdf-viewer.js?v=4"></script>
@@ -1113,7 +1115,7 @@ function renderizarCamposDobras(aluno, av){
   const campos = getProtocoloDef(av.protocolo).campos(aluno.sexo);
   return campos.map(k=>{
     const label = LABELS_DOBRAS_EXTRA[k] || LABELS_DOBRAS[k];
-    return `<div class="field"><label>${label}</label><input type="text" value="${escapeHtml(av[k]||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'${k}',this.value)"></div>`;
+    return `<div class="field"><label for="skinfold-${aluno.id}-${av.id}-${k}">${label}</label><input type="text" inputmode="decimal" id="skinfold-${aluno.id}-${av.id}-${k}" data-skinfold-key="${k}" value="${escapeHtml(av[k]||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'${k}',this.value)"></div>`;
   }).join('');
 }
 
@@ -1531,7 +1533,7 @@ async function gerarPDFAluno(alunoId, options={}){
     ['TMB (kcal)', ...avs.map((av, idx) => `${av.tmb||'—'}${idx===0 ? '' : formatDelta(av.tmb, avs[idx-1].tmb)}`)],
     ['Idade Metabólica', ...avs.map((av, idx) => `${av.idadeMetabolica||'—'}${idx===0 ? '' : formatDelta(av.idadeMetabolica, avs[idx-1].idadeMetabolica)}`)]
   ];
-  const extraRows=CompositionExtras.pdfRows(aluno,avs,formatDelta);
+  const extraRows=CompositionExtras.pdfRows(aluno,avs,formatDelta,'composicao',undefined,'standard');
   if(extraRows.some(row=>row[0]==='Altura (cm)'))compRows.splice(0,1);
   compRows.push(...extraRows);
   doc.autoTable({...AssessmentPDFStyle.tableHooks(doc),startY:53,head:[['Indicador',...avs.map(av=>(av.data||'—')+(CompositionContext.pdfSource(av)?'\n'+CompositionContext.pdfSource(av):''))]],body:pdfRows(CompositionExtras.orderRows(CompositionExtras.filterBaseRows(aluno,compRows))),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:AssessmentPDFStyle.emerald,textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
@@ -1543,6 +1545,16 @@ async function gerarPDFAluno(alunoId, options={}){
     }
   });
   yPos=doc.lastAutoTable.finalY+8;
+
+  const inbodyRows=CompositionExtras.pdfRows(aluno,avs,formatDelta,'composicao',undefined,'InBody');
+  if(inbodyRows.length){
+    if(yPos>260){doc.addPage();yPos=18;}
+    doc.setFillColor(...AssessmentPDFStyle.emerald);doc.rect(10,yPos-3,3,5,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(26,26,26);
+    doc.text('INBODY · DADOS DO LAUDO',16,yPos);yPos+=5;
+    doc.autoTable({...AssessmentPDFStyle.tableHooks(doc),startY:yPos,head:[headers],body:pdfRows(inbodyRows),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:AssessmentPDFStyle.emerald,textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10}});
+    yPos=doc.lastAutoTable.finalY+8;
+  }
 
   }
   if(includeMeasures){
@@ -1936,7 +1948,7 @@ function renderizarAlunos(alunosParaRenderizar){
               </div>
               <p class="skinfold-protocol-guide">${escapeHtml(SkinfoldProtocols.guidance(av.protocolo||'jp7',aluno.sexo,pf(av.ficha?.idade??aluno.idade)))}</p>
               <div class="sec-label">${getProtocoloDef(av.protocolo).nome} (mm)</div>
-              <div class="grid3">${renderizarCamposDobras(aluno,av)}</div>
+              <div class="grid3" data-skinfold-record="${aluno.id}" data-skinfold-av="${av.id}">${renderizarCamposDobras(aluno,av)}</div>
               <div id="dobras-preview-${aluno.id}-${av.id}">${renderizarPreviewDobras(av,aluno)}</div>
               <div class="gauge-panel" id="metric-panel-dobras-${aluno.id}-${av.id}"></div>
               <div class="sec-label">Fotos</div>
@@ -1966,6 +1978,10 @@ function renderizarAlunos(alunosParaRenderizar){
     const person=alunos.find(a=>String(a.id)===root.dataset.extraRecord),av=person.avaliacoes.find(a=>String(a.id)===root.dataset.extraAv);
     const section=root.dataset.extraSection;
     CompositionExtras.mount(root,root.nextElementSibling,{section,prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value,metadata={})=>{Object.assign(av,{[key]:value,...metadata});TreinoStorage.stageAssessment(person.id,av.id,{[key]:value,...metadata});consolidarExtras();},select:(keys,baseKeys,additionalSettings={})=>{const prefs=CompositionExtras.preferenceKeys(section),settings={[prefs.extra]:keys,[prefs.base]:baseKeys,...additionalSettings};Object.assign(person,settings);TreinoStorage.assessmentOperation(person.id,null,'person',{},settings);consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
+  });
+  container.querySelectorAll('[data-skinfold-record]').forEach(grid=>{
+    const person=alunos.find(a=>String(a.id)===grid.dataset.skinfoldRecord),av=person.avaliacoes.find(a=>String(a.id)===grid.dataset.skinfoldAv);
+    SkinfoldGuides.mount(grid,{fields:getProtocoloDef(av.protocolo).campos(person.sexo),protocol:av.protocolo,sex:person.sexo,input:key=>grid.querySelector('[data-skinfold-key="'+key+'"]')});
   });
   compactarAvaliacoes();
 }

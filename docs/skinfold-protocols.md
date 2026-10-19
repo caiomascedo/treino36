@@ -19,3 +19,5 @@ Durnin–Womersley coefficient pairs (a,b), in age bands 16–19, 20–29, 30–
 Missing age is not replaced with an assumed age for the current protocols. Out-of-domain estimates remain unavailable while raw measurements stay saved. Device water measurements are not populated from a skinfold-derived fat-free mass estimate: litres, kilograms and percentage have different units.
 
 Related composition measurements share a visual group, with independent checkboxes for each unit/source. Selected related measurements are stacked in the editor and adjacent in the PDF. Original base fields remain the default; selecting or hiding an additional unit does not convert, delete or overwrite historical values. Legacy unit preferences remain stored but no longer hide another selected measurement.
+
+InBody-specific fields (including water in litres and protein in kilograms) are selected under an exclusive InBody group. Selected readings are shown in a separate panel below the standard editor and in a separate PDF table. Common indicators are reused from the standard composition fields rather than duplicated for the device.

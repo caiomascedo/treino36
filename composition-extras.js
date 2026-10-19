@@ -98,6 +98,8 @@ window.CompositionExtras=(()=>{
   const measureFields=[{key:'antebraco',label:'Antebraço D / E',paired:true},{key:'pescoco',label:'Pescoço'},{key:'panturrilhaMedida',label:'Panturrilha D / E',paired:true}];
   const preferenceKeys=section=>section==='medidas'?{base:'medidasCampos',extra:'medidasExtras'}:{base:'composicaoCampos',extra:'composicaoExtras'};
   const catalog=section=>section==='medidas'?measureFields:fields;
+  const isInBody=key=>fields.some(field=>field.key===key&&field.report==='InBody');
+  const inbodySections=[['inbody','Dados do laudo'],['inbody-lean','Massa magra segmentar'],['inbody-fat','Gordura segmentar'],['inbody-impedance','Impedância 20/100 kHz']];
   const unitGroups=[
     {key:'gordura',label:'Gordura corporal',members:[['gordura','%'],['pesoGordura','kg']]},
     {key:'massamuscular',label:'Massa muscular total',members:[['massamuscular','kg'],['massaMuscularPct','% · taxa muscular']]},
@@ -140,7 +142,10 @@ window.CompositionExtras=(()=>{
     const hint=document.createElement('p');hint.textContent=section==='medidas'?'Marque os campos para este aluno. Os valores ficam salvos mesmo ao desmarcar.':'Padrão identifica seus campos originais. Marque as medidas que deseja juntas na tela e no PDF. Desmarcar não apaga os valores.';choices.append(hint);
     const checkboxes=new Map(),standard=document.createElement('fieldset'),additional=document.createElement('fieldset'),inbodyGroups=new Map();
     [[section==='medidas'?'Medidas padrão':'Composição · padrão e medidas relacionadas',standard],[section==='medidas'?'Medidas adicionais':'Adicionais',additional]].forEach(([text,group])=>{const legend=document.createElement('legend');legend.textContent=text;group.append(legend);choices.append(group);});
-    if(section==='composicao')for(const [key,title] of [['inbody','InBody · dados do laudo'],['inbody-lean','InBody · massa magra segmentar'],['inbody-fat','InBody · gordura segmentar'],['inbody-impedance','InBody · impedância 20/100 kHz']]){const group=document.createElement('details'),summary=document.createElement('summary');summary.textContent=title;group.className='composition-inbody-options';group.append(summary);choices.append(group);inbodyGroups.set(key,group);}
+    if(section==='composicao'){
+      const panel=document.createElement('details'),title=document.createElement('summary'),note=document.createElement('p');panel.className='composition-inbody-options composition-inbody-selector';title.textContent='InBody · campos exclusivos';note.textContent='Campos próprios do laudo InBody. Peso, gordura e outros indicadores comuns continuam na composição acima, sem duplicação.';panel.append(title,note);choices.append(panel);
+      for(const [key,text] of inbodySections){const group=document.createElement('details'),summary=document.createElement('summary');summary.textContent='InBody · '+text.toLocaleLowerCase('pt-BR');group.className='composition-inbody-options';group.dataset.inbodyGroup=key;group.append(summary);panel.append(group);inbodyGroups.set(key,group);}
+    }
     const saveChoice=(key,enabled)=>{
       const state=config.getState(),chosen=activeSelection(state.person,section);
       if(enabled)chosen.add(key);else chosen.delete(key);
@@ -156,14 +161,14 @@ window.CompositionExtras=(()=>{
     for(const key of orderedKeys(section)){
       if(rendered.has(key))continue;
       const group=section==='composicao'&&unitGroups.find(group=>group.members.some(([member])=>member===key));
-      if(group){const box=document.createElement('fieldset');box.className='composition-choice-group';box.dataset.metricGroup=group.key;const legend=document.createElement('legend');legend.textContent=group.label;box.append(legend);standard.append(box);for(const [member] of group.members){addChoice(definitions.get(member),box);rendered.add(member);}}
+      if(group){const box=document.createElement('fieldset');box.className='composition-choice-group';box.dataset.metricGroup=group.key;const legend=document.createElement('legend');legend.textContent=group.label;box.append(legend);standard.append(box);for(const [member] of group.members){if(!isInBody(member))addChoice(definitions.get(member),box);rendered.add(member);}}
       else if(base.some(field=>field.key===key)){addChoice(definitions.get(key),standard);rendered.add(key);}
     }
-    extras.filter(field=>!grouped.has(field.key)).forEach(field=>addChoice(field,inbodyGroups.get(field.group)||additional));
+    extras.filter(field=>isInBody(field.key)||!grouped.has(field.key)).forEach(field=>addChoice(field,inbodyGroups.get(field.group)||additional));
     const done=document.createElement('button');done.type='button';done.textContent='Pronto';done.onclick=()=>{choices.hidden=true;button.setAttribute('aria-expanded','false');button.focus({preventScroll:true});};choices.append(done);
     button.onclick=()=>{choices.hidden=!choices.hidden;button.setAttribute('aria-expanded',String(!choices.hidden));};
     function refresh(){
-      const state=config.getState(),chosen=selected(state.person,section),baseChosen=selectedBase(state.person,section);checkboxes.forEach((check,key)=>{check.checked=chosen.includes(key)||baseChosen.includes(key);});baseNodes.forEach((node,key)=>{node.hidden=!baseChosen.includes(key);});grid.querySelectorAll('.composition-related-fields').forEach(node=>node.replaceWith(...node.children));grid.querySelectorAll('.composition-extra-field').forEach(node=>node.remove());
+      const state=config.getState(),chosen=selected(state.person,section),baseChosen=selectedBase(state.person,section),inbodyOpen=grid.querySelector('.composition-inbody-fields')?.open??true;checkboxes.forEach((check,key)=>{check.checked=chosen.includes(key)||baseChosen.includes(key);});baseNodes.forEach((node,key)=>{node.hidden=!baseChosen.includes(key);});grid.querySelectorAll('.composition-related-fields').forEach(node=>node.replaceWith(...node.children));grid.querySelectorAll('.composition-extra-field').forEach(node=>node.remove());grid.querySelectorAll('.composition-inbody-fields').forEach(node=>node.remove());
       extras.filter(field=>chosen.includes(field.key)).forEach(field=>{
         const wrap=document.createElement('div');wrap.className=(config.fieldClass||'field')+' composition-extra-field';const label=document.createElement('label'),input=document.createElement('input');input.id=config.prefix+field.key;input.type='text';input.inputMode=field.paired||['target','text'].includes(field.kind)?'text':'decimal';if(field.paired)input.placeholder='Direito / Esquerdo';input.dataset.extraField=field.key;input.readOnly=!!field.readonly;if(field.readonly)input.placeholder='Preencha nas informações da ficha';input.value=value(state.person,state.av,field.key);label.htmlFor=input.id;label.textContent=field.label;wrap.append(label,input);addDetails(wrap,input,field,config);grid.append(wrap);
         if(!field.readonly)input.oninput=()=>{try{if(field.paired)input.value=formatPair(input.value);const state=config.getState();config.input(field.key,input.value,section==='composicao'?CompositionContext.record(state.av,field.key,input.value,''):{});}catch(error){if(config.error)config.error(error);}};
@@ -171,21 +176,25 @@ window.CompositionExtras=(()=>{
       if(section==='composicao'){
         const nodes=new Map(baseNodes);grid.querySelectorAll('.composition-extra-field').forEach(node=>nodes.set(node.querySelector('[data-extra-field]').dataset.extraField,node));const placed=new Set();
         for(const key of orderedKeys(section)){
-          if(placed.has(key))continue;const group=unitGroups.find(group=>group.members.some(([member])=>member===key)),members=(group?group.members.map(([member])=>member):[key]).filter(member=>nodes.has(member));
+          if(placed.has(key)||isInBody(key))continue;const group=unitGroups.find(group=>group.members.some(([member])=>member===key)),members=(group?group.members.map(([member])=>member):[key]).filter(member=>nodes.has(member)&&!isInBody(member));
           const visible=members.filter(member=>!nodes.get(member).hidden),target=visible.length>1?document.createElement('div'):grid;
           if(target!==grid){target.className='composition-related-fields';target.dataset.metricGroup=group.key;grid.append(target);}
           for(const member of members){target.append(nodes.get(member));placed.add(member);}
+        }
+        if(chosen.some(isInBody)){
+          const panel=document.createElement('details'),title=document.createElement('summary'),body=document.createElement('div');panel.className='composition-inbody-fields';panel.open=inbodyOpen;title.textContent='InBody · dados selecionados';body.className='composition-inbody-grid';panel.append(title,body);grid.append(panel);
+          for(const [group,name] of inbodySections){const included=extras.filter(field=>field.group===group&&chosen.includes(field.key));if(!included.length)continue;const heading=document.createElement('h4');heading.className='composition-inbody-heading';heading.textContent=name;body.append(heading);included.forEach(field=>body.append(nodes.get(field.key)));}
         }
       }
     }
     const instance={root,getState:config.getState,refresh,refreshValues(){const state=config.getState();grid.querySelectorAll('[data-extra-field]').forEach(input=>{const field=fields.find(field=>field.key===input.dataset.extraField);if(field?.readonly)input.value=value(state.person,state.av,field.key);input.dispatchEvent(new Event('composition-value-refresh'));});}};instances.add(instance);refresh();return instance;
   }
-  function pdfRows(person,avs,delta,section='composicao',pairDelta){return catalog(section).filter(field=>selected(person,section).includes(field.key)&&avs.some(av=>filled(value(person,av,field.key)))).map(field=>[field.label,...avs.map((av,index)=>{const current=value(person,av,field.key);return filled(current)?String(current)+(index&&delta&&!field.readonly?(field.paired?(pairDelta&&pairDelta(current,value(person,avs[index-1],field.key)).trim()?'\n'+pairDelta(current,value(person,avs[index-1],field.key)).trim():''):delta(current,value(person,avs[index-1],field.key))):''):'—';})]);}
+  function pdfRows(person,avs,delta,section='composicao',pairDelta,report='all'){return catalog(section).filter(field=>(report==='all'||(report==='InBody'?isInBody(field.key):!isInBody(field.key)))&&selected(person,section).includes(field.key)&&avs.some(av=>filled(value(person,av,field.key)))).map(field=>[field.label,...avs.map((av,index)=>{const current=value(person,av,field.key);return filled(current)?String(current)+(index&&delta&&!field.readonly?(field.paired?(pairDelta&&pairDelta(current,value(person,avs[index-1],field.key)).trim()?'\n'+pairDelta(current,value(person,avs[index-1],field.key)).trim():''):delta(current,value(person,avs[index-1],field.key))):''):'—';})]);}
   function filterBaseRows(person,rows,section='composicao'){const enabled=selectedBase(person,section);return rows.filter(row=>{const field=baseFields[section].find(f=>f.pdf===row[0]);return !field||enabled.includes(field.key);});}
   function orderRows(rows,section='composicao'){
     const labels=new Map([...baseFields[section].map(field=>[field.pdf,field.key]),...catalog(section).map(field=>[field.label,field.key])]),order=orderedKeys(section);
     return [...rows].sort((a,b)=>order.indexOf(labels.get(a[0]))-order.indexOf(labels.get(b[0])));
   }
   function hasValues(person,avs,section='composicao'){return [...selectedBase(person,section),...selected(person,section)].some(key=>avs.some(av=>filled(value(person,av,key))));}
-  return {classification,unitGroups,activeSelection,orderedKeys,orderRows,fields,baseFields,measureFields,selected,selectedBase,preferenceKeys,value,filled,mount,notify,refreshValues,pdfRows,filterBaseRows,hasValues,formatPair};
+  return {classification,unitGroups,activeSelection,orderedKeys,orderRows,isInBody,fields,baseFields,measureFields,selected,selectedBase,preferenceKeys,value,filled,mount,notify,refreshValues,pdfRows,filterBaseRows,hasValues,formatPair};
 })();

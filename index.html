@@ -8,8 +8,10 @@
 <script src="assessment-journal.js?v=18"></script>
 <script src="composition-context.js?v=1"></script>
 <script src="inbody-fields.js?v=1"></script>
-<script src="composition-extras.js?v=9"></script>
-<link rel="stylesheet" href="composition-extras.css?v=8">
+<script src="skinfold-guides.js?v=1"></script>
+<link rel="stylesheet" href="skinfold-guides.css?v=1">
+<script src="composition-extras.js?v=10"></script>
+<link rel="stylesheet" href="composition-extras.css?v=9">
 <script src="obs-autosave-journal.js?v=1"></script>
 <script src="storage-adapter.js?v=20"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -1482,7 +1484,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet.js?v=7"></script>
 <link rel="stylesheet" href="diet.css?v=5">
-<script src="obs-avaliacao.js?v=30"></script>
+<script src="obs-avaliacao.js?v=31"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
 </head>
 <body>
@@ -9802,7 +9804,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
     var frame=document.getElementById('assessmentLibraryFrame');
-    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=30', location.href).href;
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=31', location.href).href;
     assessmentLibraryDialog.showModal();
     frame.contentWindow.postMessage({type:'treino36-library-refresh'},location.origin);
   }
