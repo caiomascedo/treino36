@@ -6,7 +6,7 @@
 #dietDialog{width:calc(100% - 24px);max-width:680px;box-sizing:border-box;overflow-x:hidden}
 #dietDialog #dietStudentName{margin:0 0 10px;font-weight:600;color:#29465a;overflow-wrap:anywhere}
 #dietDialog #dietStudentName:empty{display:none}
-#dietDialog #dietText{width:100%;box-sizing:border-box;min-height:230px;max-height:46dvh;resize:vertical;font:16px/1.45 system-ui;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
+#dietDialog #dietText{width:100%;box-sizing:border-box;min-height:120px;height:120px;max-height:28dvh;resize:vertical;font:16px/1.45 system-ui;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
 #dietDialog details{margin-top:10px;font-size:13px}
 #dietDialog summary{cursor:pointer;color:#29465a}
 #dietPreviewBody{overflow-wrap:anywhere}
@@ -15,7 +15,7 @@
 #dietStatus{font-size:12px;color:#526675;min-height:1em}
 #dietDialog.diet-expanded{width:calc(100% - 16px);max-width:1100px;height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);margin:auto}
 #dietExpandBtn{float:right;border:0;border-radius:7px;padding:6px 9px;font-size:12px;background:#eaf0f3;color:#29465a}
-#dietDialog.diet-expanded #dietText{min-height:38dvh}
+#dietDialog.diet-expanded #dietText{min-height:120px}
 #dietCalculations{clear:both;background:#f2f7fa;border-radius:8px;padding:9px}
 #dietDialog .diet-calc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
 #dietDialog .diet-calc-grid label{font-size:12px;min-width:0}
@@ -43,3 +43,18 @@
 #dietDialog .diet-quick-goals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:8px 0 12px}
 #dietDialog .diet-quick-goals button{min-width:0;font-size:12px;padding:8px 4px;border:1px solid transparent;border-radius:7px;background:#e7eef2;color:#29465a}
 #dietDialog .diet-quick-goals button[aria-pressed="true"]{background:#dcefe3;border-color:#1e6f3f;color:#185730}
+
+#dietDialog .diet-paste-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+#dietDialog .diet-paste-header label{font-size:12px;margin:0}
+#dietPasteExpandBtn{border:0;border-radius:7px;padding:5px 8px;font-size:12px;background:#eaf0f3;color:#29465a}
+#dietDialog.diet-paste-expanded{display:flex;flex-direction:column;width:calc(100% - 16px);max-width:1100px;height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);margin:auto}
+#dietDialog.diet-paste-expanded>h3,#dietDialog.diet-paste-expanded>#dietExpandBtn,#dietDialog.diet-paste-expanded>#dietStudentName,#dietDialog.diet-paste-expanded>#dietCalculations,#dietDialog.diet-paste-expanded>#dietTotals,#dietDialog.diet-paste-expanded>#dietPreview,#dietDialog.diet-paste-expanded>.diet-export-switch,#dietDialog.diet-paste-expanded>#dietStatus,#dietDialog.diet-paste-expanded>.dialog-actions{display:none}
+#dietDialog.diet-paste-expanded #dietText{flex:1;min-height:100px;height:auto;max-height:none;resize:none}
+#dietDialog.diet-paste-expanded .diet-paste-header{flex-shrink:0}
+#dietPhotoPreviewDialog{width:calc(100% - 24px);max-width:620px;box-sizing:border-box;overflow-x:hidden}
+#dietPhotoPreviewDialog h3{font-size:15px;overflow-wrap:anywhere}
+#dietPhotoPreviewDialog .diet-photo-toolbar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:6px;background:white;padding:5px 0 10px}
+#dietPhotoPreviewDialog .diet-photo-toolbar button{font-size:12px}
+#dietPhotoImages img{display:block;width:100%;height:auto;border:1px solid #e2e8f0;box-sizing:border-box;margin-bottom:8px}
+#dietPhotoPreviewStatus{font-size:12px;color:#526675}
+#dietPhotoPreviewDialog.diet-photo-expanded{width:calc(100% - 16px);max-width:1100px;height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);margin:auto}
