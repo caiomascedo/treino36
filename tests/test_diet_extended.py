@@ -1,4 +1,4 @@
-import base64,urllib.request
+import base64,re,urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 import fitz
@@ -69,20 +69,22 @@ with sync_playwright() as p:
   for value in ['Meta: 2.303 kcal/dia','Proteína: 100','Carbo: 200','Gordura: 50','300 kcal']:assert value in pdf,(value,pdf)
   for value in ['TMB estimada:','Calorias do dia:']:assert value not in pdf,(value,pdf)
   assert '• ;' not in pdf
+  assert 'Caio' not in pdf and 'Maced' not in pdf,pdf
+ page.locator('#dietText').fill(saved+'\n\nJantar\n'+'\n'.join('Alimento de teste '+str(i) for i in range(24)))
  downloads=[];page.on('download',lambda file:downloads.append(file))
  # Record the actual canvas text: image keeps pupil/goal and omits trainer signature.
  page.evaluate("""()=>{window.photoText=[];const original=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(value,...args){photoText.push(value);return original.call(this,value,...args);};}""")
  page.locator('#dietPhotoBtn').click();expect(page.locator('#dietPhotoPreviewDialog')).to_be_visible();expect(page.locator('#dietPhotoSaveBtn')).to_be_enabled(timeout=20000)
  page.wait_for_function("document.querySelector('#dietPhotoImages img')?.naturalWidth===1240")
  expect(page.locator('#dietPhotoImages img')).to_be_visible();assert len(downloads)==0
- drawn=page.evaluate('photoText');assert any('Dieta — Ana' in line for line in drawn),drawn;assert any('Meta: 2.303 kcal/dia' in line for line in drawn),drawn;assert not any('Caio' in line or 'Maced' in line for line in drawn),drawn
+ drawn=page.evaluate('photoText');assert any('Dieta — Ana' in line for line in drawn),drawn;assert any('Meta: 2.303 kcal/dia' in line for line in drawn),drawn;assert not any('Caio' in line or 'Maced' in line for line in drawn),drawn;assert not any(re.fullmatch(r'\d+/\d+',line) for line in drawn),drawn;assert any('Alimento de teste 23' in line for line in drawn),drawn
  page.locator('#dietPhotoExpandBtn').click();expect(page.locator('#dietPhotoExpandBtn')).to_have_attribute('aria-pressed','true')
  page.screenshot(path='/tmp/treino36-diet-photo-preview.png')
  page.evaluate("Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>false})")
  with page.expect_download() as downloaded:page.locator('#dietPhotoSaveBtn').click()
  file=downloaded.value;assert file.suggested_filename=='Dieta_Ana.png';file.save_as('/tmp/treino36-diet-expanded.png')
  from PIL import Image
- with Image.open(file.path()) as img:assert img.format=='PNG' and img.width==1240 and 400<=img.height<1750
+ with Image.open(file.path()) as img:assert img.format=='PNG' and img.width==1240 and 1750<img.height<4500
  assert page.evaluate('shared.length')==1
  page.evaluate("Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true})")
  page.locator('#dietPhotoSaveBtn').click();page.wait_for_function('shared.length===2')
@@ -94,6 +96,7 @@ with sync_playwright() as p:
  photoUrl=page.locator('#dietPhotoImages img').get_attribute('src')
  page.evaluate("()=>{window.photoRevoked=[];const previous=URL.revokeObjectURL.bind(URL);URL.revokeObjectURL=url=>{photoRevoked.push(url);previous(url);};}")
  page.locator('#dietPhotoPreviewDialog [data-close]').click();expect(page.locator('#dietPhotoImages img')).to_have_count(0);assert photoUrl in page.evaluate('photoRevoked')
+ page.locator('#dietText').fill(saved)
  page.locator('#dietIncludeCalculations').check();page.locator('#dietUndoBtn').click();expect(page.locator('#dietIncludeCalculations')).not_to_be_checked();page.locator('#dietRedoBtn').click();expect(page.locator('#dietIncludeCalculations')).to_be_checked()
  page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===3')
  data=page.evaluate("""async()=>{const file=shared[2].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")

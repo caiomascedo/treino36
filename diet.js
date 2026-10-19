@@ -143,7 +143,7 @@ window.DietEditor = (() => {
       if(!pdfLibrary)pdfLibrary=(async()=>{for(const src of ['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js']){try{await config.loadScript(src);if(window.jspdf?.jsPDF)return window.jspdf.jsPDF;}catch(error){}}throw Error('Não foi possível carregar a exportação. Confira sua conexão e tente novamente.');})().catch(error=>{pdfLibrary=null;throw error;});
       return pdfLibrary;
     }
-    function report(doc,sections,metrics,pdfName,footer,withCalculations,asPhoto=false) {
+    function report(doc,sections,metrics,pdfName,withCalculations,asPhoto=false) {
       const left=asPhoto?8:16,lineWidth=asPhoto?94:178,bottom=asPhoto?172:278,startY=asPhoto?12:20;
       const pages=[[]];let y=startY;
       const addPage=()=>{pages.push([]);y=startY;};
@@ -161,7 +161,7 @@ window.DietEditor = (() => {
       if(metrics.macrosFound)lines('Proteína: '+fmt(metrics.protein)+' g | Carbo: '+fmt(metrics.carbs)+' g | Gordura: '+fmt(metrics.fat)+' g',10,false,[36,55,70]);
       y+=5;
       for(const section of sections){if(y>(asPhoto?154:260))addPage();lines(section.title,12,true,[30,111,63]);y+=2;for(const item of section.items)lines((nutrientLine(item)?'':'• ')+item,10.5,false,[36,55,70]);y+=5;}
-      pages.forEach((commands,index)=>{commands.push({text:asPhoto?'':doc.splitTextToSize(footer,160)[0]||'',x:left,y:asPhoto?182:289,size:8,color:[115,125,135]},{text:(index+1)+'/'+pages.length,x:asPhoto?102:194,y:asPhoto?182:289,size:8,color:[115,125,135],align:'right'});});
+      if(!asPhoto)pages.forEach((commands,index)=>{commands.push({text:(index+1)+'/'+pages.length,x:194,y:289,size:8,color:[115,125,135],align:'right'});});
       return pages;
     }
     function writePDF(doc,pages) {pages.forEach((commands,index)=>{if(index)doc.addPage();for(const command of commands){doc.setFont('helvetica',command.bold?'bold':'normal');doc.setFontSize(command.size);doc.setTextColor(...command.color);doc.text(command.text,command.x,command.y,{align:command.align||'left'});}});}
@@ -170,10 +170,10 @@ window.DietEditor = (() => {
       const scale=1240/110,chunkSize=3;
       for(let start=0;start<pages.length;start+=chunkSize){
         if(!dialog.open||draftKey!==exportKey||photoSession.closed)return;
-        const chunk=pages.slice(start,start+chunkSize).map(commands=>{const footerY=Math.min(182,Math.max(12,...commands.slice(0,-2).map(command=>command.y))+14);return {commands,footerY,height:Math.ceil((footerY+8)*scale)};});
+        const chunk=pages.slice(start,start+chunkSize).map(commands=>{const contentBottom=Math.max(12,...commands.map(command=>command.y));return {commands,height:Math.ceil((contentBottom+8)*scale)};});
         const canvas=document.createElement('canvas');canvas.width=1240;canvas.height=chunk.reduce((sum,page)=>sum+page.height,0);
         const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);
-        let offset=0;for(const page of chunk){page.commands.forEach((command,index)=>{ctx.fillStyle='rgb('+command.color.join(',')+')';ctx.font=(command.bold?'bold ':'')+(command.size*25.4/72*scale)+'px Arial';ctx.textAlign=command.align||'left';ctx.fillText(command.text,command.x*scale,(index>=page.commands.length-2?page.footerY:command.y)*scale+offset);});offset+=page.height;}
+        let offset=0;for(const page of chunk){page.commands.forEach(command=>{ctx.fillStyle='rgb('+command.color.join(',')+')';ctx.font=(command.bold?'bold ':'')+(command.size*25.4/72*scale)+'px Arial';ctx.textAlign=command.align||'left';ctx.fillText(command.text,command.x*scale,command.y*scale+offset);});offset+=page.height;}
         const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));canvas.width=canvas.height=1;
         if(!blob)throw Error('Não foi possível gerar a foto.');
         if(!dialog.open||draftKey!==exportKey||photoSession.closed)return;
@@ -182,11 +182,11 @@ window.DietEditor = (() => {
     }
     async function exportDiet(asPhoto) {
       const sections=parse(text.value);if(!sections.length){status.textContent='Cole a dieta antes de exportar.';return;}
-      const pdfName=name,footer=config.footer(),exportKey=draftKey,metrics=C().nutrition(sections,calculationSettings()),withCalculations=includeCalculations.checked;
+      const pdfName=name,exportKey=draftKey,metrics=C().nutrition(sections,calculationSettings()),withCalculations=includeCalculations.checked;
       const photoSession=asPhoto?photoViewer.open(pdfName):null;
       const viewer=asPhoto?null:TreinoPDFViewer.reserve();busy=true;buttons();status.textContent=asPhoto?'Gerando foto…':'Gerando PDF…';
       try {
-        const jsPDF=await getPDF(),doc=new jsPDF({unit:'mm',format:'a4',compress:true}),pages=report(doc,sections,metrics,pdfName,footer,withCalculations,asPhoto);
+        const jsPDF=await getPDF(),doc=new jsPDF({unit:'mm',format:'a4',compress:true}),pages=report(doc,sections,metrics,pdfName,withCalculations,asPhoto);
         const safeName=(pdfName||'plano_alimentar').replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').slice(0,80);
         if(asPhoto){await photos(pages,safeName,exportKey,photoSession);photoSession.ready();}else{writePDF(doc,pages);TreinoPDFViewer.deliver(doc,'Dieta_'+safeName+'.pdf',viewer);}
         if(draftKey===exportKey)status.textContent=asPhoto?'Prévia da foto gerada.':'PDF gerado.';
