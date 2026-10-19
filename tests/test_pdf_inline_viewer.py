@@ -11,7 +11,7 @@ scripts={url:urllib.request.urlopen(url,timeout=30).read() for url in urls}
 # Observe the browser handoff without delegating PDF rendering to headless Chromium.
 # Real generators produce PDFs, which are parsed below; source pages stay open.
 spy="""(() => {
- window.pdfWindows=[];window.pdfBlobs=new Map();
+ window.pdfWindows=[];window.pdfBlobs=new Map();window.pdfShareCalls=0;Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{pdfShareCalls++;}});
  const create=URL.createObjectURL.bind(URL);URL.createObjectURL=blob=>{const url=create(blob);pdfBlobs.set(url,blob);return url;};
  window.open=()=>{const viewer={closed:false,document:{title:'',body:{textContent:''}},location:{replace(url){viewer.url=url;}},close(){this.closed=true;}};pdfWindows.push(viewer);return viewer;};
 })()"""
@@ -89,5 +89,7 @@ with sync_playwright() as p:
     page.evaluate("""() => {const students=AvaliacaoTreinoSync.read('treinoAlunos');students.find(s=>s.student_id==='b').treino.A=['Remada atual 4x8'];localStorage.setItem('treinoAlunos',JSON.stringify(students));}""")
     page.reload();expect(page.locator('#searchName')).to_have_value('Bruno')
     expect(page.locator('.sec-a ol')).to_contain_text('Remada Atual 4x8')
+    assert page.locator('.pdf-direct-preview,.pdf-file-share').count()==0
+    assert page.evaluate('pdfShareCalls')==0
     assert not errors,errors
     browser.close();print('PASS: real training/evaluation/postural PDFs handed to inline application/pdf viewer; no source navigation; OBS person/history retained; library and workout selection survive reload; training YouTube links retained; cleared export name restored; typed unsaved screen retained without data/history writes; explicit clear and pupil switch respected')

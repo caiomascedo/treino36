@@ -9,7 +9,7 @@ script=urllib.request.urlopen(URL,timeout=30).read()
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
  context=browser.new_context(viewport={'width':390,'height':844})
- context.add_init_script("""window.shared=[];window.opens=0;window.open=()=>{window.opens++;return null;};Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{shared.push(data);}});Object.defineProperty(navigator,'userActivation',{configurable:true,value:{isActive:true}});""")
+ context.add_init_script("""window.shared=[];window.opens=0;window.pdfFiles=new Map();const createPDFURL=URL.createObjectURL.bind(URL);URL.createObjectURL=file=>{const url=createPDFURL(file);pdfFiles.set(url,file);return url;};window.open=()=>{window.opens++;return {closed:false,document:{title:'',body:{textContent:''}},location:{replace:url=>shared.push({files:[pdfFiles.get(url)]})}};};Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{shared.push(data);}});Object.defineProperty(navigator,'userActivation',{configurable:true,value:{isActive:true}});""")
  def route(r):
   if r.request.url==URL:r.fulfill(body=script,content_type='application/javascript');return
   u=urlparse(r.request.url);path=ROOT/u.path.strip('/')
@@ -50,12 +50,12 @@ Observações:
 - <img src=x onerror=alert(1)>
 '''
  page.locator('#dietText').fill(text);page.locator('#dietPreview > summary').click();expect(page.locator('#dietPreviewBody')).to_contain_text('1.5 bananas');expect(page.locator('#dietPreviewBody')).to_contain_text('30 g de proteína');expect(page.locator('#dietPreviewBody')).to_contain_text('500 kcal');expect(page.locator('#dietPreviewBody')).to_contain_text('16:00 - Lanche da tarde');assert page.locator('#dietPreviewBody img').count()==0
- page.locator('#dietPdfBtn').click();expect(page.locator('.pdf-file-send')).to_be_enabled();page.locator('.pdf-file-send').click();page.locator('.pdf-file-close').click();page.wait_for_function('shared.length===1');assert page.evaluate("Object.keys(shared[0]).join(',')==='files'&&shared[0].files[0].name==='Dieta_Ana.pdf'")
+ page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===1');assert page.evaluate("Object.keys(shared[0]).join(',')==='files'&&shared[0].files[0].name==='Dieta_Ana.pdf'")
  data=page.evaluate("""async()=>{const file=shared[0].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
   for value in ['Dieta — Ana','2 ovos','1.5 bananas','150 g de arroz','30 g de proteína','500 kcal','16:00','19:30','Água: 2 litros']:assert value in pdf,(value,pdf)
- assert page.evaluate('opens')==0;expect(page.locator('#searchName')).to_have_value('Ana')
+ assert page.evaluate('opens')==1;expect(page.locator('#searchName')).to_have_value('Ana')
  page.locator('#dietDialog [data-close]').click();page.reload();page.locator('#dietBtn').click();expect(page.locator('#dietText')).to_have_value(text);page.locator('#dietDialog [data-close]').click()
  page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bruno"] .aluno-nome').click();page.locator('#dietBtn').click();expect(page.locator('#dietText')).to_have_value('');page.locator('#dietText').fill('Jantar\nSopa de legumes');page.locator('#dietDialog [data-close]').click()
  page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Ana"] .aluno-nome').click();page.locator('#dietBtn').click();expect(page.locator('#dietText')).to_have_value(text)
@@ -64,10 +64,10 @@ Observações:
  long='Almoço\n'+'\n'.join(f'{i} g de alimento de teste' for i in range(1,181))
  cdp=context.new_cdp_session(page);cdp.send('Emulation.setCPUThrottlingRate',{'rate':4});page.evaluate("()=>{window.compressCalls=0;window.compressStacks=[];const oldCompress=LZString.compressToUTF16;LZString.compressToUTF16=function(...args){compressCalls++;compressStacks.push(new Error().stack);return oldCompress.apply(this,args);};}")
  page.locator('#dietText').fill(long);assert page.evaluate('compressCalls')==0,page.evaluate('compressStacks')
- page.locator('#dietPdfBtn').click();expect(page.locator('.pdf-file-send')).to_be_enabled();page.locator('.pdf-file-send').click();page.locator('.pdf-file-close').click();page.wait_for_function('shared.length===1')
+ page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===1')
  data=page.evaluate("""async()=>{const file=shared[0].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   assert doc.page_count>1
   assert '180 g de alimento de teste' in ' '.join(p.get_text() for p in doc)
  assert not errors,errors
- browser.close();print('PASS: six compact tools without side scrolling at 320/390/768px; meal parsing preserves quantities/protein/kcal/times; real named diet PDF and pagination; existing file-only share; independent persistent drafts; zero dataset writes and no typing compression at CPU4')
+ browser.close();print('PASS: six compact tools without side scrolling at 320/390/768px; meal parsing preserves quantities/protein/kcal/times; real named diet PDF and pagination; native named-PDF handoff; independent persistent drafts; zero dataset writes and no typing compression at CPU4')
