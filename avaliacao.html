@@ -4,8 +4,9 @@
   <meta charset="UTF-8"/>
 <script src="storage-compression.js?v=15"></script>
 <script src="assessment-journal.js?v=18"></script>
-<script src="composition-extras.js?v=6"></script>
-<link rel="stylesheet" href="composition-extras.css?v=5">
+<script src="composition-context.js?v=1"></script>
+<script src="composition-extras.js?v=7"></script>
+<link rel="stylesheet" href="composition-extras.css?v=6">
 <script src="obs-autosave-journal.js?v=1"></script>
 <script src="storage-adapter.js?v=20"></script>
 <script src="pdf-viewer.js?v=4"></script>
@@ -1539,7 +1540,7 @@ async function gerarPDFAluno(alunoId, options={}){
   const extraRows=CompositionExtras.pdfRows(aluno,avs,formatDelta);
   if(extraRows.some(row=>row[0]==='Altura (cm)'))compRows.splice(0,1);
   compRows.push(...extraRows);
-  doc.autoTable({...AssessmentPDFStyle.tableHooks(doc),startY:53,head:[headers],body:pdfRows(CompositionExtras.filterBaseRows(aluno,compRows)),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:AssessmentPDFStyle.emerald,textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
+  doc.autoTable({...AssessmentPDFStyle.tableHooks(doc),startY:53,head:[['Indicador',...avs.map(av=>(av.data||'—')+(CompositionContext.pdfSource(av)?'\n'+CompositionContext.pdfSource(av):''))]],body:pdfRows(CompositionExtras.filterBaseRows(aluno,compRows)),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:AssessmentPDFStyle.emerald,textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
     didParseCell:function(data){
       if(data.section==='body' && LINHAS_NEGRITO_PDF.includes(data.row.raw[0])){
         data.cell.styles.fontStyle='bold';
@@ -1970,7 +1971,7 @@ function renderizarAlunos(alunosParaRenderizar){
   container.querySelectorAll('[data-extra-record]').forEach(root=>{
     const person=alunos.find(a=>String(a.id)===root.dataset.extraRecord),av=person.avaliacoes.find(a=>String(a.id)===root.dataset.extraAv);
     const section=root.dataset.extraSection;
-    CompositionExtras.mount(root,root.nextElementSibling,{section,prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value)=>{av[key]=value;TreinoStorage.stageAssessment(person.id,av.id,{[key]:value});consolidarExtras();},select:(keys,baseKeys)=>{const prefs=CompositionExtras.preferenceKeys(section),settings={[prefs.extra]:keys,[prefs.base]:baseKeys};Object.assign(person,settings);TreinoStorage.assessmentOperation(person.id,null,'person',{},settings);consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
+    CompositionExtras.mount(root,root.nextElementSibling,{section,prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value,metadata={})=>{Object.assign(av,{[key]:value,...metadata});TreinoStorage.stageAssessment(person.id,av.id,{[key]:value,...metadata});consolidarExtras();},select:(keys,baseKeys)=>{const prefs=CompositionExtras.preferenceKeys(section),settings={[prefs.extra]:keys,[prefs.base]:baseKeys};Object.assign(person,settings);TreinoStorage.assessmentOperation(person.id,null,'person',{},settings);consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
   });
   compactarAvaliacoes();
 }
