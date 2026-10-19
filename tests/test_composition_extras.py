@@ -21,6 +21,11 @@ with sync_playwright() as p:
   if not page.locator('.composition-extras-choices').is_visible():page.locator('.composition-extras-add').click()
  def choose(key,enabled=True):
   options();check=page.locator('[data-extra-key="'+key+'"]')
+  if check.locator('xpath=ancestor::details[contains(@class,"composition-inbody-selector")]').count():
+   parent=page.locator('.composition-inbody-selector')
+   if parent.get_attribute('open') is None:parent.locator(':scope > summary').click()
+   subgroup=check.locator('xpath=ancestor::details[@data-inbody-group]')
+   if subgroup.get_attribute('open') is None:subgroup.locator(':scope > summary').click()
   check.check() if enabled else check.uncheck()
  def done():page.locator('.composition-extras-choices > button').click()
  composition();expect(page.locator('.composition-source')).to_have_count(0)
@@ -33,11 +38,11 @@ with sync_playwright() as p:
  expect(page.locator('[data-unit-group]')).to_have_count(0)
  for key in ['peso','imc','gordura','visceral','massamuscular','proteina','agua','tmb','idadeMetabolica']:expect(page.locator('[data-extra-key="'+key+'"]')).to_be_checked()
  options()
- basic=page.locator('.composition-inbody-options').filter(has=page.locator('summary',has_text='InBody · dados do laudo'));basic.locator('summary').click()
+ basic=page.locator('[data-inbody-group="inbody"]');assert basic.get_attribute('open') is not None
  values={'mineraisKg':'2,84','pontuacaoInbody':'67','pesoIdealInbody':'56,5','controlePesoInbody':'-0,4','controleGorduraInbody':'-6,7','controleMuscularInbody':'+6,3','rcqInformado':'0,86','grauObesidadeInbody':'101','idLaudoInbody':'EX-120','horaLaudoInbody':'11:21'}
  for key in values:page.locator('[data-extra-key="'+key+'"]').check()
  for title,keys in [('InBody · massa magra segmentar',['magra_bracoDireito','adequacaoMagra_bracoDireito']),('InBody · gordura segmentar',['gordura_tronco','adequacaoGordura_tronco']),('InBody · impedância',['impedancia20_bd','impedancia100_bd'])]:
-  group=page.locator('.composition-inbody-options').filter(has=page.locator('summary',has_text=title));group.locator('summary').click()
+  group=page.locator('[data-inbody-group]').filter(has=page.locator('summary',has_text=title));group.locator(':scope > summary').click()
   for key in keys:page.locator('[data-extra-key="'+key+'"]').check()
  done();values.update({'agua':'47,8','pesoAgua':'27,2','proteina':'12,65','musculoEsqueleticoPct':'34,6','aguaLitros':'27,2','proteinaKg':'7,2','metabolismoInformado':'1174','magra_bracoDireito':'1,61','adequacaoMagra_bracoDireito':'91','gordura_tronco':'10','adequacaoGordura_tronco':'187,7','impedancia20_bd':'474,1','impedancia100_bd':'439,5'})
  cdp=context.new_cdp_session(page);cdp.send('Emulation.setCPUThrottlingRate',{'rate':4});page.evaluate("""()=>{window.compressionCalls=0;const old=LZString.compressToUTF16;LZString.compressToUTF16=function(...args){compressionCalls++;return old.apply(this,args);};}""")
@@ -53,12 +58,23 @@ with sync_playwright() as p:
  raw=page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')[0]");av=raw['avaliacoes'][1]
  assert av['gordura']=='34.6' and av['pesoGordura']=='19.7' and av['massaMuscularPct']=='52.7'
  assert 'pesoGordura' in raw['composicaoExtras'] and 'gordura' in raw['composicaoCampos']
- for group,keys in [('gordura',['gordura','pesoGordura']),('agua',['agua','pesoAgua','aguaLitros']),('massamuscular',['massamuscular','massaMuscularPct']),('musculoEsqueletico',['musculoEsqueleticoKg','musculoEsqueleticoPct'])]:
+ for group,keys in [('gordura',['gordura','pesoGordura']),('agua',['agua','pesoAgua']),('massamuscular',['massamuscular','massaMuscularPct']),('musculoEsqueletico',['musculoEsqueleticoKg','musculoEsqueleticoPct'])]:
   container=page.locator('.composition-related-fields[data-metric-group="'+group+'"]')
   ids=container.locator('input[id^="obs-av-"]').evaluate_all('(nodes)=>nodes.map(n=>n.id)')
   assert ids==['obs-av-'+key for key in keys],(group,ids)
   boxes=[page.locator('#obs-av-'+key).bounding_box() for key in keys]
   assert all(boxes[i+1]['y']>boxes[i]['y']+boxes[i]['height'] for i in range(len(boxes)-1)),boxes
+ # InBody-specific choices and fields live exclusively below the standard section.
+ options()
+ for key in ['aguaLitros','proteinaKg','mineraisKg']:
+  expect(page.locator('.composition-inbody-selector [data-extra-key="'+key+'"]')).to_have_count(1)
+  expect(page.locator('.composition-extras-choices > fieldset [data-extra-key="'+key+'"]')).to_have_count(0)
+ done()
+ inbody=page.locator('.composition-inbody-fields');expect(inbody).to_be_visible()
+ for key in ['aguaLitros','proteinaKg','mineraisKg','magra_bracoDireito','impedancia20_bd']:expect(inbody.locator('#obs-av-'+key)).to_have_count(1)
+ assert inbody.evaluate('(e)=>e.previousElementSibling.querySelector(".composition-inbody-fields")===null')
+ inbody.locator(':scope > summary').click();expect(page.locator('#obs-av-aguaLitros')).not_to_be_visible()
+ inbody.locator(':scope > summary').click();expect(page.locator('#obs-av-aguaLitros')).to_have_value('27,2')
  with page.expect_download() as download:page.locator('#obsAssessment-pdf').click()
  text=re.sub(r'\s+',' ',' '.join(pg.get_text() for pg in fitz.open(download.value.path())))
  for expected in ['InBody','Minerais','Pontuação','2,84','-6,7','27,2','7,2','474,1','439,5','187,7']:assert expected in text,(expected,text)
@@ -66,10 +82,16 @@ with sync_playwright() as p:
  assert text.index('% Gordura')<text.index('Peso da gordura (kg)')<text.index('Massa Muscular (kg)'),text
  assert text.index('Massa Muscular (kg)')<text.index('Massa muscular (%)')<text.index('% Proteína'),text
  assert text.index('% Água')<text.index('Peso da água (kg)')<text.index('Água corporal total'),text
+ assert 'INBODY · DADOS DO LAUDO' in text,text
+ assert text.index('Massa muscular esquelética (kg)')<text.index('INBODY · DADOS DO LAUDO')<text.index('Água corporal total'),text
+ for label in ['Água corporal total','Proteína (kg)','Minerais (kg)']:assert text.count(label)==1,(label,text)
  assert page.locator('#searchName').input_value()=='Ana'
+ choose('aguaLitros',False);done();expect(page.locator('#obs-av-aguaLitros')).to_have_count(0)
+ assert page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')[0].avaliacoes[1].aguaLitros")=='27,2'
+ page.reload();composition();choose('aguaLitros');done();expect(page.locator('#obs-av-aguaLitros')).to_have_value('27,2')
  library=context.new_page();library.on('pageerror',lambda e:errors.append(str(e)));library.goto('http://app.test/treino36/avaliacao.html?embed=treino36&treinoStudentId=a')
  expect(library.locator('#library-extra-10-12-mineraisKg')).to_have_value('2,84');library.locator('#library-extra-10-12-mineraisKg').fill('2,85');library.close()
  page.reload();composition();expect(page.locator('#obs-av-mineraisKg')).to_have_value('2,85');expect(page.locator('#obs-av-mineraisKg').locator('..').locator('.composition-extra-rating')).to_have_text('Normal')
- page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Bia')");page.reload();composition();expect(page.locator('#obs-av-gordura')).to_be_visible();expect(page.locator('#obs-av-mineraisKg')).to_have_count(0)
+ page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Bia')");page.reload();composition();expect(page.locator('#obs-av-gordura')).to_be_visible();expect(page.locator('#obs-av-mineraisKg')).to_have_count(0);expect(page.locator('.composition-inbody-fields')).to_have_count(0)
  assert not errors,errors
- browser.close();print('PASS: no source field; independent related units stacked in UI and PDF, old values preserved, InBody general/segment/impedance fields, signed controls, actual PDF, immediate persistence, native/library sync and per-pupil selections; CPU4 typing without compression')
+ browser.close();print('PASS: no source field; related units plus a separate InBody selector/editor/PDF section, old values preserved, InBody general/segment/impedance fields, signed controls, actual PDF, immediate persistence, native/library sync and per-pupil selections; CPU4 typing without compression')

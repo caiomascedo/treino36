@@ -16,13 +16,15 @@ with sync_playwright() as p:
   else:r.fulfill(status=404,body='')
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto('http://app.test/treino36/avaliacao.html')
- page.evaluate("""()=>{localStorage.setItem('treinoAlunos','[]');localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Ana',sexo:'F',idade:'30',altura:'1.60',composicaoExtras:['pesoGordura','musculoEsqueleticoKg'],medidasExtras:['antebraco'],avaliacoes:[{id:11,data:'01/09/2026',peso:'60',gordura:'25',massamuscular:'25',pesoGordura:'15',musculoEsqueleticoKg:'18',peitoral:'90',biceps:'30 / 28',coxa:'50 / 48',antebraco:'24 / 22',triceps:'10'},{id:12,data:'01/10/2026',peso:'62',gordura:'24',massamuscular:'26',pesoGordura:'14',musculoEsqueleticoKg:'19',peitoral:'89',biceps:'31 / 27',coxa:'49 / 49',antebraco:'25 / 21',triceps:'9'}]}]));}""");page.reload()
+ page.evaluate("""()=>{localStorage.setItem('treinoAlunos','[]');localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Ana',sexo:'F',idade:'30',altura:'1.60',composicaoExtras:['pesoGordura','musculoEsqueleticoKg','mineraisKg','aguaLitros'],medidasExtras:['antebraco'],avaliacoes:[{id:11,data:'01/09/2026',peso:'60',gordura:'25',massamuscular:'25',pesoGordura:'15',musculoEsqueleticoKg:'18',mineraisKg:'2.84',aguaLitros:'27',peitoral:'90',biceps:'30 / 28',coxa:'50 / 48',antebraco:'24 / 22',triceps:'10'},{id:12,data:'01/10/2026',peso:'62',gordura:'24',massamuscular:'26',pesoGordura:'14',musculoEsqueleticoKg:'19',mineraisKg:'2.9',aguaLitros:'26.5',peitoral:'89',biceps:'31 / 27',coxa:'49 / 49',antebraco:'25 / 21',triceps:'9'}]}]));}""");page.reload()
  with page.expect_download() as downloaded:page.evaluate("gerarPDFAluno(10,{mode:'completo',viewer:null})")
  file=downloaded.value;file.save_as('/tmp/treino36-assessment-emerald.pdf')
  green=0x1e6f3f;red=0xbe2d2d
  with fitz.open(file.path()) as pdf:
   spans=[span for pg in pdf for block in pg.get_text('dict')['blocks'] if 'lines' in block for line in block['lines'] for span in line['spans']]
   positive=[s for s in spans if '(+' in s['text']];negative=[s for s in spans if '(-' in s['text']]
+  assert 'INBODY · DADOS DO LAUDO' in ''.join(pg.get_text() for pg in pdf)
+  assert any('(+0,1)' in span['text'] for span in positive) and any('(-0,5)' in span['text'] for span in negative)
   assert len(positive)>=5 and len(negative)>=5,[(s['text'],hex(s['color'])) for s in spans]
   assert all(s['color']==red for s in positive),positive
   assert all(s['color']==green for s in negative),negative
