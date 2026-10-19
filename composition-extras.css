@@ -36,7 +36,7 @@
 .composition-record-history{border-top:1px solid #d7e3ed;margin-top:5px;font-size:11px}
 .composition-record-history ul{margin:0;padding:0 8px 8px 22px}.composition-record-history li{margin-bottom:4px;overflow-wrap:anywhere}
 
-.composition-extras-choices .composition-unified-choice select{grid-column:2;width:100%;box-sizing:border-box;min-width:0;font:16px system-ui;padding:5px;border:1px solid #cbd5e1;border-radius:6px;background:white;color:#29465a}
+.composition-extras-choices .composition-choice-group{border-top:1px solid #dce7e2;padding-top:5px;margin:9px 0}.composition-default-tag{display:inline-block;margin-left:6px;padding:0 5px;border-radius:4px;background:#e2f0e8;color:#286744;font-size:10px;font-weight:400}.composition-related-fields{display:flex;flex-direction:column;gap:12px;min-width:0}.composition-related-fields>.info-field,.composition-related-fields>.field{min-width:0}
 .composition-inbody-options{margin:8px 0;border-top:1px solid #d7e3ed;padding-top:5px;font-size:12px}
 .composition-inbody-options>summary{cursor:pointer;font-weight:600;color:#1e6f3f}
 .composition-inbody-options label{display:grid!important;grid-template-columns:17px minmax(0,1fr)}

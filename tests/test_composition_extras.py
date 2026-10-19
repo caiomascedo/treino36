@@ -19,21 +19,27 @@ with sync_playwright() as p:
   page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click()
  def options():
   if not page.locator('.composition-extras-choices').is_visible():page.locator('.composition-extras-add').click()
- def unit(group,key):options();page.locator('[data-unit-group="'+group+'"]').select_option(key)
+ def choose(key,enabled=True):
+  options();check=page.locator('[data-extra-key="'+key+'"]')
+  check.check() if enabled else check.uncheck()
  def done():page.locator('.composition-extras-choices > button').click()
- composition();expect(page.locator('.composition-source')).to_have_count(0);expect(page.locator('#obs-av-gordura')).to_be_visible();expect(page.locator('#obs-av-pesoGordura')).to_have_count(0)
- unit('gordura','pesoGordura');done();expect(page.locator('#obs-av-pesoGordura')).to_have_value('19.7');expect(page.locator('#obs-av-gordura')).not_to_be_visible()
- unit('gordura','gordura');done();expect(page.locator('#obs-av-gordura')).to_have_value('34.6')
- unit('gordura','pesoGordura');unit('agua','aguaLitros');unit('proteina','proteinaKg');unit('tmb','metabolismoInformado')
- for key in ['alturaCm','idadeReal','pesoGordura','massaMuscularPct']:expect(page.locator('[data-extra-key="'+key+'"]')).to_have_count(0)
- for group in ['gordura','agua','proteina','tmb']:expect(page.locator('[data-unit-group="'+group+'"]')).to_have_count(1)
+ composition();expect(page.locator('.composition-source')).to_have_count(0)
+ expect(page.locator('#obs-av-gordura')).to_have_value('34.6');expect(page.locator('#obs-av-pesoGordura')).to_have_value('19.7')
+ # Related values can be selected together, independently, with their original readings.
+ choose('gordura',False);done();expect(page.locator('#obs-av-gordura')).not_to_be_visible();expect(page.locator('#obs-av-pesoGordura')).to_have_value('19.7')
+ choose('gordura');choose('pesoGordura',False);done();expect(page.locator('#obs-av-gordura')).to_have_value('34.6');expect(page.locator('#obs-av-pesoGordura')).to_have_count(0)
+ for key in ['pesoGordura','aguaLitros','pesoAgua','proteinaKg','metabolismoInformado','musculoEsqueleticoPct']:choose(key)
+ for key in ['alturaCm','idadeReal']:expect(page.locator('[data-extra-key="'+key+'"]')).to_have_count(0)
+ expect(page.locator('[data-unit-group]')).to_have_count(0)
+ for key in ['peso','imc','gordura','visceral','massamuscular','proteina','agua','tmb','idadeMetabolica']:expect(page.locator('[data-extra-key="'+key+'"]')).to_be_checked()
+ options()
  basic=page.locator('.composition-inbody-options').filter(has=page.locator('summary',has_text='InBody · dados do laudo'));basic.locator('summary').click()
  values={'mineraisKg':'2,84','pontuacaoInbody':'67','pesoIdealInbody':'56,5','controlePesoInbody':'-0,4','controleGorduraInbody':'-6,7','controleMuscularInbody':'+6,3','rcqInformado':'0,86','grauObesidadeInbody':'101','idLaudoInbody':'EX-120','horaLaudoInbody':'11:21'}
  for key in values:page.locator('[data-extra-key="'+key+'"]').check()
  for title,keys in [('InBody · massa magra segmentar',['magra_bracoDireito','adequacaoMagra_bracoDireito']),('InBody · gordura segmentar',['gordura_tronco','adequacaoGordura_tronco']),('InBody · impedância',['impedancia20_bd','impedancia100_bd'])]:
   group=page.locator('.composition-inbody-options').filter(has=page.locator('summary',has_text=title));group.locator('summary').click()
   for key in keys:page.locator('[data-extra-key="'+key+'"]').check()
- done();values.update({'aguaLitros':'27,2','proteinaKg':'7,2','metabolismoInformado':'1174','magra_bracoDireito':'1,61','adequacaoMagra_bracoDireito':'91','gordura_tronco':'10','adequacaoGordura_tronco':'187,7','impedancia20_bd':'474,1','impedancia100_bd':'439,5'})
+ done();values.update({'agua':'47,8','pesoAgua':'27,2','proteina':'12,65','musculoEsqueleticoPct':'34,6','aguaLitros':'27,2','proteinaKg':'7,2','metabolismoInformado':'1174','magra_bracoDireito':'1,61','adequacaoMagra_bracoDireito':'91','gordura_tronco':'10','adequacaoGordura_tronco':'187,7','impedancia20_bd':'474,1','impedancia100_bd':'439,5'})
  cdp=context.new_cdp_session(page);cdp.send('Emulation.setCPUThrottlingRate',{'rate':4});page.evaluate("""()=>{window.compressionCalls=0;const old=LZString.compressToUTF16;LZString.compressToUTF16=function(...args){compressionCalls++;return old.apply(this,args);};}""")
  for key,value in values.items():page.locator('#obs-av-'+key).fill(value)
  minerals=page.locator('#obs-av-mineraisKg').locator('..');minerals.locator('.composition-extra-rating').click()
@@ -46,15 +52,24 @@ with sync_playwright() as p:
  for key,value in values.items():expect(page.locator('#obs-av-'+key)).to_have_value(value)
  raw=page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')[0]");av=raw['avaliacoes'][1]
  assert av['gordura']=='34.6' and av['pesoGordura']=='19.7' and av['massaMuscularPct']=='52.7'
- assert raw['composicaoUnidades']['gordura']=='pesoGordura'
+ assert 'pesoGordura' in raw['composicaoExtras'] and 'gordura' in raw['composicaoCampos']
+ for group,keys in [('gordura',['gordura','pesoGordura']),('agua',['agua','pesoAgua','aguaLitros']),('massamuscular',['massamuscular','massaMuscularPct']),('musculoEsqueletico',['musculoEsqueleticoKg','musculoEsqueleticoPct'])]:
+  container=page.locator('.composition-related-fields[data-metric-group="'+group+'"]')
+  ids=container.locator('input[id^="obs-av-"]').evaluate_all('(nodes)=>nodes.map(n=>n.id)')
+  assert ids==['obs-av-'+key for key in keys],(group,ids)
+  boxes=[page.locator('#obs-av-'+key).bounding_box() for key in keys]
+  assert all(boxes[i+1]['y']>boxes[i]['y']+boxes[i]['height'] for i in range(len(boxes)-1)),boxes
  with page.expect_download() as download:page.locator('#obsAssessment-pdf').click()
  text=re.sub(r'\s+',' ',' '.join(pg.get_text() for pg in fitz.open(download.value.path())))
  for expected in ['InBody','Minerais','Pontuação','2,84','-6,7','27,2','7,2','474,1','439,5','187,7']:assert expected in text,(expected,text)
- assert '% Gordura' not in text and '% Proteína' not in text,text
+ for label in ['% Gordura','Peso da gordura (kg)','Massa muscular (%)','Massa muscular esquelética (kg)','Massa muscular esquelética (%)','% Proteína','% Água','Peso da água (kg)','TMB (kcal)','Metabolismo da bioimpedância']:assert label in text,(label,text)
+ assert text.index('% Gordura')<text.index('Peso da gordura (kg)')<text.index('Massa Muscular (kg)'),text
+ assert text.index('Massa Muscular (kg)')<text.index('Massa muscular (%)')<text.index('% Proteína'),text
+ assert text.index('% Água')<text.index('Peso da água (kg)')<text.index('Água corporal total'),text
  assert page.locator('#searchName').input_value()=='Ana'
  library=context.new_page();library.on('pageerror',lambda e:errors.append(str(e)));library.goto('http://app.test/treino36/avaliacao.html?embed=treino36&treinoStudentId=a')
  expect(library.locator('#library-extra-10-12-mineraisKg')).to_have_value('2,84');library.locator('#library-extra-10-12-mineraisKg').fill('2,85');library.close()
  page.reload();composition();expect(page.locator('#obs-av-mineraisKg')).to_have_value('2,85');expect(page.locator('#obs-av-mineraisKg').locator('..').locator('.composition-extra-rating')).to_have_text('Normal')
  page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Bia')");page.reload();composition();expect(page.locator('#obs-av-gordura')).to_be_visible();expect(page.locator('#obs-av-mineraisKg')).to_have_count(0)
  assert not errors,errors
- browser.close();print('PASS: no source field; one option per indicator/unit, old values preserved, InBody general/segment/impedance fields, signed controls, actual PDF, immediate persistence, native/library sync and per-pupil units; CPU4 typing without compression')
+ browser.close();print('PASS: no source field; independent related units stacked in UI and PDF, old values preserved, InBody general/segment/impedance fields, signed controls, actual PDF, immediate persistence, native/library sync and per-pupil selections; CPU4 typing without compression')
