@@ -13,3 +13,29 @@
 #dietPreviewBody h4{margin:12px 0 5px;color:#1e6f3f}
 #dietPreviewBody ul{margin:0;padding-left:20px}
 #dietStatus{font-size:12px;color:#526675;min-height:1em}
+#dietDialog.diet-expanded{width:calc(100% - 16px);max-width:1100px;height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);margin:auto}
+#dietExpandBtn{float:right;border:0;border-radius:7px;padding:6px 9px;font-size:12px;background:#eaf0f3;color:#29465a}
+#dietDialog.diet-expanded #dietText{min-height:38dvh}
+#dietCalculations{clear:both;background:#f2f7fa;border-radius:8px;padding:9px}
+#dietDialog .diet-calc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+#dietDialog .diet-calc-grid label{font-size:12px;min-width:0}
+#dietDialog .diet-calc-grid input,#dietDialog .diet-calc-grid select,#dietDialog #diet-goal{width:100%;min-width:0;box-sizing:border-box;font:16px system-ui;border:1px solid #cbd5e1;border-radius:7px;padding:8px;background:white;color:#243746}
+#dietDialog .diet-wide{grid-column:1/-1}
+#dietDialog .diet-goal-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px}
+#dietDialog .diet-goal-row button{border:0;border-radius:7px;padding:6px;background:#e5edf2;color:#29465a}
+#dietDialog .diet-hint{font-size:11px;color:#526675}
+#dietTotals{font-size:12px;line-height:1.5;padding:10px 0;color:#29465a}
+#dietTotals small{display:block;font-size:11px;color:#64748b}
+#dietPreviewBody [contenteditable]{white-space:pre-wrap;border-radius:5px;outline-color:#9ac1dc;min-height:1.4em}
+#dietPreviewBody [contenteditable]:focus{background:#fffdeb}
+#dietPreviewBody .diet-nutrition-line{list-style:none;margin-left:-16px;font-size:12px;color:#526675}
+#dietDialog .diet-history{position:sticky;bottom:8px;z-index:5;display:flex;gap:6px;width:max-content;margin:10px auto 0;padding:5px 8px;background:rgba(42,59,70,.8);border-radius:24px;box-shadow:0 2px 8px #0002}
+#dietDialog .diet-history button{border:0;border-radius:16px;background:white;color:#29465a;font-size:22px;line-height:1;padding:5px 12px}
+#dietDialog button:disabled{opacity:.45;cursor:default}
+
+#dietDialog .diet-export-switch{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:12px}
+#dietDialog .diet-export-switch input{appearance:none;-webkit-appearance:none;position:relative;width:34px;height:20px;flex:0 0 34px;margin:0;padding:0;border:0;border-radius:20px;background:#cbd5e1;cursor:pointer}
+#dietDialog .diet-export-switch input::before{content:'';position:absolute;width:14px;height:14px;top:3px;left:3px;border-radius:50%;background:white;transition:transform .12s}
+#dietDialog .diet-export-switch input:checked{background:#1e6f3f}
+#dietDialog .diet-export-switch input:checked::before{transform:translateX(14px)}
+#dietDialog .diet-export-switch input:focus-visible{outline:2px solid #2379bd;outline-offset:2px}
