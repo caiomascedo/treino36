@@ -46,11 +46,12 @@ window.DietEditor = (() => {
       '<button type="button" data-diet-goal="tmb">TMB</button><button type="button" data-diet-goal="daily">Manutenção</button><button type="button" data-diet-goal="deficit">Emagrecimento</button><button type="button" data-diet-goal="surplus">Hipertrofia</button></div>' +
       '<label for="diet-goal">Meta (kcal/dia)</label><div class="diet-goal-row"><button type="button" id="dietGoalMinus">−100</button><input id="diet-goal" inputmode="decimal" placeholder="Automática"><button type="button" id="dietGoalPlus">+100</button><button type="button" id="dietGoalAuto">Auto</button></div>' +
       '<div class="diet-calc-grid"><label>Calorias do dia<input id="diet-calories" inputmode="decimal" placeholder="Automático"></label><label>Proteína (g)<input id="diet-protein" inputmode="decimal" placeholder="Do texto"></label><label>Carboidratos (g)<input id="diet-carbs" inputmode="decimal" placeholder="Do texto"></label><label>Gorduras (g)<input id="diet-fat" inputmode="decimal" placeholder="Do texto"></label></div><p class="diet-hint">Os valores da OBS são atualizados automaticamente. Deixe a meta vazia para usar a opção selecionada acima; os totais podem vir do texto ou ser corrigidos aqui.</p></details>' +
-      '<div id="dietTotals" aria-live="polite"></div><label for="dietText">🧠 Cola inteligente</label>' +
+      '<div id="dietTotals" aria-live="polite"></div><div class="diet-paste-header"><label for="dietText">🧠 Cola inteligente</label><button type="button" id="dietPasteExpandBtn" aria-pressed="false">⛶ Ampliar</button></div>' +
       '<textarea id="dietText" placeholder="Cole a dieta completa aqui. As refeições serão organizadas automaticamente.\n\nCafé da manhã\n2 ovos\n1 fruta\n\nAlmoço\nArroz, feijão e frango"></textarea>' +
       '<details id="dietPreview"><summary>Refeições · editar</summary><div id="dietPreviewBody"></div></details>' +
-      '<label class="diet-export-switch"><input type="checkbox" role="switch" id="dietIncludeCalculations"> Incluir TMB, meta e calorias no PDF/foto</label><p id="dietStatus" role="status"></p><div class="dialog-actions"><button type="button" id="dietPdfBtn" class="primary">📄 PDF</button><button type="button" id="dietPhotoBtn">🖼 Baixar foto</button><button type="button" data-close>Fechar</button></div>' +
+      '<label class="diet-export-switch"><input type="checkbox" role="switch" id="dietIncludeCalculations"> Incluir TMB e calorias no PDF/foto</label><p id="dietStatus" role="status"></p><div class="dialog-actions"><button type="button" id="dietPdfBtn" class="primary">📄 PDF</button><button type="button" id="dietPhotoBtn">🖼 Ver foto</button><button type="button" data-close>Fechar</button></div>' +
       '<div class="diet-history"><button type="button" id="dietUndoBtn" aria-label="Desfazer edição da dieta">↶</button><button type="button" id="dietRedoBtn" aria-label="Refazer edição da dieta">↷</button></div>');
+    const photoViewer=DietPhotoViewer.mount(config.createDialog);
     const text = dialog.querySelector('#dietText'), status = dialog.querySelector('#dietStatus');
     const preview = dialog.querySelector('#dietPreview'), body = dialog.querySelector('#dietPreviewBody');
     const pdfButton = dialog.querySelector('#dietPdfBtn'), photoButton = dialog.querySelector('#dietPhotoBtn');
@@ -121,58 +122,68 @@ window.DietEditor = (() => {
     function adjustGoal(delta){const current=C().nutrition(parse(text.value),calculationSettings()).goal;if(current===null){status.textContent='Preencha os dados da TMB ou digite uma meta.';return;}inputs.goal.value=String(Math.max(0,current+delta));change('goal-step',false);}
     dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{button.onclick=()=>{goalMode=button.dataset.dietGoal;inputs.goal.value='';change('goal-preset',false);};});
     dialog.querySelector('#dietGoalMinus').onclick=()=>adjustGoal(-100);dialog.querySelector('#dietGoalPlus').onclick=()=>adjustGoal(100);dialog.querySelector('#dietGoalAuto').onclick=()=>{inputs.goal.value='';change('goal-auto',false);};
-    dialog.addEventListener('close',()=>clearTimeout(timer));
+    const pasteExpand=dialog.querySelector('#dietPasteExpandBtn');let pasteScroll=0;
+    function expandPaste(expanded){
+      if(expanded)pasteScroll=dialog.scrollTop;
+      dialog.classList.toggle('diet-paste-expanded',expanded);pasteExpand.setAttribute('aria-pressed',String(expanded));pasteExpand.textContent=expanded?'↙ Minimizar':'⛶ Ampliar';dialog.scrollTop=expanded?0:pasteScroll;
+    }
+    pasteExpand.onpointerdown=event=>{if(document.activeElement===text)event.preventDefault();};
+    pasteExpand.onclick=()=>expandPaste(!dialog.classList.contains('diet-paste-expanded'));
+    dialog.addEventListener('cancel',event=>{if(dialog.classList.contains('diet-paste-expanded')){event.preventDefault();expandPaste(false);}});
+    dialog.addEventListener('close',()=>{clearTimeout(timer);expandPaste(false);photoViewer.close();});
     async function getPDF() {
       if(window.jspdf?.jsPDF)return window.jspdf.jsPDF;
       if(!pdfLibrary)pdfLibrary=(async()=>{for(const src of ['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js']){try{await config.loadScript(src);if(window.jspdf?.jsPDF)return window.jspdf.jsPDF;}catch(error){}}throw Error('Não foi possível carregar a exportação. Confira sua conexão e tente novamente.');})().catch(error=>{pdfLibrary=null;throw error;});
       return pdfLibrary;
     }
-    function report(doc,sections,metrics,pdfName,footer,withCalculations) {
-      const pages=[[]];let y=20;
-      const addPage=()=>{pages.push([]);y=20;};
+    function report(doc,sections,metrics,pdfName,footer,withCalculations,asPhoto=false) {
+      const left=asPhoto?8:16,lineWidth=asPhoto?94:178,bottom=asPhoto?172:278,startY=asPhoto?12:20;
+      const pages=[[]];let y=startY;
+      const addPage=()=>{pages.push([]);y=startY;};
       function lines(value,size,bold,color) {
         doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);
-        for(const line of doc.splitTextToSize(value,178)) {if(y>278)addPage();pages.at(-1).push({text:line,x:16,y,size,bold,color});y+=size*.43;}
+        for(const line of doc.splitTextToSize(value,lineWidth)) {if(y>bottom)addPage();pages.at(-1).push({text:line,x:left,y,size,bold,color});y+=size*.43;}
       }
       lines(pdfName?'Dieta — '+pdfName:'Dieta',16,true,[30,111,63]);y+=2;lines(new Date().toLocaleDateString('pt-BR'),9,false,[100,110,120]);y+=5;
       if(withCalculations){
       if(metrics.tmb!==null)lines('TMB estimada: '+fmt(metrics.tmb)+' kcal/dia',10,false,[36,55,70]);
-      if(metrics.goal!==null)lines('Meta: '+fmt(metrics.goal)+' kcal/dia',10,true,[30,111,63]);
       if(metrics.calories!==null)lines('Calorias do dia: '+fmt(metrics.calories)+' kcal ('+metrics.source+')',10,false,[36,55,70]);
       if(metrics.missing&&metrics.calories!==null)lines('Contagem parcial: '+metrics.missing+' refeição(ões) com contagem incompleta.',9,false,[100,110,120]);
       }
+      if(metrics.goal!==null)lines('Meta: '+fmt(metrics.goal)+' kcal/dia',10,true,[30,111,63]);
       if(metrics.macrosFound)lines('Proteína: '+fmt(metrics.protein)+' g | Carbo: '+fmt(metrics.carbs)+' g | Gordura: '+fmt(metrics.fat)+' g',10,false,[36,55,70]);
       y+=5;
-      for(const section of sections){if(y>260)addPage();lines(section.title,12,true,[30,111,63]);y+=2;for(const item of section.items)lines((nutrientLine(item)?'':'• ')+item,10.5,false,[36,55,70]);y+=5;}
-      pages.forEach((commands,index)=>{commands.push({text:doc.splitTextToSize(footer,160)[0]||'',x:16,y:289,size:8,color:[115,125,135]},{text:(index+1)+'/'+pages.length,x:194,y:289,size:8,color:[115,125,135],align:'right'});});
+      for(const section of sections){if(y>(asPhoto?154:260))addPage();lines(section.title,12,true,[30,111,63]);y+=2;for(const item of section.items)lines((nutrientLine(item)?'':'• ')+item,10.5,false,[36,55,70]);y+=5;}
+      pages.forEach((commands,index)=>{commands.push({text:doc.splitTextToSize(footer,asPhoto?78:160)[0]||'',x:left,y:asPhoto?182:289,size:8,color:[115,125,135]},{text:(index+1)+'/'+pages.length,x:asPhoto?102:194,y:asPhoto?182:289,size:8,color:[115,125,135],align:'right'});});
       return pages;
     }
     function writePDF(doc,pages) {pages.forEach((commands,index)=>{if(index)doc.addPage();for(const command of commands){doc.setFont('helvetica',command.bold?'bold':'normal');doc.setFontSize(command.size);doc.setTextColor(...command.color);doc.text(command.text,command.x,command.y,{align:command.align||'left'});}});}
-    async function photos(pages,safeName,exportKey) {
+    async function photos(pages,safeName,exportKey,photoSession) {
       // Bound image dimensions and memory; normal plans become a single tall PNG.
-      const scale=1240/210,chunkSize=4;
+      const scale=1240/110,chunkSize=3;
       for(let start=0;start<pages.length;start+=chunkSize){
-        if(!dialog.open||draftKey!==exportKey)return;
-        const chunk=pages.slice(start,start+chunkSize).map(commands=>{const footerY=Math.min(289,Math.max(20,...commands.slice(0,-2).map(command=>command.y))+14);return {commands,footerY,height:Math.ceil((footerY+8)*scale)};});
+        if(!dialog.open||draftKey!==exportKey||photoSession.closed)return;
+        const chunk=pages.slice(start,start+chunkSize).map(commands=>{const footerY=Math.min(182,Math.max(12,...commands.slice(0,-2).map(command=>command.y))+14);return {commands,footerY,height:Math.ceil((footerY+8)*scale)};});
         const canvas=document.createElement('canvas');canvas.width=1240;canvas.height=chunk.reduce((sum,page)=>sum+page.height,0);
         const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);
         let offset=0;for(const page of chunk){page.commands.forEach((command,index)=>{ctx.fillStyle='rgb('+command.color.join(',')+')';ctx.font=(command.bold?'bold ':'')+(command.size*25.4/72*scale)+'px Arial';ctx.textAlign=command.align||'left';ctx.fillText(command.text,command.x*scale,(index>=page.commands.length-2?page.footerY:command.y)*scale+offset);});offset+=page.height;}
         const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));canvas.width=canvas.height=1;
         if(!blob)throw Error('Não foi possível gerar a foto.');
-        if(!dialog.open||draftKey!==exportKey)return;
-        const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='Dieta_'+safeName+(pages.length>chunkSize?'_'+(Math.floor(start/chunkSize)+1):'')+'.png';link.hidden=true;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+        if(!dialog.open||draftKey!==exportKey||photoSession.closed)return;
+        photoSession.add(blob,'Dieta_'+safeName+(pages.length>chunkSize?'_'+(Math.floor(start/chunkSize)+1):'')+'.png');
       }
     }
     async function exportDiet(asPhoto) {
       const sections=parse(text.value);if(!sections.length){status.textContent='Cole a dieta antes de exportar.';return;}
       const pdfName=name,footer=config.footer(),exportKey=draftKey,metrics=C().nutrition(sections,calculationSettings()),withCalculations=includeCalculations.checked;
+      const photoSession=asPhoto?photoViewer.open(pdfName):null;
       const viewer=asPhoto?null:TreinoPDFViewer.reserve();busy=true;buttons();status.textContent=asPhoto?'Gerando foto…':'Gerando PDF…';
       try {
-        const jsPDF=await getPDF(),doc=new jsPDF({unit:'mm',format:'a4',compress:true}),pages=report(doc,sections,metrics,pdfName,footer,withCalculations);
+        const jsPDF=await getPDF(),doc=new jsPDF({unit:'mm',format:'a4',compress:true}),pages=report(doc,sections,metrics,pdfName,footer,withCalculations,asPhoto);
         const safeName=(pdfName||'plano_alimentar').replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').slice(0,80);
-        if(asPhoto)await photos(pages,safeName,exportKey);else{writePDF(doc,pages);TreinoPDFViewer.deliver(doc,'Dieta_'+safeName+'.pdf',viewer);}
-        if(draftKey===exportKey)status.textContent=asPhoto?'Foto gerada.':'PDF gerado.';
-      }catch(error){TreinoPDFViewer.close(viewer);if(draftKey===exportKey)status.textContent=error.message;}
+        if(asPhoto){await photos(pages,safeName,exportKey,photoSession);photoSession.ready();}else{writePDF(doc,pages);TreinoPDFViewer.deliver(doc,'Dieta_'+safeName+'.pdf',viewer);}
+        if(draftKey===exportKey)status.textContent=asPhoto?'Prévia da foto gerada.':'PDF gerado.';
+      }catch(error){TreinoPDFViewer.close(viewer);if(photoSession)photoSession.error(error.message);if(draftKey===exportKey)status.textContent=error.message;}
       finally{busy=false;buttons();}
     }
     pdfButton.onclick=()=>exportDiet(false);photoButton.onclick=()=>exportDiet(true);

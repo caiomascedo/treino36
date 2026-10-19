@@ -27,7 +27,15 @@ with sync_playwright() as p:
   page.locator('[data-diet-goal="'+mode+'"]').click();expect(page.locator('#dietTotals')).to_contain_text('Meta: '+value)
 
  text='Café da manhã\n2 ovos · 140 kcal\nPão · 100 kcal\nTotal: 240 kcal\nMacros:\nCarbo: 45g | Prot: 12g | Gord: 8g\n;\n• ;\nAlmoço\nMacros:\nCarbo: 50g | Prot: 35g | Gord: 12g'
- page.locator('#dietText').fill(text);expect(page.locator('#dietTotals')).to_contain_text('688 kcal');page.locator('#dietPreview > summary').click()
+ page.locator('#dietText').fill(text);expect(page.locator('#dietTotals')).to_contain_text('688 kcal')
+ compactHeight=page.locator('#dietText').bounding_box()['height'];assert compactHeight<=150
+ page.locator('#dietText').evaluate('el=>{el.focus();el.setSelectionRange(8,12)}')
+ page.locator('#dietPasteExpandBtn').click();expect(page.locator('#dietPasteExpandBtn')).to_have_attribute('aria-pressed','true');assert page.locator('#dietText').bounding_box()['height']>compactHeight*2
+ assert page.locator('#dietText').evaluate('el=>[el.selectionStart,el.selectionEnd]')==[8,12]
+ expect(page.locator('#dietText')).to_have_value(text);expect(page.locator('.diet-history')).to_be_visible();expect(page.locator('#dietPdfBtn')).not_to_be_visible()
+ page.locator('#dietPasteExpandBtn').click();expect(page.locator('#dietExpandBtn')).to_be_visible();expect(page.locator('#dietText')).to_have_value(text)
+ page.locator('#dietPasteExpandBtn').click();page.keyboard.press('Escape');expect(page.locator('#dietPasteExpandBtn')).to_have_attribute('aria-pressed','false');expect(page.locator('#dietDialog')).to_be_visible()
+ page.locator('#dietPreview > summary').click()
  assert not page.locator('#dietPreviewBody li').evaluate_all("nodes=>nodes.some(node=>/^[;\\s]+$/.test(node.textContent))")
  page.locator('#dietPreviewBody li').filter(has_text='Total: 240 kcal').fill('Total: 300 kcal');expect(page.locator('#dietTotals')).to_contain_text('748 kcal');assert '300 kcal' in page.locator('#dietText').input_value()
  page.locator('#dietUndoBtn').click();expect(page.locator('#dietTotals')).to_contain_text('688 kcal');page.locator('#dietRedoBtn').click();expect(page.locator('#dietTotals')).to_contain_text('748 kcal')
@@ -45,17 +53,34 @@ with sync_playwright() as p:
  data=page.evaluate("""async()=>{const file=shared[0].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
-  for value in ['Proteína: 100','Carbo: 200','Gordura: 50','300 kcal']:assert value in pdf,(value,pdf)
-  for value in ['TMB estimada:','Meta:','Calorias do dia:']:assert value not in pdf,(value,pdf)
+  for value in ['Meta: 2.303 kcal/dia','Proteína: 100','Carbo: 200','Gordura: 50','300 kcal']:assert value in pdf,(value,pdf)
+  for value in ['TMB estimada:','Calorias do dia:']:assert value not in pdf,(value,pdf)
   assert '• ;' not in pdf
- with page.expect_download() as downloaded:page.locator('#dietPhotoBtn').click()
+ downloads=[];page.on('download',lambda file:downloads.append(file))
+ page.locator('#dietPhotoBtn').click();expect(page.locator('#dietPhotoPreviewDialog')).to_be_visible();expect(page.locator('#dietPhotoSaveBtn')).to_be_enabled(timeout=20000)
+ page.wait_for_function("document.querySelector('#dietPhotoImages img')?.naturalWidth===1240")
+ expect(page.locator('#dietPhotoImages img')).to_be_visible();assert len(downloads)==0
+ page.locator('#dietPhotoExpandBtn').click();expect(page.locator('#dietPhotoExpandBtn')).to_have_attribute('aria-pressed','true')
+ page.screenshot(path='/tmp/treino36-diet-photo-preview.png')
+ page.evaluate("Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>false})")
+ with page.expect_download() as downloaded:page.locator('#dietPhotoSaveBtn').click()
  file=downloaded.value;assert file.suggested_filename=='Dieta_Ana.png';file.save_as('/tmp/treino36-diet-expanded.png')
  from PIL import Image
  with Image.open(file.path()) as img:assert img.format=='PNG' and img.width==1240 and 400<=img.height<1750
  assert page.evaluate('shared.length')==1
+ page.evaluate("Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true})")
+ page.locator('#dietPhotoSaveBtn').click();page.wait_for_function('shared.length===2')
+ assert page.evaluate("Object.keys(shared[1]).join(',')==='files'&&shared[1].files[0].type==='image/png'&&shared[1].files[0].name==='Dieta_Ana.png'")
+ expect(page.locator('#dietPhotoImages img')).to_be_visible()
+ page.evaluate("()=>{window.imageShareOriginal=navigator.share;Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{const error=new Error('Cancelado');error.name='AbortError';throw error;}});}")
+ page.locator('#dietPhotoSaveBtn').click();expect(page.locator('#dietPhotoSaveBtn')).to_be_enabled();expect(page.locator('#dietPhotoImages img')).to_be_visible()
+ page.evaluate("Object.defineProperty(navigator,'share',{configurable:true,value:window.imageShareOriginal})")
+ photoUrl=page.locator('#dietPhotoImages img').get_attribute('src')
+ page.evaluate("()=>{window.photoRevoked=[];const previous=URL.revokeObjectURL.bind(URL);URL.revokeObjectURL=url=>{photoRevoked.push(url);previous(url);};}")
+ page.locator('#dietPhotoPreviewDialog [data-close]').click();expect(page.locator('#dietPhotoImages img')).to_have_count(0);assert photoUrl in page.evaluate('photoRevoked')
  page.locator('#dietIncludeCalculations').check();page.locator('#dietUndoBtn').click();expect(page.locator('#dietIncludeCalculations')).not_to_be_checked();page.locator('#dietRedoBtn').click();expect(page.locator('#dietIncludeCalculations')).to_be_checked()
- page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===2')
- data=page.evaluate("""async()=>{const file=shared[1].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
+ page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===3')
+ data=page.evaluate("""async()=>{const file=shared[2].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
   for value in ['TMB estimada: 1.486','Meta: 2.303','Calorias do dia: 1.850','Proteína: 100']:assert value in pdf,(value,pdf)
@@ -73,4 +98,4 @@ with sync_playwright() as p:
  expect(page.locator('#dietTmb')).to_have_text('1.586');expect(page.locator('#dietTotals')).to_contain_text('Meta: 1.586')
  page.reload();page.locator('#dietBtn').click();expect(page.locator('#dietTmb')).to_have_text('1.586');expect(page.locator('#dietIncludeCalculations')).to_be_checked()
  assert not errors,errors
- browser.close();print('PASS: original draft retained, automatic OBS TMB, no duplicate demographics, quick targets, editable kcal/macros, meal editing and floating undo/redo, immediate persistence, expanded layout, PDF with macros-only default and optional calculation summary, real PNG export, independent pupils and unchanged datasets')
+ browser.close();print('PASS: original draft retained, automatic OBS TMB, no duplicate demographics, quick targets, editable kcal/macros, meal editing and floating undo/redo, immediate persistence, expanded layout, PDF with goal/macros by default and optional TMB/calorie summary, real image preview before PNG download, separate paste expansion with cursor retained, independent pupils and unchanged datasets')
