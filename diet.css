@@ -70,3 +70,5 @@
 #dietDialog.diet-meals-expanded #dietPreviewBody{height:calc(100dvh - 160px);min-height:100px;overflow-y:auto;padding:0 3px 12px;box-sizing:border-box}
 
 #dietDialog.diet-meals-expanded #dietPreviewBody,#dietDialog.diet-meals-expanded #dietPreviewBody [contenteditable]{font-size:16px;line-height:1.5}
+#dietDialog .diet-paste-header>div{display:flex;gap:5px;flex-shrink:0}#dietPasteClearBtn{border:0;border-radius:7px;padding:5px 8px;font-size:12px;background:#eaf0f3;color:#29465a}
+@media(max-width:360px){#dietDialog .diet-paste-header{flex-wrap:wrap}}

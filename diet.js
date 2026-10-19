@@ -3,26 +3,35 @@ window.DietEditor = (() => {
   const plain = text => text.replace(/\*\*|__|`/g, '').replace(/\p{Extended_Pictographic}|[\uFE0F\u200D]/gu, '').replace(/^\s*#{1,6}\s*/, '').trim();
   const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const meals = /^(?:cafe da manha|cafe|desjejum|lanche da manha|almoco|lanche da tarde|jantar|ceia|pre[- ]?treino|pos[- ]?treino|lanche(?:\s+\d+)?|refeicao\s*\d+|orientacoes(?: gerais)?|observacoes|recomendacoes|resumo(?: diario)?|total(?: diario| do dia| geral)|totais(?: do dia)?)(?=$|\s*[:(–—-]|\s+\d)/;
+  const daily = /^(?:resumo(?: diario)?|total(?: diario| do dia| geral)|totais(?: do dia)?)(?:\s+aproximad[oa]s?)?(?=$|\s*[:(–—-])/;
+  const visibleSections = sections => sections.filter(section=>!section.summary);
   function parse(text) {
     const sections = [];
     let current;
-    for (const raw of text.split(/\r?\n/)) {
+    function locate(section,index){Object.defineProperties(section,{startLine:{value:index,writable:true},endLine:{value:index+1,writable:true}});return section;}
+    for (const [index,raw] of text.split(/\r?\n/).entries()) {
       const line = plain(raw).replace(/^\s*(?:[-*•▪]+\s*|\d+\)\s*|\d+\.\s+)/, '').trim();
       if (!line || /^[\s\p{P}\p{S}]+$/u.test(line)) continue;
+      const normalized=normalize(line);
+      if(/^os valores podem variar\b/.test(normalized))continue;
+      if(!current&&(/^(?:cardapio\b|dieta\b|plano alimentar\b)/.test(normalized)||/^pesar\b/.test(normalized)))continue;
       const candidate = line.replace(/^\d{1,2}(?::\d{2}|h\d{0,2})\s*[-–—:]?\s*/i, '');
-      const match = normalize(candidate).match(meals);
+      const summary=normalize(candidate).match(daily);
+      const match = summary||normalize(candidate).match(meals);
       if (match) {
         // An inline meal ("Almoço: arroz...") retains the food after the colon.
         const tail = candidate.slice(match[0].length);
         const inline = tail.match(/^\s*:\s*(.+)$/);
         const colon = inline && !/^\d{1,2}(?::\d{2}|h\d{0,2})(?:\s*(?:h|horas?))?$/i.test(inline[1]) ? inline : null;
         const prefix = line.slice(0, line.length - candidate.length);
-        current = {title: colon ? prefix + candidate.slice(0, match[0].length) : line, items: []};
+        current = locate({title: colon ? prefix + candidate.slice(0, match[0].length) : line, items: []},index);
+        if(summary)current.summary=true;
         sections.push(current);
         if (colon) current.items.push(colon[1]);
       } else {
-        if (!current) { current = {title: 'Plano alimentar', items: []}; sections.push(current); }
+        if (!current) { current = locate({title: 'Plano alimentar', items: []},index); sections.push(current); }
         current.items.push(line);
+        current.endLine=index+1;
       }
     }
     return sections;
@@ -46,7 +55,7 @@ window.DietEditor = (() => {
       '<button type="button" data-diet-goal="tmb">TMB</button><button type="button" data-diet-goal="daily">Manutenção</button><button type="button" data-diet-goal="deficit">Emagrecimento</button><button type="button" data-diet-goal="surplus">Hipertrofia</button></div>' +
       '<label for="diet-goal">Meta (kcal/dia)</label><div class="diet-goal-row"><button type="button" id="dietGoalMinus">−100</button><input id="diet-goal" inputmode="decimal" placeholder="Automática"><button type="button" id="dietGoalPlus">+100</button><button type="button" id="dietGoalAuto">Auto</button></div>' +
       '<div class="diet-calc-grid"><label>Calorias do dia<input id="diet-calories" inputmode="decimal" placeholder="Automático"></label><label>Proteína (g)<input id="diet-protein" inputmode="decimal" placeholder="Do texto"></label><label>Carboidratos (g)<input id="diet-carbs" inputmode="decimal" placeholder="Do texto"></label><label>Gorduras (g)<input id="diet-fat" inputmode="decimal" placeholder="Do texto"></label></div><p class="diet-hint">Os valores da OBS são atualizados automaticamente. Deixe a meta vazia para usar a opção selecionada acima; os totais podem vir do texto ou ser corrigidos aqui.</p></details>' +
-      '<div id="dietTotals" aria-live="polite"></div><div class="diet-paste-header"><label for="dietText">🧠 Cola inteligente</label><button type="button" id="dietPasteExpandBtn" aria-pressed="false">⛶ Ampliar</button></div>' +
+      '<div id="dietTotals" aria-live="polite"></div><div class="diet-paste-header"><label for="dietText">🧠 Cola inteligente</label><div><button type="button" id="dietPasteClearBtn">Limpar texto</button><button type="button" id="dietPasteExpandBtn" aria-pressed="false">⛶ Ampliar</button></div></div>' +
       '<textarea id="dietText" placeholder="Cole a dieta completa aqui. As refeições serão organizadas automaticamente.\n\nCafé da manhã\n2 ovos\n1 fruta\n\nAlmoço\nArroz, feijão e frango"></textarea>' +
       '<details id="dietPreview"><summary><span>Refeições · editar</span><button type="button" id="dietMealsExpandBtn" aria-pressed="false">⛶ Ampliar</button></summary><div id="dietPreviewBody"></div></details>' +
       '<label class="diet-export-switch"><input type="checkbox" role="switch" id="dietIncludeCalculations"> Incluir TMB e calorias no PDF/foto</label><p id="dietStatus" role="status"></p><div class="dialog-actions"><button type="button" id="dietPdfBtn" class="primary">📄 PDF</button><button type="button" id="dietPhotoBtn">🖼 Ver foto</button><button type="button" data-close>Fechar</button></div>' +
@@ -68,7 +77,7 @@ window.DietEditor = (() => {
       try {localStorage.setItem(draftKey,value.text);localStorage.setItem(settingsKey,JSON.stringify(value.settings));status.textContent='Rascunho salvo.';}
       catch(error) {status.textContent='Não foi possível guardar o rascunho neste navegador. O conteúdo continua disponível para exportar.';}
     }
-    function buttons() {undo.disabled=historyIndex===0;redo.disabled=historyIndex>=history.length-1;pdfButton.disabled=photoButton.disabled=busy||!parse(text.value).length;}
+    function buttons() {undo.disabled=historyIndex===0;redo.disabled=historyIndex>=history.length-1;dialog.querySelector('#dietPasteClearBtn').disabled=!text.value.length;pdfButton.disabled=photoButton.disabled=busy||!visibleSections(parse(text.value)).some(section=>section.items.length);}
     function record(group) {
       const snapshot=JSON.stringify(state());
       if(snapshot===history[historyIndex])return;
@@ -93,21 +102,24 @@ window.DietEditor = (() => {
       return value;
     }
     function nutrientLine(item) {return /^(?:macros?|carbo|prot|gord|total|calorias|kcal)\b/i.test(normalize(item));}
+    let renderedSections=[];
     function render() {
       body.replaceChildren();
-      for(const section of parse(text.value)) {
+      renderedSections=parse(text.value);renderedSections.forEach((section,index)=>{if(section.summary)return;
         const block=document.createElement('section'),heading=document.createElement('h4');heading.textContent=section.title;heading.contentEditable='true';heading.setAttribute('aria-label','Nome da refeição');
+        block.dataset.sectionIndex=index;
         const list=document.createElement('ul');for(const item of section.items){const li=document.createElement('li');li.contentEditable='true';li.setAttribute('aria-label','Alimento ou informação da refeição');li.textContent=item;if(nutrientLine(item))li.className='diet-nutrition-line';list.append(li);}
         block.append(heading,list);body.append(block);
-      }
+      });
     }
     function refresh(renderPreview=true) {totals();buttons();if(renderPreview&&preview.open)render();}
     function change(group,renderPreview=true) {save();record(group);totals();buttons();clearTimeout(timer);if(renderPreview&&preview.open)timer=setTimeout(render,160);}
     text.oninput=()=>change('text');
+    dialog.querySelector('#dietPasteClearBtn').onclick=()=>{if(!text.value.length||!confirm('Limpar o texto da cola inteligente? Você poderá desfazer.'))return;text.value='';change('clear-text');refresh();};
     includeCalculations.onchange=()=>change('export-option',false);
     for(const [key,input] of Object.entries(inputs))input.addEventListener(input.tagName==='SELECT'?'change':'input',()=>change(key,false));
     preview.ontoggle=()=>{if(preview.open)render();};
-    body.addEventListener('input',()=>{text.value=[...body.children].map(block=>[block.querySelector('h4').innerText,...[...block.querySelectorAll('li')].map(li=>li.innerText)].join('\n')).join('\n\n');change('meals',false);});
+    body.addEventListener('input',()=>{const raw=text.value.split(/\r?\n/),blocks=new Map([...body.children].map(block=>[Number(block.dataset.sectionIndex),block])),output=[];let cursor=0;renderedSections.forEach((section,index)=>{const start=section.startLine,end=section.endLine;output.push(...raw.slice(cursor,start));section.startLine=output.length;const block=blocks.get(index);if(block){section.title=block.querySelector('h4').innerText;section.items=[...block.querySelectorAll('li')].map(li=>li.innerText);output.push(section.title,...section.items);}else output.push(...raw.slice(start,end));section.endLine=output.length;cursor=end;});output.push(...raw.slice(cursor));text.value=output.join('\n');change('meals',false);});
     body.addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,event.clipboardData.getData('text/plain'));});
     body.addEventListener('drop',event=>{event.preventDefault();});
     function move(direction) {
@@ -186,8 +198,8 @@ window.DietEditor = (() => {
       }
     }
     async function exportDiet(asPhoto) {
-      const sections=parse(text.value);if(!sections.length){status.textContent='Cole a dieta antes de exportar.';return;}
-      const pdfName=name,exportKey=draftKey,metrics=C().nutrition(sections,calculationSettings()),withCalculations=includeCalculations.checked;
+      const parsed=parse(text.value),sections=visibleSections(parsed);if(!sections.some(section=>section.items.length)){status.textContent='Cole a dieta antes de exportar.';return;}
+      const pdfName=name,exportKey=draftKey,metrics=C().nutrition(parsed,calculationSettings()),withCalculations=includeCalculations.checked;
       const photoSession=asPhoto?photoViewer.open(pdfName):null;
       const viewer=asPhoto?null:TreinoPDFViewer.reserve();busy=true;buttons();status.textContent=asPhoto?'Gerando foto…':'Gerando PDF…';
       try {
