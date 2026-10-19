@@ -29,7 +29,7 @@ with sync_playwright() as p:
   assert len(set(round(b['y']) for b in boxes))==(2 if width<521 else 1),boxes
  page.set_viewport_size({'width':390,'height':844});page.screenshot(path='/tmp/treino36-tools-diet.png',full_page=False)
  original=page.evaluate("[localStorage.getItem('treinoAlunos'),localStorage.getItem('avaliacao_fisica_alunos')]")
- page.locator('#dietBtn').click();expect(page.locator('#dietStudentName')).to_have_text('Ana');expect(page.locator('#dietPdfBtn')).to_be_disabled();assert page.locator('#dietDialog input').count()==0
+ page.locator('#dietBtn').click();expect(page.locator('#dietStudentName')).to_have_text('Ana');expect(page.locator('#dietPdfBtn')).to_be_disabled()
  text='''**1. Café da manhã — 07:00**
 - 2 ovos
 - 1.5 bananas

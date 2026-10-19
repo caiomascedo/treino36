@@ -1,0 +1,27 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const context={window:{}};
+vm.runInNewContext(fs.readFileSync('diet-calculations.js','utf8'),context);
+vm.runInNewContext(fs.readFileSync('diet.js','utf8'),context);
+const C=context.window.DietCalculations,P=context.window.DietEditor.parse;
+assert.equal(C.basal({sex:'F',age:'30',weight:'60',height:'165'}),1387);
+assert.equal(C.basal({sex:'F',age:'30',weight:'60',height:'1,65'}),1387);
+assert.equal(C.basal({sex:'M',age:'30',weight:'70',height:'175'}),1696);
+assert.equal(C.basal({sex:'',age:'30',weight:'70',height:'175'}),null);
+assert.equal(C.basal({sex:'M',age:'',weight:'70',height:'175'}),null);
+assert.equal(C.number('1.850'),1850);assert.equal(C.number('12,5'),12.5);
+let sections=P('Café da manhã\n2 ovos · 140 kcal\nPão · 100 kcal\nTotal: 240 kcal\nMacros:\nCarbo: 45g | Prot: 12g | Gord: 8g\n;\n• ;\nAlmoço\nMacros:\nCarbo: 50g | Prot: 35g | Gord: 12g');
+assert.equal(sections.length,2);assert(!sections.some(s=>s.items.includes(';')));
+let value=C.nutrition(sections,{sex:'F',age:'30',weight:'60',height:'165',activity:'moderada'});
+assert.equal(value.calories,688); // 240 explicit + 448 from the second meal; never double-count the explicit total.
+assert.equal(value.protein,47);assert.equal(value.carbs,95);assert.equal(value.fat,20);assert.equal(value.tmb,1387);assert.equal(value.goal,1803);
+value=C.nutrition(P('Café da manhã\nMacros:\nCarbo: 45g | Prot: 12g | Gord: 8g\nResumo diário\nCarbo: 100g | Prot: 80g | Gord: 50g\nTotal: 1170 kcal'));
+assert.equal(value.calories,1170);assert.equal(value.carbs,100);assert.equal(value.protein,80);assert.equal(value.fat,50);
+assert.equal(C.nutrition(P('Almoço\nArroz e frango')).calories,null);
+const partial=C.nutrition(P('Almoço\nProt: 12g'));assert.equal(partial.calories,48);assert.equal(partial.missing,1);
+value=C.nutrition(sections,{calories:'1.850',goal:'2000',protein:'100',carbs:'200',fat:'50'});
+assert.equal(value.calories,1850);assert.equal(value.goal,2000);assert.equal(value.protein,100);
+value=C.nutrition(sections,{protein:'100',carbs:'200',fat:'50'});assert.equal(value.calories,1650);
+assert.equal(C.nutrition(sections,{calories:'0'}).calories,0);
+assert.equal(C.nutrition(P('Almoço\nTotal: 1.850,5 kcal')).calories,1851);
+assert.equal(P('Almoço\n1.5 bananas')[0].items[0],'1.5 bananas');
+console.log('PASS: Harris–Benedict, actual-input-only estimates, comma/period parsing, explicit kcal vs macro totals, daily summary deduplication, manual overrides and punctuation cleanup');
