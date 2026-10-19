@@ -26,6 +26,11 @@ with sync_playwright() as p:
  cdp=context.new_cdp_session(page);cdp.send('Emulation.setCPUThrottlingRate',{'rate':4});page.evaluate("""()=>{window.compressionCalls=0;const original=LZString.compressToUTF16;LZString.compressToUTF16=function(...args){window.compressionCalls++;return original.apply(this,args);};}""")
  values={'pesoGordura':'20,8','musculoEsqueleticoPct':'34,1','musculoEsqueleticoKg':'20,0','massaMuscularPct':'59,8','metabolismoInformado':'1197,8'}
  for key,value in values.items():page.locator('#obs-av-'+key).fill(value)
+ detail=page.locator('#obs-av-musculoEsqueleticoPct').locator('..').locator('.composition-extra-detail')
+ detail.locator('summary').click();expect(detail.locator('.composition-extra-value')).to_contain_text('34,1');expect(detail).to_contain_text('músculos esqueléticos')
+ page.locator('#obs-av-musculoEsqueleticoPct').fill('34,2');expect(detail.locator('.composition-extra-value')).to_contain_text('34,2');assert detail.evaluate('el=>el.open')
+ page.locator('#obs-av-musculoEsqueleticoPct').fill('34,1');detail.locator('summary').click();assert not detail.evaluate('el=>el.open')
+ page.locator('#obs-av-pesoAgua').locator('..').locator('summary').click();expect(page.locator('#obs-av-pesoAgua').locator('..')).to_contain_text('Não informado')
  assert page.evaluate('window.compressionCalls')==0;expect(page.locator('#obs-av-tmb')).to_have_value(original_tmb)
  # Choices and values survive immediate reload, independently of clicking Save.
  page.reload();composition()
@@ -43,6 +48,8 @@ with sync_playwright() as p:
  page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Danyelle')");page.reload();composition();expect(page.locator('.composition-extra-field')).to_have_count(8)
  # The library uses the same fields and settings, including all history cards.
  library=context.new_page();library.on('pageerror',lambda e:errors.append(str(e)));library.goto('http://app.test/treino36/avaliacao.html?embed=treino36&treinoStudentId=a')
+ libraryDetail=library.locator('#library-extra-10-12-musculoEsqueleticoPct').locator('..').locator('.composition-extra-detail')
+ libraryDetail.locator('summary').click();expect(libraryDetail).to_contain_text('34,1');expect(libraryDetail).to_contain_text('músculos esqueléticos')
  expect(library.locator('#library-extra-10-12-pesoGordura')).to_have_value('20,8');library.locator('#library-extra-10-12-musculoEsqueleticoKg').fill('20,5')
  assert library.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')[0].avaliacoes.find(a=>a.id===12).musculoEsqueleticoKg")=='20,5'
  library.close();page.reload();composition();expect(page.locator('#obs-av-musculoEsqueleticoKg')).to_have_value('20,5')
