@@ -29,12 +29,12 @@ window.CompositionExtras=(()=>{
     pescoco:'Circunferência do pescoço em centímetros.',
     panturrilhaMedida:'Circunferência das panturrilhas direita e esquerda, em centímetros, nessa ordem.'
   };
-  const ratingLabels=['Baixo','Saudável','Bom','Excelente','Moderado','Elevado'];
+  const ratingLabels=['Baixo','Saudável','Bom','Excelente','Moderado','Elevado','Muito elevado'];
   const numeric=value=>{const text=String(value??'').trim().replace(',','.');return text!==''&&Number.isFinite(Number(text))?Number(text):null;};
   function classification(person,av,key){
     const n=numeric(av[key]);if(n===null)return {text:'—',tone:'neutral',note:'Preencha o valor para ver a classificação.'};
     if(n<0)return {text:'Valor inválido',tone:'neutral',note:'Confira o valor informado.'};
-    const manual=av[key+'Classificacao'];if(ratingLabels.includes(manual))return {text:manual,tone:['Saudável','Bom','Excelente'].includes(manual)?'good':manual==='Moderado'?'moderate':'attention',note:'Classificação informada a partir do laudo.'};
+    const manual=av[key+'Classificacao'];if(ratingLabels.includes(manual))return {text:manual,manual:true,tone:['Saudável','Bom','Excelente'].includes(manual)?'good':manual==='Moderado'?'moderate':'attention',note:'Classificação informada a partir do laudo.'};
     const supported=['pesoGordura','musculoEsqueleticoPct','musculoEsqueleticoKg'];
     if(!supported.includes(key))return {text:'Consultar laudo',tone:'neutral',note:'Este indicador não tem uma faixa universal de saudável. Você pode registrar a classificação do laudo abaixo.'};
     const age=numeric(av.ficha?.idade??person.idade),sex=person.sexo;
@@ -51,17 +51,19 @@ window.CompositionExtras=(()=>{
     // OMRON HBF-511 adult reference tables; compare percentages, never kg directly.
     const ranges=fat?{F:[[21,33,39],[23,34,40],[24,36,42]],M:[[8,20,25],[11,22,28],[13,25,30]]}:{F:[[24.3,30.4,35.4],[24.1,30.2,35.2],[23.9,30,35]],M:[[33.3,39.4,44.1],[33.1,39.2,43.9],[32.9,39,43.7]]};
     const [low,high,veryHigh]=ranges[sex][band],text=percent<low?'Baixo':percent<high?'Saudável':percent<veryHigh?'Elevado':'Muito elevado';
-    return {text,tone:text==='Saudável'||(!fat&&percent>=low)?'good':text==='Elevado'?'moderate':'attention',note:'Referência OMRON HBF-511 por idade e sexo. Percentual utilizado: '+percent.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%. '+(fat?'Faixa de referência: ':'Faixa normal de músculo esquelético: ')+low.toLocaleString('pt-BR')+'% a menos de '+high.toLocaleString('pt-BR')+'%.'};
+    const zones=[{label:'Baixo',color:'#c93732',min:0,max:low},{label:'Saudável / referência',color:'#23864a',min:low,max:high},{label:'Elevado',color:fat?'#c77700':'#157ab8',min:high,max:veryHigh},{label:'Muito elevado',color:fat?'#c93732':'#157ab8',min:veryHigh,max:Math.max(60,veryHigh+10)}];
+    return {text,zones,percent,tone:text==='Saudável'||(!fat&&percent>=low)?'good':text==='Elevado'?'moderate':'attention',note:'Referência OMRON HBF-511 por idade e sexo. Percentual utilizado: '+percent.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%. '+(fat?'Faixa de referência: ':'Faixa normal de músculo esquelético: ')+low.toLocaleString('pt-BR')+'% a menos de '+high.toLocaleString('pt-BR')+'%.'};
   }
   function addDetails(wrap,input,field,config){
     const detail=document.createElement('details');detail.className='composition-extra-detail';
     const summary=document.createElement('summary');summary.textContent='Ver detalhes';detail.id=input.id+'-details';
     const current=document.createElement('p');current.className='composition-extra-value';
     const explanation=document.createElement('p');explanation.textContent=descriptions[field.key];
-        let badge=null,note=null,select=null;
+        let badge=null,note=null,select=null;const gauge=document.createElement('div');gauge.className='composition-gauge';const analysis=document.createElement('strong');analysis.textContent='Análise de indicadores';analysis.className='composition-analysis-title';let updateHistory=()=>{};
     const update=()=>{
       current.textContent=field.label+': '+(filled(input.value)?input.value:'Não informado');
-      if(badge){const state=config.getState(),result=classification(state.person,{...state.av,[field.key]:input.value},field.key);badge.textContent=result.text;badge.dataset.tone=result.tone;note.textContent=result.note;select.value=state.av[field.key+'Classificacao']||'';}
+      if(badge){const state=config.getState(),result=classification(state.person,{...state.av,[field.key]:input.value},field.key);badge.textContent=result.text;badge.dataset.tone=result.tone;note.textContent=result.note;select.value=state.av[field.key+'Classificacao']||'';if(detail.open)CompositionContext.gauge(gauge,result);}
+      if(detail.open)updateHistory();
     };
     if(!field.readonly&&!field.paired&&field.key!=='pescoco'){
       badge=document.createElement('button');badge.type='button';badge.className='composition-extra-rating badge';summary.hidden=true;detail.classList.add('composition-detail-from-rating');badge.setAttribute('aria-controls',detail.id);badge.setAttribute('aria-expanded','false');badge.onclick=()=>{detail.open=!detail.open;};wrap.append(badge);
@@ -70,7 +72,7 @@ window.CompositionExtras=(()=>{
       select.onchange=()=>{try{config.input(field.key+'Classificacao',select.value);update();}catch(error){if(config.error)config.error(error);}};label.append(select);detail.append(note,label);
     }
     detail.addEventListener('toggle',()=>{if(badge)badge.setAttribute('aria-expanded',String(detail.open));if(detail.open)update();});input.addEventListener('input',update);input.addEventListener('composition-value-refresh',update);
-    detail.prepend(summary,current,explanation);wrap.append(detail);update();
+    detail.prepend(summary,current,gauge,analysis,explanation);wrap.append(detail);if(config.section!=='medidas')updateHistory=CompositionContext.mountHistory(detail,input,field,config);update();
     return update;
   }
   const baseFields={
@@ -95,22 +97,25 @@ window.CompositionExtras=(()=>{
   function mount(root,grid,config){
     for(const instance of instances)if(!instance.root.isConnected)instances.delete(instance);
     const section=config.section||'composicao',base=baseFields[section],extras=catalog(section);
+    if(section==='composicao')CompositionContext.mountSource(root,config);
     const baseNodes=new Map();[...grid.children].filter(node=>!node.classList.contains('composition-extra-field')).slice(-base.length).forEach((node,index)=>baseNodes.set(base[index].key,node));
     const button=document.createElement('button');button.type='button';button.className='composition-extras-add';button.textContent='＋ Adicionar campos';button.setAttribute('aria-expanded','false');
     const choices=document.createElement('div');choices.className='composition-extras-choices';choices.hidden=true;
     const id=config.prefix+section+'-extra-options';choices.id=id;button.setAttribute('aria-controls',id);root.append(button,choices);
     const hint=document.createElement('p');hint.textContent='Marque os campos para este aluno. Os valores ficam salvos mesmo ao desmarcar.';choices.append(hint);
-    const checkboxes=new Map();
-    [...base,...extras].forEach(field=>{const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.dataset.extraKey=field.key;label.append(check,document.createTextNode(field.label+(field.alias?' · '+field.alias:'')));choices.append(label);checkboxes.set(field.key,check);
+    const checkboxes=new Map(),standard=document.createElement('fieldset'),additional=document.createElement('fieldset');
+    [[(section==='medidas'?'Medidas padrão':'Campos padrão · comuns às balanças'),standard],[(section==='medidas'?'Medidas adicionais':'Adicionais · conforme a balança / laudo'),additional]].forEach(([text,group])=>{const legend=document.createElement('legend');legend.textContent=text;group.append(legend);choices.append(group);});
+    const relationNote=document.createElement('p');relationNote.className='composition-selection-note';relationNote.hidden=section==='medidas';choices.append(relationNote);
+    [...base,...extras].forEach(field=>{const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.dataset.extraKey=field.key;label.append(check,document.createTextNode(field.label+(field.alias?' · '+field.alias:'')));(base.includes(field)?standard:additional).append(label);if(section==='composicao')CompositionContext.markChoice(label,field.key);checkboxes.set(field.key,check);
       check.onchange=()=>{const state=config.getState(),chosen=new Set([...selectedBase(state.person,section),...selected(state.person,section)]);if(check.checked)chosen.add(field.key);else chosen.delete(field.key);try{config.select(extras.filter(f=>chosen.has(f.key)).map(f=>f.key),base.filter(f=>chosen.has(f.key)).map(f=>f.key));notify(state.person.id);}catch(error){check.checked=!check.checked;if(config.error)config.error(error);}};
     });
     const done=document.createElement('button');done.type='button';done.textContent='Pronto';done.onclick=()=>{choices.hidden=true;button.setAttribute('aria-expanded','false');button.focus({preventScroll:true});};choices.append(done);
     button.onclick=()=>{choices.hidden=!choices.hidden;button.setAttribute('aria-expanded',String(!choices.hidden));};
     function refresh(){
-      const state=config.getState(),chosen=selected(state.person,section),baseChosen=selectedBase(state.person,section);checkboxes.forEach((check,key)=>{check.checked=chosen.includes(key)||baseChosen.includes(key);});baseNodes.forEach((node,key)=>{node.hidden=!baseChosen.includes(key);});grid.querySelectorAll('.composition-extra-field').forEach(node=>node.remove());
+      const state=config.getState(),chosen=selected(state.person,section),baseChosen=selectedBase(state.person,section);checkboxes.forEach((check,key)=>{check.checked=chosen.includes(key)||baseChosen.includes(key);});if(section==='composicao'){CompositionContext.selectionNote(relationNote,[...chosen,...baseChosen]);CompositionContext.markSelection(checkboxes,[...chosen,...baseChosen]);}baseNodes.forEach((node,key)=>{node.hidden=!baseChosen.includes(key);});grid.querySelectorAll('.composition-extra-field').forEach(node=>node.remove());
       extras.filter(field=>chosen.includes(field.key)).forEach(field=>{
         const wrap=document.createElement('div');wrap.className=(config.fieldClass||'field')+' composition-extra-field';const label=document.createElement('label'),input=document.createElement('input');input.id=config.prefix+field.key;input.type='text';input.inputMode=field.paired?'text':'decimal';if(field.paired)input.placeholder='Direito / Esquerdo';input.dataset.extraField=field.key;input.readOnly=!!field.readonly;if(field.readonly)input.placeholder='Preencha nas informações da ficha';input.value=value(state.person,state.av,field.key);label.htmlFor=input.id;label.textContent=field.label;wrap.append(label,input);addDetails(wrap,input,field,config);grid.append(wrap);
-        if(!field.readonly)input.oninput=()=>{try{if(field.paired)input.value=formatPair(input.value);config.input(field.key,input.value);}catch(error){if(config.error)config.error(error);}};
+        if(!field.readonly)input.oninput=()=>{try{if(field.paired)input.value=formatPair(input.value);const state=config.getState();config.input(field.key,input.value,section==='composicao'?CompositionContext.record(state.av,field.key,input.value,state.av.origemComposicao||''):{});}catch(error){if(config.error)config.error(error);}};
       });
     }
     const instance={root,getState:config.getState,refresh,refreshValues(){const state=config.getState();fields.forEach(field=>{const input=grid.querySelector('[data-extra-field="'+field.key+'"]');if(input){if(field.readonly)input.value=value(state.person,state.av,field.key);input.dispatchEvent(new Event('composition-value-refresh'));}});}};instances.add(instance);refresh();return instance;

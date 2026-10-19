@@ -22,3 +22,22 @@
 .obs-native-assessment .composition-extra-rating[data-tone="good"]{background:#23864a}
 .obs-native-assessment .composition-extra-rating[data-tone="moderate"]{background:#c77700}
 .obs-native-assessment .composition-extra-rating[data-tone="attention"]{background:#c93732}
+.composition-source{display:flex!important;flex-direction:column;gap:4px;margin:0 0 8px;font-size:12px!important;color:#29465a}
+.composition-source input{box-sizing:border-box;width:100%;font:16px system-ui;border:1px solid #cbd5e1;border-radius:7px;padding:6px 8px;background:white;color:#29465a}
+.composition-extras-choices fieldset{border:0;padding:0;margin:8px 0}
+.composition-extras-choices legend{font-size:12px;font-weight:600;color:#1e6f3f;padding:0 0 4px}
+.composition-extras-choices fieldset>label{display:grid!important;grid-template-columns:17px minmax(0,1fr);column-gap:8px;row-gap:1px}
+.composition-related{grid-column:2;font-size:10px;line-height:1.25;color:#607184}
+.composition-selection-note{border-left:2px solid #1e6f3f;padding-left:6px}
+.composition-gauge{padding:0 8px}
+.composition-gauge-bar{position:relative;display:flex;height:8px;border-radius:8px;margin:6px 0 8px}
+.composition-gauge-bar>span:first-child{border-radius:8px 0 0 8px}.composition-gauge-bar>span:last-of-type{border-radius:0 8px 8px 0}
+.composition-gauge-marker{position:absolute;top:-3px;width:12px;height:12px;background:white;border:3px solid #29465a;border-radius:50%;box-sizing:border-box;transform:translateX(-50%)}
+.composition-gauge-legend{list-style:none!important;padding:0!important;margin:0 0 8px!important;font-size:11px;line-height:1.4}
+.composition-gauge-legend li{display:flex;align-items:center;gap:5px}.composition-gauge-legend i{width:8px;height:8px;flex:0 0 8px;border-radius:50%}
+.composition-analysis-title{display:block;font-size:12px;color:#29465a;padding:0 8px 5px}
+.composition-record-info{font-size:10px!important;color:#607184!important}
+.composition-record-history{border-top:1px solid #d7e3ed;margin-top:5px;font-size:11px}
+.composition-record-history ul{margin:0;padding:0 8px 8px 22px}.composition-record-history li{margin-bottom:4px;overflow-wrap:anywhere}
+
+.composition-extras-choices .composition-related-selected{border-left:2px solid #1e6f3f;padding-left:4px;background:#edf7f0;border-radius:3px}

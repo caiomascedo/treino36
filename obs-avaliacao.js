@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=27',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=28',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -45,12 +45,12 @@ window.ObsAssessmentEditor = (() => {
       status.textContent='Salvo automaticamente nesta avaliação.';
       clearTimeout(saveTimer);saveTimer=setTimeout(compact,1200);
     }
-    function update(key,value,target) {
+    function update(key,value,target,metadata={}) {
       try {
         const state=current(target);if(!state.av)return;
-        state.av[key]=value;
+        Object.assign(state.av,{[key]:value,...metadata});
         api.calculate(state.person,state.av.id);
-        stage(state,{[key]:value});
+        stage(state,{[key]:value,...metadata});
         if(key==='peso'&&state.person.avaliacoes.at(-1)===state.av){state.person.pesoAtual=value;state.person.pesoAtualAvaliacaoId=state.av.id;}
         if(String(state.person.id)===String(recordId)&&String(state.av.id)===String(avId))updateResults(state);
       } catch(error){status.textContent='Não foi possível salvar: '+error.message;}
@@ -114,7 +114,7 @@ window.ObsAssessmentEditor = (() => {
       if(sections[section])sections[section].forEach(f=>content.append(field(f[0],f[1],f[2],state)));
       if(section==='composicao'||section==='medidas'){
         const tools=el('div',{class:'composition-extras-tools'});host.insertBefore(tools,content);
-        CompositionExtras.mount(tools,content,{section,prefix:'obs-av-',fieldClass:'info-field',getState:current,input:(key,value)=>update(key,value),select:(keys,baseKeys)=>{
+        CompositionExtras.mount(tools,content,{section,prefix:'obs-av-',fieldClass:'info-field',getState:current,input:(key,value,metadata)=>update(key,value,undefined,metadata),select:(keys,baseKeys)=>{
           const state=current(),prefs=CompositionExtras.preferenceKeys(section);const draft=TreinoStorage.assessmentOperation(state.person.id,null,'person',{}, {[prefs.extra]:keys,[prefs.base]:baseKeys});TreinoAssessmentJournal.merge(state.records,[draft]);status.textContent='Campos salvos para este aluno.';clearTimeout(saveTimer);saveTimer=setTimeout(compact,1200);
         },error:error=>{status.textContent='Não foi possível salvar: '+error.message;}});
       }

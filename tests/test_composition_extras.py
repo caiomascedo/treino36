@@ -17,11 +17,11 @@ with sync_playwright() as p:
  page.goto('http://app.test/treino36/');page.evaluate("""()=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Danyelle',treino_id:'wa',treino:{A:['Agachamento 3x10']},avaliacaoId:10},{student_id:'b',nome:'Bia',treino_id:'wb',treino:{A:['Supino 3x10']},avaliacaoId:20}]));localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Danyelle',sexo:'F',idade:'17',altura:'1.52',treinoStudentIds:['a'],avaliacaoPreferidaId:12,avaliacoes:[{id:11,data:'23/09/2025',peso:'57',pesoGordura:'21.1',ficha:{idade:'16',altura:'1.50'}},{id:12,data:'23/09/2026',peso:'58.7',gordura:'35.4',massamuscular:'35',ficha:{idade:'17',altura:'1.52'}}]},{id:20,nome:'Bia',sexo:'F',idade:'24',altura:'1.67',treinoStudentIds:['b'],avaliacoes:[{id:21,data:'01/10/2026',peso:'70'}]}]));}""");page.reload()
  def composition():
   page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click();expect(page.locator('#obs-av-peso')).to_be_visible()
- composition();expect(page.locator('.composition-extra-field')).to_have_count(0);expect(page.locator('#obs-av-imc')).to_have_value('25.4');original_tmb=page.locator('#obs-av-tmb').input_value()
+ composition();page.locator('#obs-av-source').fill('Balança azul');expect(page.locator('.composition-extra-field')).to_have_count(0);expect(page.locator('#obs-av-imc')).to_have_value('25.4');original_tmb=page.locator('#obs-av-tmb').input_value()
  page.locator('#obsNativeAssessment .composition-extras-add').click()
  keys=['pesoGordura','musculoEsqueleticoPct','musculoEsqueleticoKg','massaMuscularPct','pesoAgua','metabolismoInformado','alturaCm','idadeReal','massaLivreGordura','gorduraSubcutanea','massaOssea']
  for key in keys:page.locator('[data-extra-key="'+key+'"]').check()
- assert page.locator('[data-extra-key="massaMuscularPct"]').locator('..').inner_text()=='Massa muscular (%) · Taxa muscular'
+ assert 'Massa muscular (%) · Taxa muscular' in page.locator('[data-extra-key="massaMuscularPct"]').locator('..').inner_text()
  assert page.locator('[data-extra-key="taxaMuscular"]').count()==0
  expect(page.locator('.composition-extra-field')).to_have_count(len(keys));expect(page.locator('#obs-av-alturaCm')).to_have_value('152');expect(page.locator('#obs-av-idadeReal')).to_have_value('17')
  page.locator('.composition-extras-choices button').click()
@@ -29,19 +29,20 @@ with sync_playwright() as p:
  values={'pesoGordura':'20,8','musculoEsqueleticoPct':'34,1','musculoEsqueleticoKg':'20,0','massaMuscularPct':'59,8','metabolismoInformado':'1197,8','massaLivreGordura':'55,9','gorduraSubcutanea':'18,6','massaOssea':'2,9'}
  for key,value in values.items():page.locator('#obs-av-'+key).fill(value)
  detail=page.locator('#obs-av-musculoEsqueleticoPct').locator('..').locator('.composition-extra-detail')
- expect(detail.locator('summary')).not_to_be_visible()
+ expect(detail.locator(':scope > summary')).not_to_be_visible()
  sizes=page.evaluate("()=>{const style=el=>{const s=getComputedStyle(el);return [s.fontSize,s.paddingTop,s.paddingBottom,s.lineHeight,el.getBoundingClientRect().height]};return [style(document.querySelector('#obs-av-musculoEsqueleticoPct').parentElement.querySelector('.composition-extra-rating')),style(document.querySelector('.obs-metric'))];}")
  assert sizes[0]==sizes[1],sizes
 
  page.locator('#obs-av-musculoEsqueleticoPct').locator('..').locator('.composition-extra-rating').click();expect(detail.locator('.composition-extra-value')).to_contain_text('34,1');expect(detail).to_contain_text('músculos esqueléticos')
  page.locator('#obs-av-musculoEsqueleticoPct').fill('34,2');expect(detail.locator('.composition-extra-value')).to_contain_text('34,2');assert detail.evaluate('el=>el.open')
  page.locator('#obs-av-musculoEsqueleticoPct').fill('34,1');expect(page.locator('#obs-av-musculoEsqueleticoPct').locator('..').locator('.composition-extra-rating')).to_have_text('Consultar laudo')
- detail.locator('select').select_option('Saudável');expect(page.locator('#obs-av-musculoEsqueleticoPct').locator('..').locator('.composition-extra-rating')).to_have_text('Saudável')
+ detail.locator('.composition-record-history summary').click();expect(detail.locator('.composition-record-history ul')).to_contain_text('Balança azul');expect(detail.locator('.composition-record-history ul')).to_contain_text('34,1');
+ detail.locator('select').select_option('Saudável');expect(detail.locator('.composition-gauge-bar')).to_be_visible();detail.screenshot(path='/tmp/treino36-composition-history.png');expect(detail.locator('.composition-record-info')).to_contain_text('Balança azul');expect(page.locator('#obs-av-musculoEsqueleticoPct').locator('..').locator('.composition-extra-rating')).to_have_text('Saudável')
  page.locator('#obs-av-musculoEsqueleticoPct').locator('..').locator('.composition-extra-rating').click();assert not detail.evaluate('el=>el.open')
  page.locator('#obs-av-pesoAgua').locator('..').locator('.composition-extra-rating').click();expect(page.locator('#obs-av-pesoAgua').locator('..')).to_contain_text('Não informado')
  assert page.evaluate('window.compressionCalls')==0;expect(page.locator('#obs-av-tmb')).to_have_value(original_tmb)
  # Choices and values survive immediate reload, independently of clicking Save.
- page.reload();composition()
+ page.reload();composition();expect(page.locator('#obs-av-source')).to_have_value('Balança azul')
  for key,value in values.items():expect(page.locator('#obs-av-'+key)).to_have_value(value)
  expect(page.locator('#obs-av-musculoEsqueleticoPct').locator('..').locator('.composition-extra-rating')).to_have_text('Saudável')
  page.locator('.composition-extras-add').click();page.locator('[data-extra-key="musculoEsqueleticoPct"]').uncheck();expect(page.locator('#obs-av-musculoEsqueleticoPct')).to_have_count(0);page.locator('[data-extra-key="musculoEsqueleticoPct"]').check();expect(page.locator('#obs-av-musculoEsqueleticoPct')).to_have_value('34,1');page.locator('.composition-extras-choices button').click()
@@ -50,13 +51,15 @@ with sync_playwright() as p:
  for expected in ['Massa livre de gordura (kg)','Gordura subcutânea (%)','Massa óssea (kg)','55,9','18,6','2,9','Peso da gordura (kg)','Massa muscular esquelética (%)','Massa muscular esquelética (kg)','Massa muscular (%)','Metabolismo da bioimpedância (kcal/dia)','Altura (cm)','Idade real (anos)','20,8','34,1','20,0','59,8','1197,8','150','152']:
   assert expected in text,(expected,text)
  assert 'Peso da água (kg)' not in text,text
+ assert 'Balança azul' in text,text
  assert page.locator('#searchName').input_value()=='Danyelle'
  # Per-pupil selection does not leak into another pupil.
- page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Bia')");page.reload();composition();expect(page.locator('.composition-extra-field')).to_have_count(0)
+ page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Bia')");page.reload();composition();expect(page.locator('#obs-av-source')).to_have_value('');expect(page.locator('.composition-extra-field')).to_have_count(0)
  page.locator('.composition-extras-add').click();page.locator('[data-extra-key="pesoAgua"]').check();page.locator('.composition-extras-choices button').click();page.locator('#obs-av-pesoAgua').fill('30')
  page.evaluate("localStorage.setItem('treinoAlunoSelecionado','Danyelle')");page.reload();composition();expect(page.locator('.composition-extra-field')).to_have_count(len(keys))
  # The library uses the same fields and settings, including all history cards.
  library=context.new_page();library.on('pageerror',lambda e:errors.append(str(e)));library.goto('http://app.test/treino36/avaliacao.html?embed=treino36&treinoStudentId=a')
+ expect(library.locator('#library-extra-10-12-source')).to_have_value('Balança azul')
  libraryDetail=library.locator('#library-extra-10-12-musculoEsqueleticoPct').locator('..').locator('.composition-extra-detail')
  library.locator('#library-extra-10-12-musculoEsqueleticoPct').locator('..').locator('.composition-extra-rating').click();expect(libraryDetail).to_contain_text('34,1');expect(libraryDetail).to_contain_text('músculos esqueléticos')
  expect(library.locator('#library-extra-10-12-pesoGordura')).to_have_value('20,8');library.locator('#library-extra-10-12-musculoEsqueleticoKg').fill('20,5')
