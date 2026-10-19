@@ -49,7 +49,7 @@ window.CompositionExtras=(()=>{
   }
   function addDetails(wrap,input,field,config){
     const detail=document.createElement('details');detail.className='composition-extra-detail';
-    const summary=document.createElement('summary');summary.textContent='Ver detalhes';
+    const summary=document.createElement('summary');summary.textContent='Ver detalhes';detail.id=input.id+'-details';
     const current=document.createElement('p');current.className='composition-extra-value';
     const explanation=document.createElement('p');explanation.textContent=descriptions[field.key];
         let badge=null,note=null,select=null;
@@ -58,7 +58,7 @@ window.CompositionExtras=(()=>{
       if(badge){const state=config.getState(),result=classification(state.person,{...state.av,[field.key]:input.value},field.key);badge.textContent=result.text;badge.dataset.tone=result.tone;note.textContent=result.note;select.value=state.av[field.key+'Classificacao']||'';}
     };
     if(!field.readonly&&!field.paired&&field.key!=='pescoco'){
-      badge=document.createElement('button');badge.type='button';badge.className='composition-extra-rating';badge.setAttribute('aria-expanded','false');badge.onclick=()=>{detail.open=!detail.open;};wrap.append(badge);
+      badge=document.createElement('button');badge.type='button';badge.className='composition-extra-rating badge';summary.hidden=true;detail.classList.add('composition-detail-from-rating');badge.setAttribute('aria-controls',detail.id);badge.setAttribute('aria-expanded','false');badge.onclick=()=>{detail.open=!detail.open;};wrap.append(badge);
       note=document.createElement('p');const label=document.createElement('label');label.textContent='Classificação do laudo';select=document.createElement('select');select.setAttribute('aria-label','Classificação do laudo: '+field.label);
       ['',...ratingLabels].forEach(text=>{const option=document.createElement('option');option.value=text;option.textContent=text||'Automática / não informada';select.append(option);});
       select.onchange=()=>{try{config.input(field.key+'Classificacao',select.value);update();}catch(error){if(config.error)config.error(error);}};label.append(select);detail.append(note,label);

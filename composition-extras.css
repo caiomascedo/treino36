@@ -13,3 +13,12 @@
 .composition-extra-rating[data-tone="attention"]{background:#ba3434;color:white}
 .composition-extra-detail select{display:block;width:100%;min-width:0;box-sizing:border-box;font:16px system-ui;margin-top:5px;padding:6px;border:1px solid #cbd5e1;border-radius:6px;background:white;color:#29465a}
 .composition-extra-detail label{display:block!important;padding:8px;font-size:12px!important}
+
+.composition-extra-detail>summary[hidden],.composition-detail-from-rating:not([open]){display:none!important}
+
+.composition-extra-rating.badge{margin:0;font-family:inherit}
+.obs-native-assessment .composition-extra-rating{margin:0;border:0;border-radius:6px;padding:3px 6px;font:11px Arial;line-height:normal;color:white;text-align:left}
+.obs-native-assessment .composition-extra-rating[data-tone="neutral"]{background:#64748b}
+.obs-native-assessment .composition-extra-rating[data-tone="good"]{background:#23864a}
+.obs-native-assessment .composition-extra-rating[data-tone="moderate"]{background:#c77700}
+.obs-native-assessment .composition-extra-rating[data-tone="attention"]{background:#c93732}
