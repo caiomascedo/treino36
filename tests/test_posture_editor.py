@@ -19,14 +19,24 @@ with sync_playwright() as p:
  def open_photos():
   page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="fotos"]').click()
  def av():return page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')[0].avaliacoes[1]")
- def pixels(src):return page.evaluate("""async src=>{const image=new Image();image.src=src;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const x=c.getContext('2d');x.drawImage(image,0,0);return [...x.getImageData(90,100,1,1).data];}""",src)
+ def pixels(src,x=90):return page.evaluate("""async ({src,pixelX})=>{const image=new Image();image.src=src;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const x=c.getContext('2d');x.drawImage(image,0,0);return [...x.getImageData(pixelX,100,1,1).data];}""",{"src":src,"pixelX":x})
  open_photos();page.locator('[data-posture-edit="fotoF"]').click();dialog=page.locator('#postureEditorDialog');expect(dialog).to_be_visible();dialog.locator('.posture-stage img').evaluate('(e)=>e.decode()')
  expect(page.locator('#postureGrid')).not_to_be_checked()
  box=dialog.locator('.posture-stage').bounding_box();work=dialog.locator('.posture-workspace').bounding_box()
  assert box['width']<=work['width'] and box['height']<=work['height'] and abs(box['width']/box['height']-.6)<.01,(box,work)
  for kind in ['vertical','horizontal','ruler']:dialog.locator('[data-action="'+kind+'"]').click()
  expect(page.locator('#postureLine option')).to_have_count(3)
- svg=dialog.locator('svg');end=svg.locator('circle').nth(1).bounding_box();stage=dialog.locator('.posture-stage').bounding_box()
+ svg=dialog.locator('svg')
+ # Both horizontal and vertical guides rotate freely by dragging either endpoint.
+ for index in [0,1]:
+  page.locator('#postureLine').select_option(index=index);dots=svg.locator('circle');start=dots.nth(0).get_attribute('cx'),dots.nth(0).get_attribute('cy')
+  end=dots.nth(1).bounding_box();stage=dialog.locator('.posture-stage').bounding_box()
+  page.mouse.move(end['x']+end['width']/2,end['y']+end['height']/2);page.mouse.down();page.mouse.move(stage['x']+stage['width']*.7,stage['y']+stage['height']*.65,steps=10);page.mouse.up()
+  assert abs(float(dots.nth(1).get_attribute('cx'))-420)<2 and abs(float(dots.nth(1).get_attribute('cy'))-650)<2
+  assert (float(dots.nth(0).get_attribute('cx')),float(dots.nth(0).get_attribute('cy')))==tuple(map(float,start)),(index,start,dots.nth(0).get_attribute('cx'),dots.nth(0).get_attribute('cy'))
+  dialog.locator('[data-action="undo"]').click()
+ page.locator('#postureLine').select_option(index=2)
+ end=svg.locator('circle').nth(1).bounding_box();stage=dialog.locator('.posture-stage').bounding_box()
  page.mouse.move(end['x']+end['width']/2,end['y']+end['height']/2);page.mouse.down();page.mouse.move(stage['x']+stage['width']*.7,stage['y']+stage['height']*.68,steps=10);page.mouse.up()
  after=svg.locator('circle').nth(1).get_attribute('cy');assert float(after)>600,after
  dialog.locator('[data-action="undo"]').click();assert abs(float(svg.locator('circle').nth(1).get_attribute('cy'))-450)<1
@@ -43,21 +53,28 @@ with sync_playwright() as p:
  assert without['fotoFOriginal']==photos['portrait'] and len(without['posturaEdicoes']['fotoF']['lines'])==3
  # Rotate a constrained horizontal line, hide the handles and independently recolor the grid.
  page.locator('[data-posture-edit="fotoF"]').click();page.locator('#postureLine').select_option(index=1)
- def set_angle(degrees):
-  page.locator('#postureAngle').evaluate('(e,value)=>{e.value=value;e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}));}',str(degrees))
- set_angle(35);expect(page.locator('#postureAngleValue')).to_have_text('35°')
- dialog.locator('[data-action="rotate-right"]').click();expect(page.locator('#postureAngleValue')).to_have_text('40°')
+ # Rotate directly on the image; no numeric rotation controls are shown.
+ assert dialog.locator('.posture-rotation').count()==0
+ end=svg.locator('circle').nth(1).bounding_box();stage=dialog.locator('.posture-stage').bounding_box()
+ page.mouse.move(end['x']+end['width']/2,end['y']+end['height']/2);page.mouse.down();page.mouse.move(stage['x']+stage['width']*.7,stage['y']+stage['height']*.70173,steps=10);page.mouse.up()
  page.locator('#postureHandles').uncheck();expect(svg.locator('circle')).to_have_count(0);assert svg.locator('[data-part="body"]').count()==3
  page.locator('#postureGrid').check()
  page.locator('#postureGridColor').evaluate('(e)=>{e.value="#2563eb";e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}));}')
+ for field,value in [('postureGridThickness','4'),('postureGridTransparency','70')]:
+  page.locator('#'+field).evaluate('(e,value)=>{e.value=value;e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}));}',value)
+ expect(page.locator('#postureGridThicknessValue')).to_have_text('4×');expect(page.locator('#postureGridTransparencyValue')).to_have_text('70%')
+ assert svg.locator('line[stroke="#2563eb"]').first.get_attribute('stroke-width')=='4'
+ assert abs(float(svg.locator('line[stroke="#2563eb"]').first.get_attribute('stroke-opacity'))-.3)<.001
  assert page.locator('#postureColor').input_value()=='#ef4444'
  dialog.locator('[data-action="save-top"]').click();expect(dialog).not_to_be_visible();without=av()
  settings=without['posturaEdicoes']['fotoF'];assert settings['showHandles'] is False and settings['gridColor']=='#2563eb'
+ assert settings['gridThickness']==4 and settings['gridTransparency']==70
  rotated=settings['lines'][1];assert rotated['kind']=='line'
- assert abs(page.evaluate('(line)=>PostureEditor.angle(line,600,1000)',rotated)-40)<.01
- pixel=pixels(without['fotoF']);assert pixel[2]-pixel[0]>20,pixel
+ assert abs(page.evaluate('(line)=>PostureEditor.angle(line,600,1000)',rotated)-40)<1
+ pixel=pixels(without['fotoF'],91);assert pixel[2]-pixel[0]>20,pixel
  page.locator('[data-posture-edit="fotoF"]').click();expect(page.locator('#postureHandles')).not_to_be_checked();expect(svg.locator('circle')).to_have_count(0)
- assert page.locator('#postureGridColor').input_value()=='#2563eb';page.locator('#postureLine').select_option(index=1);expect(page.locator('#postureAngleValue')).to_have_text('40°')
+ assert page.locator('#postureGridColor').input_value()=='#2563eb';page.locator('#postureLine').select_option(index=1)
+ assert page.locator('#postureGridThickness').input_value()=='4' and page.locator('#postureGridTransparency').input_value()=='70'
  page.locator('#postureHandles').check();expect(svg.locator('circle')).to_have_count(2)
  dialog.locator('[data-action="close"]').click();assert av()['posturaEdicoes']['fotoF']['showHandles'] is False
  # The native camera picker opens within the editor, and cancelling preserves the old photo.
@@ -88,4 +105,4 @@ with sync_playwright() as p:
  records=page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')")
  assert records[0]['avaliacoes'][0]['fotoF']==photos['old'];assert records[0]['avaliacoes'][1]['fotoL'];assert 'fotoF' not in records[1]['avaliacoes'][0]
  assert not errors,errors
- browser.close();print('PASS: mobile fit, endpoint dragging/angles, rotation slider/buttons, hidden handles, independent persisted grid color, top save, undo/redo, baked optional grid verified by pixels, original retained/re-edit without double overlays, camera/gallery and cancel, actual PDF aspect ratios, immediate durable saves and isolation, quota rollback and confirmed deletion inside/outside editor')
+ browser.close();print('PASS: mobile fit, endpoint dragging/angles, free endpoint rotation of horizontal/vertical lines, no numeric rotation toolbar, hidden handles, independent persisted grid color/thickness/transparency, top save, undo/redo, baked optional grid verified by pixels, original retained/re-edit without double overlays, camera/gallery and cancel, actual PDF aspect ratios, immediate durable saves and isolation, quota rollback and confirmed deletion inside/outside editor')
