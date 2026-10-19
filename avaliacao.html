@@ -1666,10 +1666,11 @@ async function gerarPDFPosturalAluno(alunoId, options={}){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
 
-  for(let i=0;i<aluno.avaliacoes.length;i++){
-    if(i>0) doc.addPage();
-    const av=aluno.avaliacoes[i];
-
+  const photoViews=[['fotoF','FRONTAL'],['fotoL','LATERAL'],['fotoD','DORSAL']];
+  const hasPhotos=av=>photoViews.some(([key])=>!!av[key]);
+  const dateValue=value=>{const match=String(value||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return match?Date.UTC(+match[3],+match[2]-1,+match[1]):Number.MAX_SAFE_INTEGER;};
+  const assessments=aluno.avaliacoes.map((av,index)=>({av,index})).sort((a,b)=>dateValue(a.av.data)-dateValue(b.av.data)||a.index-b.index).map(item=>item.av);
+  function header(av){
     doc.setFillColor(18,18,26); doc.rect(0,0,210,45,'F');
     doc.setFillColor(...AssessmentPDFStyle.emerald); doc.rect(0,0,8,45,'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(255,255,255);
@@ -1680,47 +1681,54 @@ async function gerarPDFPosturalAluno(alunoId, options={}){
     doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(...AssessmentPDFStyle.emerald);
     doc.text('RELATÓRIO POSTURAL',195,25,{align:'right'});
 
-    let y=58;
-    const temF=!!av.fotoF, temL=!!av.fotoL, temD=!!av.fotoD;
-    if(temF||temL||temD){
+  }
+  for(let i=0;i<assessments.length;i++){
+    if(i>0)doc.addPage();
+    const av=assessments[i],before=assessments.slice(0,i).reverse().find(hasPhotos),compare=hasPhotos(av)&&!!before;
+    header(av);let y=58;
+    if(hasPhotos(av)){
       doc.setFillColor(...AssessmentPDFStyle.emerald); doc.rect(14,y-3,3,5,'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
-      doc.text('REGISTRO FOTOGRÁFICO',20,y);
+      doc.text(compare?'COMPARATIVO FOTOGRÁFICO':'REGISTRO FOTOGRÁFICO',20,y);
       y+=8;
-      const fW=56,fH=74,gap=5;
-      const qtd=(temF?1:0)+(temL?1:0)+(temD?1:0);
-      let fx=(210-(qtd*(fW+gap)-gap))/2;
-      const drawF=async(src,label)=>{
-        doc.setFillColor(245,245,245); doc.roundedRect(fx,y,fW,fH+9,3,3,'F');
-        doc.setDrawColor(200,200,200); doc.setLineWidth(0.5); doc.roundedRect(fx,y,fW,fH+9,3,3,'S');
-        try{
-          const d=await getImgDataURL(src);
-          if(d){const size=doc.getImageProperties(d),scale=Math.min((fW-3)/size.width,(fH-3)/size.height),width=size.width*scale,height=size.height*scale;doc.addImage(d,'JPEG',fx+(fW-width)/2,y+1.5+(fH-3-height)/2,width,height,undefined,'FAST');}
-        }catch(e){}
-        doc.setFillColor(26,26,26); doc.rect(fx,y+fH,fW,9,'F');
-        doc.setFillColor(...AssessmentPDFStyle.emerald); doc.rect(fx,y+fH,4,9,'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(255,255,255);
-        doc.text(label,fx+fW/2,y+fH+6,{align:'center'});
-        fx+=fW+gap;
+      const fW=56,fH=compare?62:74,gap=5;
+      const views=photoViews.filter(([key])=>av[key]||(compare&&before[key]));
+      const startX=(210-(views.length*(fW+gap)-gap))/2;
+      const drawRow=async(record,label)=>{
+        if(label){doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...AssessmentPDFStyle.emerald);doc.text(label+' - '+(record.data||'Sem data'),14,y);y+=5;}
+        for(let column=0;column<views.length;column++){
+          const [key,view]=views[column],fx=startX+column*(fW+gap),src=record[key];
+          doc.setFillColor(245,245,245);doc.roundedRect(fx,y,fW,fH+9,3,3,'F');
+          doc.setDrawColor(200,200,200);doc.setLineWidth(.5);doc.roundedRect(fx,y,fW,fH+9,3,3,'S');
+          let drawn=false;
+          try{const data=src?await getImgDataURL(src):null;if(data){const size=doc.getImageProperties(data),scale=Math.min((fW-3)/size.width,(fH-3)/size.height),width=size.width*scale,height=size.height*scale;doc.addImage(data,'JPEG',fx+(fW-width)/2,y+1.5+(fH-3-height)/2,width,height,undefined,'FAST');drawn=true;}}catch(error){}
+          if(!drawn){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(120,120,120);doc.text(src?'Foto indisponível':'Sem foto',fx+fW/2,y+fH/2,{align:'center'});}
+          doc.setFillColor(26,26,26);doc.rect(fx,y+fH,fW,9,'F');doc.setFillColor(...AssessmentPDFStyle.emerald);doc.rect(fx,y+fH,4,9,'F');
+          doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(255,255,255);doc.text(view,fx+fW/2,y+fH+6,{align:'center'});
+        }
+        y+=fH+9+9;
       };
-      if(temF) await drawF(av.fotoF,'FRONTAL');
-      if(temL) await drawF(av.fotoL,'LATERAL');
-      if(temD) await drawF(av.fotoD,'DORSAL');
-      y+=fH+9+12;
+      if(compare)await drawRow(before,'ANTES');
+      await drawRow(av,compare?'ATUAL':null);y+=3;
     }
 
     if(av.resumo&&av.resumo.trim()){
-      doc.setFillColor(...AssessmentPDFStyle.emerald); doc.rect(14,y-3,3,5,'F');
-      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
-      doc.text('ANÁLISE POSTURAL',20,y); y+=8;
+      doc.setFont('helvetica','normal');doc.setFontSize(8);
       const resumoLines=doc.splitTextToSize(av.resumo,170);
-      const boxH=resumoLines.length*5+10;
-      doc.setFillColor(242,249,244); doc.roundedRect(14,y-2,182,boxH,3,3,'F');
-      doc.setDrawColor(...AssessmentPDFStyle.emerald); doc.setLineWidth(0.5); doc.roundedRect(14,y-2,182,boxH,3,3,'S');
-      doc.setFillColor(...AssessmentPDFStyle.emerald); doc.rect(14,y-2,4,boxH,'F');
-      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,60,70);
-      doc.text(resumoLines,22,y+4);
+      let offset=0;
+      while(offset<resumoLines.length){
+        if(y+28>275){doc.addPage();header(av);y=58;}
+        const count=Math.max(1,Math.floor((275-y-18)/5)),lines=resumoLines.slice(offset,offset+count),boxH=lines.length*5+10;
+        doc.setFillColor(...AssessmentPDFStyle.emerald);doc.rect(14,y-3,3,5,'F');doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(26,26,26);
+        doc.text(offset?'ANÁLISE POSTURAL - CONTINUAÇÃO':'ANÁLISE POSTURAL',20,y);y+=8;
+        doc.setFillColor(242,249,244);doc.roundedRect(14,y-2,182,boxH,3,3,'F');doc.setDrawColor(...AssessmentPDFStyle.emerald);doc.setLineWidth(.5);doc.roundedRect(14,y-2,182,boxH,3,3,'S');doc.setFillColor(...AssessmentPDFStyle.emerald);doc.rect(14,y-2,4,boxH,'F');
+        doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(60,60,70);doc.text(lines,22,y+4);offset+=lines.length;y+=boxH+12;
+      }
     }
+  }
+  const pageCount=doc.getNumberOfPages();
+  for(let page=1;page<=pageCount;page++){
+    doc.setPage(page);
 
     const pH=297;
     doc.setFillColor(18,18,26); doc.rect(0,pH-16,210,16,'F');
@@ -1730,7 +1738,7 @@ async function gerarPDFPosturalAluno(alunoId, options={}){
     doc.setFontSize(5.5); doc.setTextColor(170,170,180);
     doc.text('CREF 007854-G/PI • @caiomacedo.personal • (86) 98879-6410',12,pH-3.5);
     doc.setTextColor(130,130,140);
-    doc.text(`Pág. ${i+1} de ${aluno.avaliacoes.length}`,200,pH-8,{align:'right'});
+    doc.text(`Pág. ${page} de ${pageCount}`,200,pH-8,{align:'right'});
   }
   TreinoPDFViewer.deliver(doc,`Postural_${aluno.nome.replace(/\s+/g,'_')}.pdf`,viewer);
   notifMsg('✅ PDF Postural gerado!');
