@@ -37,6 +37,19 @@ with sync_playwright() as p:
  page.locator('#dietPasteExpandBtn').click();page.keyboard.press('Escape');expect(page.locator('#dietPasteExpandBtn')).to_have_attribute('aria-pressed','false');expect(page.locator('#dietDialog')).to_be_visible()
  page.locator('#dietPreview > summary').click()
  assert not page.locator('#dietPreviewBody li').evaluate_all("nodes=>nodes.some(node=>/^[;\\s]+$/.test(node.textContent))")
+ # Expand the meals editor directly while collapsed, edit and undo without leaving it.
+ page.locator('#dietPreview > summary').click();expect(page.locator('#dietPreviewBody')).not_to_be_visible()
+ page.locator('#dietMealsExpandBtn').click();expect(page.locator('#dietMealsExpandBtn')).to_have_attribute('aria-pressed','true')
+ expect(page.locator('#dietPreviewBody')).to_be_visible();expect(page.locator('#dietText')).not_to_be_visible();expect(page.locator('.diet-history')).to_be_visible()
+ for width in [320,390]:
+  page.set_viewport_size({'width':width,'height':844});assert page.locator('#dietDialog').evaluate('el=>el.scrollWidth<=el.clientWidth+1')
+  assert page.locator('#dietPreviewBody').bounding_box()['height']>550
+ page.locator('#dietPreviewBody li').filter(has_text='Total: 240 kcal').fill('Total: 280 kcal');assert '280 kcal' in page.locator('#dietText').input_value()
+ page.locator('#dietUndoBtn').click();expect(page.locator('#dietPreviewBody')).to_contain_text('Total: 240 kcal')
+ page.locator('#dietRedoBtn').click();expect(page.locator('#dietPreviewBody')).to_contain_text('Total: 280 kcal')
+ page.screenshot(path='/tmp/treino36-diet-meals-expanded.png')
+ page.locator('#dietUndoBtn').click();page.locator('#dietMealsExpandBtn').click();expect(page.locator('#dietText')).to_be_visible();expect(page.locator('#dietPreviewBody')).to_be_visible()
+ page.locator('#dietMealsExpandBtn').click();page.keyboard.press('Escape');expect(page.locator('#dietMealsExpandBtn')).to_have_attribute('aria-pressed','false');expect(page.locator('#dietDialog')).to_be_visible()
  page.locator('#dietPreviewBody li').filter(has_text='Total: 240 kcal').fill('Total: 300 kcal');expect(page.locator('#dietTotals')).to_contain_text('748 kcal');assert '300 kcal' in page.locator('#dietText').input_value()
  page.locator('#dietUndoBtn').click();expect(page.locator('#dietTotals')).to_contain_text('688 kcal');page.locator('#dietRedoBtn').click();expect(page.locator('#dietTotals')).to_contain_text('748 kcal')
  page.locator('#diet-goal').fill('2000');page.locator('#dietGoalPlus').click();expect(page.locator('#diet-goal')).to_have_value('2100');page.locator('#dietUndoBtn').click();expect(page.locator('#diet-goal')).to_have_value('2000');page.locator('#dietRedoBtn').click();expect(page.locator('#diet-goal')).to_have_value('2100');page.locator('#dietGoalAuto').click();expect(page.locator('#diet-goal')).to_have_value('')
@@ -57,9 +70,12 @@ with sync_playwright() as p:
   for value in ['TMB estimada:','Calorias do dia:']:assert value not in pdf,(value,pdf)
   assert '• ;' not in pdf
  downloads=[];page.on('download',lambda file:downloads.append(file))
+ # Record the actual canvas text: image keeps pupil/goal and omits trainer signature.
+ page.evaluate("""()=>{window.photoText=[];const original=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(value,...args){photoText.push(value);return original.call(this,value,...args);};}""")
  page.locator('#dietPhotoBtn').click();expect(page.locator('#dietPhotoPreviewDialog')).to_be_visible();expect(page.locator('#dietPhotoSaveBtn')).to_be_enabled(timeout=20000)
  page.wait_for_function("document.querySelector('#dietPhotoImages img')?.naturalWidth===1240")
  expect(page.locator('#dietPhotoImages img')).to_be_visible();assert len(downloads)==0
+ drawn=page.evaluate('photoText');assert any('Dieta — Ana' in line for line in drawn),drawn;assert any('Meta: 2.303 kcal/dia' in line for line in drawn),drawn;assert not any('Caio' in line or 'Maced' in line for line in drawn),drawn
  page.locator('#dietPhotoExpandBtn').click();expect(page.locator('#dietPhotoExpandBtn')).to_have_attribute('aria-pressed','true')
  page.screenshot(path='/tmp/treino36-diet-photo-preview.png')
  page.evaluate("Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>false})")
