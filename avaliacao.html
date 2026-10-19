@@ -6,8 +6,8 @@
 <script src="assessment-journal.js?v=18"></script>
 <script src="composition-context.js?v=1"></script>
 <script src="inbody-fields.js?v=1"></script>
-<script src="composition-extras.js?v=8"></script>
-<link rel="stylesheet" href="composition-extras.css?v=7">
+<script src="composition-extras.js?v=9"></script>
+<link rel="stylesheet" href="composition-extras.css?v=8">
 <script src="obs-autosave-journal.js?v=1"></script>
 <script src="storage-adapter.js?v=20"></script>
 <script src="pdf-viewer.js?v=4"></script>
@@ -1534,7 +1534,7 @@ async function gerarPDFAluno(alunoId, options={}){
   const extraRows=CompositionExtras.pdfRows(aluno,avs,formatDelta);
   if(extraRows.some(row=>row[0]==='Altura (cm)'))compRows.splice(0,1);
   compRows.push(...extraRows);
-  doc.autoTable({...AssessmentPDFStyle.tableHooks(doc),startY:53,head:[['Indicador',...avs.map(av=>(av.data||'—')+(CompositionContext.pdfSource(av)?'\n'+CompositionContext.pdfSource(av):''))]],body:pdfRows(CompositionExtras.filterBaseRows(aluno,compRows)),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:AssessmentPDFStyle.emerald,textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
+  doc.autoTable({...AssessmentPDFStyle.tableHooks(doc),startY:53,head:[['Indicador',...avs.map(av=>(av.data||'—')+(CompositionContext.pdfSource(av)?'\n'+CompositionContext.pdfSource(av):''))]],body:pdfRows(CompositionExtras.orderRows(CompositionExtras.filterBaseRows(aluno,compRows))),theme:'grid',styles:{fontSize:7,cellPadding:1.2},headStyles:{fillColor:AssessmentPDFStyle.emerald,textColor:[255,255,255]},columnStyles:{0:{cellWidth:36,halign:'left',fontStyle:'bold'}},margin:{left:10,right:10},
     didParseCell:function(data){
       if(data.section==='body' && LINHAS_NEGRITO_PDF.includes(data.row.raw[0])){
         data.cell.styles.fontStyle='bold';

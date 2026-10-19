@@ -21,10 +21,10 @@ console.log('PASS: adult age/sex references, kg converted with current weight, i
 
 const api=ctx.window.CompositionExtras;
 const legacy={composicaoExtras:['pesoGordura','massaMuscularPct','alturaCm','idadeReal']};
-assert(api.selectedBase(legacy).includes('gordura'));assert(!api.selected(legacy).includes('pesoGordura'));
+assert(api.selectedBase(legacy).includes('gordura'));assert(api.selected(legacy).includes('pesoGordura'));
 assert(!api.selected(legacy).includes('alturaCm'));assert(!api.selected(legacy).includes('idadeReal'));
 const preferred={...legacy,composicaoUnidades:{gordura:'pesoGordura'}};
-assert(!api.selectedBase(preferred).includes('gordura'));assert(api.selected(preferred).includes('pesoGordura'));
+assert(api.selectedBase(preferred).includes('gordura'));assert(api.selected(preferred).includes('pesoGordura'));
 assert(legacy.composicaoExtras.includes('pesoGordura'));
 assert.equal(classify(female,{controleGorduraInbody:'-6.7'},'controleGorduraInbody').text,'Meta do laudo');
 assert.equal(classify(female,{pontuacaoInbody:'120'},'pontuacaoInbody').text,'Pontuação do laudo');
@@ -34,3 +34,7 @@ assert.equal(new Set(ctx.window.InBodyFields.fields.map(f=>f.key)).size,ctx.wind
 assert.equal(classify(female,{mineraisKg:'2.84',mineraisKgRefMin:'2.66',mineraisKgRefMax:'3.25'},'mineraisKg').text,'Normal');
 assert.equal(classify(female,{mineraisKg:'3.5',mineraisKgRefMin:'2.66',mineraisKgRefMax:'3.25'},'mineraisKg').text,'Acima');
 assert.equal(classify(female,{mineraisKg:'2.84',mineraisKgRefMin:'3',mineraisKgRefMax:'2'},'mineraisKg').text,'Faixa inválida');
+
+const ordered=api.orderRows([['Massa Muscular (kg)','35'],['Peso da gordura (kg)','20.8'],['% Gordura','35.4'],['Massa muscular esquelética (%)','34.1'],['Massa muscular esquelética (kg)','20'],['Massa muscular (%)','59.8'],['Peso (kg)','58.7']]);
+assert.deepEqual(Array.from(ordered,row=>row[0]),['Peso (kg)','% Gordura','Peso da gordura (kg)','Massa Muscular (kg)','Massa muscular (%)','Massa muscular esquelética (kg)','Massa muscular esquelética (%)']);
+assert.equal(api.selected({}).length,0);assert.equal(api.selectedBase({}).length,9);

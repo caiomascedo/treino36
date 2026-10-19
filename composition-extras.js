@@ -4,7 +4,7 @@ window.CompositionExtras=(()=>{
     {key:'pesoGordura',label:'Peso da gordura (kg)'},
     {key:'musculoEsqueleticoPct',label:'Massa muscular esquelética (%)'},
     {key:'musculoEsqueleticoKg',label:'Massa muscular esquelética (kg)'},
-    {key:'massaMuscularPct',label:'Massa muscular (%)',alias:'Taxa muscular'},
+    {key:'massaMuscularPct',label:'Massa muscular (%)',alias:'Taxa muscular / registro de massa muscular'},
     {key:'massaLivreGordura',label:'Massa livre de gordura (kg)'},
     {key:'gorduraSubcutanea',label:'Gordura subcutânea (%)'},
     {key:'massaOssea',label:'Massa óssea (kg)'},
@@ -18,7 +18,7 @@ window.CompositionExtras=(()=>{
     pesoGordura:'Quantidade de gordura corporal em quilogramas. É diferente do percentual de gordura.',
     musculoEsqueleticoPct:'Percentual do peso corporal correspondente aos músculos esqueléticos, responsáveis pelos movimentos. É diferente da massa muscular total.',
     musculoEsqueleticoKg:'Quantidade de músculos esqueléticos em quilogramas. É diferente da massa muscular total.',
-    massaMuscularPct:'Também chamada de taxa muscular na balança: percentual do peso corporal correspondente à massa muscular estimada pelo aparelho. Não equivale ao percentual de músculo esquelético. Massa muscular em kg é a quantidade absoluta; confira a unidade do aparelho.',
+    massaMuscularPct:'Também chamada de taxa muscular ou registro de massa muscular (%) no laudo: percentual do peso corporal correspondente à massa muscular estimada pelo aparelho. Não equivale ao percentual de músculo esquelético. Massa muscular em kg é a quantidade absoluta; confira a unidade do aparelho.',
     massaLivreGordura:'Peso corporal sem a gordura. Inclui músculos, água, ossos, órgãos e outros tecidos; não é o mesmo que massa muscular.',
     gorduraSubcutanea:'Percentual de gordura localizado sob a pele. É diferente da gordura corporal total e do índice de gordura visceral.',
     massaOssea:'Estimativa da massa óssea em quilogramas informada pela balança. Não é uma medida de densidade mineral óssea.',
@@ -111,8 +111,12 @@ window.CompositionExtras=(()=>{
     return new Set([...(Array.isArray(person[prefs.base])?person[prefs.base].filter(key=>base.includes(key)):base),...(Array.isArray(person[prefs.extra])?person[prefs.extra].filter(key=>extra.includes(key)):[])]);
   }
   function activeSelection(person,section='composicao'){
-    const keys=rawSelection(person,section);if(section!=='composicao')return keys;
-    unitGroups.forEach(group=>{const enabled=group.members.map(([key])=>key).filter(key=>keys.has(key));if(!enabled.length)return;const preferred=person.composicaoUnidades?.[group.key],chosen=enabled.includes(preferred)?preferred:enabled[0];enabled.forEach(key=>{if(key!==chosen)keys.delete(key);});});return keys;
+    return rawSelection(person,section);
+  }
+  function orderedKeys(section='composicao'){
+    const keys=[...baseFields[section],...catalog(section).filter(field=>!field.retired)].map(field=>field.key),ordered=[];
+    for(const key of keys){const group=section==='composicao'&&unitGroups.find(group=>group.members.some(([member])=>member===key));for(const member of group?group.members.map(([member])=>member):[key])if(!ordered.includes(member))ordered.push(member);}
+    return ordered;
   }
   const selectedBase=(person,section='composicao')=>baseFields[section].filter(field=>activeSelection(person,section).has(field.key)).map(field=>field.key);
   const instances=new Set();
@@ -133,45 +137,55 @@ window.CompositionExtras=(()=>{
     const button=document.createElement('button');button.type='button';button.className='composition-extras-add';button.textContent='＋ Adicionar campos';button.setAttribute('aria-expanded','false');
     const choices=document.createElement('div');choices.className='composition-extras-choices';choices.hidden=true;
     const id=config.prefix+section+'-extra-options';choices.id=id;button.setAttribute('aria-controls',id);root.append(button,choices);
-    const hint=document.createElement('p');hint.textContent='Marque os campos para este aluno. Os valores ficam salvos mesmo ao desmarcar.';choices.append(hint);
-    const checkboxes=new Map(),unitControls=new Map(),standard=document.createElement('fieldset'),additional=document.createElement('fieldset'),inbodyGroups=new Map();
-    [[section==='medidas'?'Medidas padrão':'Indicadores · escolha a unidade',standard],[section==='medidas'?'Medidas adicionais':'Adicionais',additional]].forEach(([text,group])=>{const legend=document.createElement('legend');legend.textContent=text;group.append(legend);choices.append(group);});
+    const hint=document.createElement('p');hint.textContent=section==='medidas'?'Marque os campos para este aluno. Os valores ficam salvos mesmo ao desmarcar.':'Padrão identifica seus campos originais. Marque as medidas que deseja juntas na tela e no PDF. Desmarcar não apaga os valores.';choices.append(hint);
+    const checkboxes=new Map(),standard=document.createElement('fieldset'),additional=document.createElement('fieldset'),inbodyGroups=new Map();
+    [[section==='medidas'?'Medidas padrão':'Composição · padrão e medidas relacionadas',standard],[section==='medidas'?'Medidas adicionais':'Adicionais',additional]].forEach(([text,group])=>{const legend=document.createElement('legend');legend.textContent=text;group.append(legend);choices.append(group);});
     if(section==='composicao')for(const [key,title] of [['inbody','InBody · dados do laudo'],['inbody-lean','InBody · massa magra segmentar'],['inbody-fat','InBody · gordura segmentar'],['inbody-impedance','InBody · impedância 20/100 kHz']]){const group=document.createElement('details'),summary=document.createElement('summary');summary.textContent=title;group.className='composition-inbody-options';group.append(summary);choices.append(group);inbodyGroups.set(key,group);}
-    const saveChoice=(key,enabled,group,unit)=>{
-      const state=config.getState(),chosen=activeSelection(state.person,section);if(group)group.members.forEach(([member])=>chosen.delete(member));
+    const saveChoice=(key,enabled)=>{
+      const state=config.getState(),chosen=activeSelection(state.person,section);
       if(enabled)chosen.add(key);else chosen.delete(key);
-      const settings=group?{composicaoUnidades:{...(state.person.composicaoUnidades||{}),[group.key]:unit}}:{};
-      config.select(extras.filter(f=>chosen.has(f.key)).map(f=>f.key),base.filter(f=>chosen.has(f.key)).map(f=>f.key),settings);notify(state.person.id);
+      config.select(extras.filter(f=>chosen.has(f.key)).map(f=>f.key),base.filter(f=>chosen.has(f.key)).map(f=>f.key));notify(state.person.id);
     };
     const addChoice=(field,target)=>{
       const label=document.createElement('label'),check=document.createElement('input'),name=document.createElement('span');check.type='checkbox';check.dataset.extraKey=field.key;name.textContent=field.label+(field.alias?' · '+field.alias:'');label.append(check,name);target.append(label);checkboxes.set(field.key,check);
+      if(section==='composicao'&&base.some(f=>f.key===field.key)){const tag=document.createElement('small');tag.className='composition-default-tag';tag.textContent='Padrão';name.append(tag);}
       check.onchange=()=>{try{saveChoice(field.key,check.checked);}catch(error){check.checked=!check.checked;if(config.error)config.error(error);}};
     };
     const grouped=new Set(section==='composicao'?unitGroups.flatMap(group=>group.members.map(([key])=>key)):[]);
-    for(const field of base){
-      const group=section==='composicao'&&unitGroups.find(group=>group.key===field.key);
-      if(group)continue;addChoice(field,standard);
+    const definitions=new Map([...base,...extras].map(field=>[field.key,field])),rendered=new Set();
+    for(const key of orderedKeys(section)){
+      if(rendered.has(key))continue;
+      const group=section==='composicao'&&unitGroups.find(group=>group.members.some(([member])=>member===key));
+      if(group){const box=document.createElement('fieldset');box.className='composition-choice-group';box.dataset.metricGroup=group.key;const legend=document.createElement('legend');legend.textContent=group.label;box.append(legend);standard.append(box);for(const [member] of group.members){addChoice(definitions.get(member),box);rendered.add(member);}}
+      else if(base.some(field=>field.key===key)){addChoice(definitions.get(key),standard);rendered.add(key);}
     }
-    if(section==='composicao')unitGroups.forEach(group=>{
-      const label=document.createElement('label'),check=document.createElement('input'),name=document.createElement('span'),unit=document.createElement('select');label.className='composition-unified-choice';check.type='checkbox';check.dataset.extraKey=group.key;name.textContent=group.label;unit.dataset.unitGroup=group.key;unit.setAttribute('aria-label','Unidade / fonte: '+group.label);
-      group.members.forEach(([key,text])=>{const option=document.createElement('option');option.value=key;option.textContent=text;unit.append(option);});label.append(check,name,unit);standard.append(label);unitControls.set(group.key,{check,unit,group});
-      check.onchange=()=>{try{saveChoice(unit.value,check.checked,group,unit.value);}catch(error){if(config.error)config.error(error);}};
-      unit.onchange=()=>{try{saveChoice(unit.value,true,group,unit.value);}catch(error){if(config.error)config.error(error);}};
-    });
     extras.filter(field=>!grouped.has(field.key)).forEach(field=>addChoice(field,inbodyGroups.get(field.group)||additional));
     const done=document.createElement('button');done.type='button';done.textContent='Pronto';done.onclick=()=>{choices.hidden=true;button.setAttribute('aria-expanded','false');button.focus({preventScroll:true});};choices.append(done);
     button.onclick=()=>{choices.hidden=!choices.hidden;button.setAttribute('aria-expanded',String(!choices.hidden));};
     function refresh(){
-      const state=config.getState(),chosen=selected(state.person,section),baseChosen=selectedBase(state.person,section);checkboxes.forEach((check,key)=>{check.checked=chosen.includes(key)||baseChosen.includes(key);});unitControls.forEach(({check,unit,group})=>{const keys=[...chosen,...baseChosen],enabled=group.members.find(([key])=>keys.includes(key));check.checked=!!enabled;unit.value=enabled?.[0]||state.person.composicaoUnidades?.[group.key]||group.members[0][0];});baseNodes.forEach((node,key)=>{node.hidden=!baseChosen.includes(key);});grid.querySelectorAll('.composition-extra-field').forEach(node=>node.remove());
+      const state=config.getState(),chosen=selected(state.person,section),baseChosen=selectedBase(state.person,section);checkboxes.forEach((check,key)=>{check.checked=chosen.includes(key)||baseChosen.includes(key);});baseNodes.forEach((node,key)=>{node.hidden=!baseChosen.includes(key);});grid.querySelectorAll('.composition-related-fields').forEach(node=>node.replaceWith(...node.children));grid.querySelectorAll('.composition-extra-field').forEach(node=>node.remove());
       extras.filter(field=>chosen.includes(field.key)).forEach(field=>{
         const wrap=document.createElement('div');wrap.className=(config.fieldClass||'field')+' composition-extra-field';const label=document.createElement('label'),input=document.createElement('input');input.id=config.prefix+field.key;input.type='text';input.inputMode=field.paired||['target','text'].includes(field.kind)?'text':'decimal';if(field.paired)input.placeholder='Direito / Esquerdo';input.dataset.extraField=field.key;input.readOnly=!!field.readonly;if(field.readonly)input.placeholder='Preencha nas informações da ficha';input.value=value(state.person,state.av,field.key);label.htmlFor=input.id;label.textContent=field.label;wrap.append(label,input);addDetails(wrap,input,field,config);grid.append(wrap);
         if(!field.readonly)input.oninput=()=>{try{if(field.paired)input.value=formatPair(input.value);const state=config.getState();config.input(field.key,input.value,section==='composicao'?CompositionContext.record(state.av,field.key,input.value,''):{});}catch(error){if(config.error)config.error(error);}};
       });
+      if(section==='composicao'){
+        const nodes=new Map(baseNodes);grid.querySelectorAll('.composition-extra-field').forEach(node=>nodes.set(node.querySelector('[data-extra-field]').dataset.extraField,node));const placed=new Set();
+        for(const key of orderedKeys(section)){
+          if(placed.has(key))continue;const group=unitGroups.find(group=>group.members.some(([member])=>member===key)),members=(group?group.members.map(([member])=>member):[key]).filter(member=>nodes.has(member));
+          const visible=members.filter(member=>!nodes.get(member).hidden),target=visible.length>1?document.createElement('div'):grid;
+          if(target!==grid){target.className='composition-related-fields';target.dataset.metricGroup=group.key;grid.append(target);}
+          for(const member of members){target.append(nodes.get(member));placed.add(member);}
+        }
+      }
     }
     const instance={root,getState:config.getState,refresh,refreshValues(){const state=config.getState();grid.querySelectorAll('[data-extra-field]').forEach(input=>{const field=fields.find(field=>field.key===input.dataset.extraField);if(field?.readonly)input.value=value(state.person,state.av,field.key);input.dispatchEvent(new Event('composition-value-refresh'));});}};instances.add(instance);refresh();return instance;
   }
   function pdfRows(person,avs,delta,section='composicao',pairDelta){return catalog(section).filter(field=>selected(person,section).includes(field.key)&&avs.some(av=>filled(value(person,av,field.key)))).map(field=>[field.label,...avs.map((av,index)=>{const current=value(person,av,field.key);return filled(current)?String(current)+(index&&delta&&!field.readonly?(field.paired?(pairDelta&&pairDelta(current,value(person,avs[index-1],field.key)).trim()?'\n'+pairDelta(current,value(person,avs[index-1],field.key)).trim():''):delta(current,value(person,avs[index-1],field.key))):''):'—';})]);}
   function filterBaseRows(person,rows,section='composicao'){const enabled=selectedBase(person,section);return rows.filter(row=>{const field=baseFields[section].find(f=>f.pdf===row[0]);return !field||enabled.includes(field.key);});}
+  function orderRows(rows,section='composicao'){
+    const labels=new Map([...baseFields[section].map(field=>[field.pdf,field.key]),...catalog(section).map(field=>[field.label,field.key])]),order=orderedKeys(section);
+    return [...rows].sort((a,b)=>order.indexOf(labels.get(a[0]))-order.indexOf(labels.get(b[0])));
+  }
   function hasValues(person,avs,section='composicao'){return [...selectedBase(person,section),...selected(person,section)].some(key=>avs.some(av=>filled(value(person,av,key))));}
-  return {classification,unitGroups,activeSelection,fields,baseFields,measureFields,selected,selectedBase,preferenceKeys,value,filled,mount,notify,refreshValues,pdfRows,filterBaseRows,hasValues,formatPair};
+  return {classification,unitGroups,activeSelection,orderedKeys,orderRows,fields,baseFields,measureFields,selected,selectedBase,preferenceKeys,value,filled,mount,notify,refreshValues,pdfRows,filterBaseRows,hasValues,formatPair};
 })();
