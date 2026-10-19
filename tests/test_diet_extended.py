@@ -9,7 +9,7 @@ script=urllib.request.urlopen(URL,timeout=30).read()
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
  context=browser.new_context(viewport={'width':390,'height':844})
- context.add_init_script("""window.shared=[];window.opens=0;window.open=()=>{window.opens++;return null;};Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{shared.push(data);}});Object.defineProperty(navigator,'userActivation',{configurable:true,value:{isActive:true}});""")
+ context.add_init_script("""window.shared=[];window.opens=0;window.pdfFiles=new Map();const createPDFURL=URL.createObjectURL.bind(URL);URL.createObjectURL=file=>{const url=createPDFURL(file);pdfFiles.set(url,file);return url;};window.open=()=>{window.opens++;return {closed:false,document:{title:'',body:{textContent:''}},location:{replace:url=>shared.push({files:[pdfFiles.get(url)]})}};};Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{shared.push(data);}});Object.defineProperty(navigator,'userActivation',{configurable:true,value:{isActive:true}});""")
  def route(r):
   if r.request.url==URL:r.fulfill(body=script,content_type='application/javascript');return
   u=urlparse(r.request.url);path=ROOT/u.path.strip('/')
@@ -62,7 +62,7 @@ with sync_playwright() as p:
  page.screenshot(path='/tmp/treino36-diet-controls.png')
  assert page.locator('.diet-history').evaluate("el=>getComputedStyle(el).position==='sticky'")
  expect(page.locator('#dietIncludeCalculations')).not_to_be_checked()
- page.locator('#dietPdfBtn').click();expect(page.locator('.pdf-file-send')).to_be_enabled();page.locator('.pdf-file-send').click();page.locator('.pdf-file-close').click();page.wait_for_function('shared.length===1')
+ page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===1')
  data=page.evaluate("""async()=>{const file=shared[0].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
@@ -102,7 +102,7 @@ with sync_playwright() as p:
  page.locator('#dietPhotoPreviewDialog [data-close]').click();expect(page.locator('#dietPhotoImages img')).to_have_count(0);assert photoUrl in page.evaluate('photoRevoked')
  page.locator('#dietText').fill(saved)
  page.locator('#dietIncludeCalculations').check();page.locator('#dietUndoBtn').click();expect(page.locator('#dietIncludeCalculations')).not_to_be_checked();page.locator('#dietRedoBtn').click();expect(page.locator('#dietIncludeCalculations')).to_be_checked()
- page.locator('#dietPdfBtn').click();expect(page.locator('.pdf-file-send')).to_be_enabled();page.locator('.pdf-file-send').click();page.locator('.pdf-file-close').click();page.wait_for_function('shared.length===3')
+ page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===3')
  data=page.evaluate("""async()=>{const file=shared[2].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
