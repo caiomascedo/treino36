@@ -4,9 +4,12 @@ window.CompositionExtras=(()=>{
     {key:'pesoGordura',label:'Peso da gordura (kg)'},
     {key:'musculoEsqueleticoPct',label:'Massa muscular esquelética (%)'},
     {key:'musculoEsqueleticoKg',label:'Massa muscular esquelética (kg)'},
-    {key:'massaMuscularPct',label:'Massa muscular (%)'},
+    {key:'massaMuscularPct',label:'Massa muscular (%)',alias:'Taxa muscular'},
+    {key:'massaLivreGordura',label:'Massa livre de gordura (kg)'},
+    {key:'gorduraSubcutanea',label:'Gordura subcutânea (%)'},
+    {key:'massaOssea',label:'Massa óssea (kg)'},
     {key:'pesoAgua',label:'Peso da água (kg)'},
-    {key:'metabolismoInformado',label:'Metabolismo da bioimpedância (kcal/dia)'},
+    {key:'metabolismoInformado',label:'Metabolismo da bioimpedância (kcal/dia)',alias:'TMB da balança'},
     {key:'alturaCm',label:'Altura (cm)',readonly:true},
     {key:'idadeReal',label:'Idade real (anos)',readonly:true}
   ];
@@ -14,7 +17,10 @@ window.CompositionExtras=(()=>{
     pesoGordura:'Quantidade de gordura corporal em quilogramas. É diferente do percentual de gordura.',
     musculoEsqueleticoPct:'Percentual do peso corporal correspondente aos músculos esqueléticos, responsáveis pelos movimentos. É diferente da massa muscular total.',
     musculoEsqueleticoKg:'Quantidade de músculos esqueléticos em quilogramas. É diferente da massa muscular total.',
-    massaMuscularPct:'Percentual do peso corporal correspondente à massa muscular estimada pelo aparelho. Não equivale necessariamente ao percentual de músculo esquelético.',
+    massaMuscularPct:'Também chamada de taxa muscular na balança: percentual do peso corporal correspondente à massa muscular estimada pelo aparelho. Não equivale ao percentual de músculo esquelético. Massa muscular em kg é a quantidade absoluta; confira a unidade do aparelho.',
+    massaLivreGordura:'Peso corporal sem a gordura. Inclui músculos, água, ossos, órgãos e outros tecidos; não é o mesmo que massa muscular.',
+    gorduraSubcutanea:'Percentual de gordura localizado sob a pele. É diferente da gordura corporal total e do índice de gordura visceral.',
+    massaOssea:'Estimativa da massa óssea em quilogramas informada pela balança. Não é uma medida de densidade mineral óssea.',
     pesoAgua:'Quantidade de água corporal em quilogramas. É diferente do percentual de água.',
     metabolismoInformado:'Estimativa de gasto energético em repouso informada no laudo da bioimpedância, em kcal por dia. Este valor não substitui a TMB calculada pelo aplicativo.',
     alturaCm:'Altura registrada na ficha desta avaliação, apresentada em centímetros.',
@@ -49,7 +55,7 @@ window.CompositionExtras=(()=>{
   }
   function addDetails(wrap,input,field,config){
     const detail=document.createElement('details');detail.className='composition-extra-detail';
-    const summary=document.createElement('summary');summary.textContent='Ver detalhes';
+    const summary=document.createElement('summary');summary.textContent='Ver detalhes';detail.id=input.id+'-details';
     const current=document.createElement('p');current.className='composition-extra-value';
     const explanation=document.createElement('p');explanation.textContent=descriptions[field.key];
         let badge=null,note=null,select=null;
@@ -58,7 +64,7 @@ window.CompositionExtras=(()=>{
       if(badge){const state=config.getState(),result=classification(state.person,{...state.av,[field.key]:input.value},field.key);badge.textContent=result.text;badge.dataset.tone=result.tone;note.textContent=result.note;select.value=state.av[field.key+'Classificacao']||'';}
     };
     if(!field.readonly&&!field.paired&&field.key!=='pescoco'){
-      badge=document.createElement('button');badge.type='button';badge.className='composition-extra-rating';badge.setAttribute('aria-expanded','false');badge.onclick=()=>{detail.open=!detail.open;};wrap.append(badge);
+      badge=document.createElement('button');badge.type='button';badge.className='composition-extra-rating badge';summary.hidden=true;detail.classList.add('composition-detail-from-rating');badge.setAttribute('aria-controls',detail.id);badge.setAttribute('aria-expanded','false');badge.onclick=()=>{detail.open=!detail.open;};wrap.append(badge);
       note=document.createElement('p');const label=document.createElement('label');label.textContent='Classificação do laudo';select=document.createElement('select');select.setAttribute('aria-label','Classificação do laudo: '+field.label);
       ['',...ratingLabels].forEach(text=>{const option=document.createElement('option');option.value=text;option.textContent=text||'Automática / não informada';select.append(option);});
       select.onchange=()=>{try{config.input(field.key+'Classificacao',select.value);update();}catch(error){if(config.error)config.error(error);}};label.append(select);detail.append(note,label);
@@ -95,7 +101,7 @@ window.CompositionExtras=(()=>{
     const id=config.prefix+section+'-extra-options';choices.id=id;button.setAttribute('aria-controls',id);root.append(button,choices);
     const hint=document.createElement('p');hint.textContent='Marque os campos para este aluno. Os valores ficam salvos mesmo ao desmarcar.';choices.append(hint);
     const checkboxes=new Map();
-    [...base,...extras].forEach(field=>{const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.dataset.extraKey=field.key;label.append(check,document.createTextNode(field.label));choices.append(label);checkboxes.set(field.key,check);
+    [...base,...extras].forEach(field=>{const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.dataset.extraKey=field.key;label.append(check,document.createTextNode(field.label+(field.alias?' · '+field.alias:'')));choices.append(label);checkboxes.set(field.key,check);
       check.onchange=()=>{const state=config.getState(),chosen=new Set([...selectedBase(state.person,section),...selected(state.person,section)]);if(check.checked)chosen.add(field.key);else chosen.delete(field.key);try{config.select(extras.filter(f=>chosen.has(f.key)).map(f=>f.key),base.filter(f=>chosen.has(f.key)).map(f=>f.key));notify(state.person.id);}catch(error){check.checked=!check.checked;if(config.error)config.error(error);}};
     });
     const done=document.createElement('button');done.type='button';done.textContent='Pronto';done.onclick=()=>{choices.hidden=true;button.setAttribute('aria-expanded','false');button.focus({preventScroll:true});};choices.append(done);
