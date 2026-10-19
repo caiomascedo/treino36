@@ -6,12 +6,12 @@ ROOT=Path(__file__).resolve().parents[2]
 URLS=['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js']
 scripts={url:urllib.request.urlopen(url,timeout=30).read() for url in URLS}
 with sync_playwright() as p:
- browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);context=browser.new_context(viewport={'width':390,'height':844});context.add_init_script('window.open=()=>null')
+ browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);context=browser.new_context(viewport={'width':390,'height':844},has_touch=True);context.add_init_script('window.open=()=>null')
  def route(r):
   if r.request.url in scripts:r.fulfill(body=scripts[r.request.url],content_type='application/javascript');return
   u=urlparse(r.request.url);path=ROOT/u.path.strip('/')
   if path.is_dir():path/='index.html'
-  if u.hostname=='app.test' and path.is_file():r.fulfill(body=path.read_bytes(),content_type={'.js':'application/javascript','.css':'text/css'}.get(path.suffix,'text/html'))
+  if u.hostname=='app.test' and path.is_file():r.fulfill(body=path.read_bytes(),content_type={'.js':'application/javascript','.css':'text/css','.png':'image/png'}.get(path.suffix,'text/html'))
   else:r.fulfill(status=404)
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto('http://app.test/treino36/')
@@ -24,6 +24,22 @@ with sync_playwright() as p:
  expect(page.locator('#postureGrid')).not_to_be_checked()
  box=dialog.locator('.posture-stage').bounding_box();work=dialog.locator('.posture-workspace').bounding_box()
  assert box['width']<=work['width'] and box['height']<=work['height'] and abs(box['width']/box['height']-.6)<.01,(box,work)
+ # Exercise real multi-touch events, rather than calling the zoom implementation.
+ cdp=context.new_cdp_session(page)
+ def touch(kind,points):cdp.send('Input.dispatchTouchEvent',{'type':kind,'touchPoints':[{'x':x,'y':y,'id':i+1} for i,(x,y) in enumerate(points)]})
+ work=dialog.locator('.posture-workspace').bounding_box();cx=work['x']+work['width']/2;cy=work['y']+work['height']/2
+ touch('touchStart',[(cx-35,cy),(cx+35,cy)]);touch('touchMove',[(cx-70,cy),(cx+70,cy)]);touch('touchEnd',[])
+ expect(page.locator('#postureZoomValue')).to_have_text('200%')
+ enlarged=dialog.locator('.posture-stage').bounding_box();assert abs(enlarged['width']/box['width']-2)<.02
+ # A guide remains editable in source-image coordinates while zoomed.
+ dialog.locator('[data-action="horizontal"]').click();end=dialog.locator('svg circle').nth(1).bounding_box()
+ page.mouse.move(end['x']+end['width']/2,end['y']+end['height']/2);page.mouse.down();page.mouse.move(enlarged['x']+enlarged['width']*.65,enlarged['y']+enlarged['height']*.52,steps=8);page.mouse.up()
+ assert abs(float(dialog.locator('svg circle').nth(1).get_attribute('cx'))-390)<2
+ assert abs(float(dialog.locator('svg circle').nth(1).get_attribute('cy'))-520)<2
+ dialog.locator('[data-action="undo"]').click();dialog.locator('[data-action="undo"]').click()
+ dialog.locator('[data-action="zoom-reset"]').click();expect(page.locator('#postureZoomValue')).to_have_text('100%')
+ dialog.locator('[data-action="zoom-out"]').click();expect(page.locator('#postureZoomValue')).to_have_text('83%')
+ dialog.locator('[data-action="zoom-reset"]').click()
  for kind in ['vertical','horizontal','ruler']:dialog.locator('[data-action="'+kind+'"]').click()
  expect(page.locator('#postureLine option')).to_have_count(3)
  svg=dialog.locator('svg')
@@ -77,9 +93,38 @@ with sync_playwright() as p:
  assert page.locator('#postureGridThickness').input_value()=='4' and page.locator('#postureGridTransparency').input_value()=='70'
  page.locator('#postureHandles').check();expect(svg.locator('circle')).to_have_count(2)
  dialog.locator('[data-action="close"]').click();assert av()['posturaEdicoes']['fotoF']['showHandles'] is False
+ # The four compact actions include a direct download of the saved composite.
+ frontal=page.locator('#obs-av-fotoF').locator('..');assert frontal.locator('.posture-photo-actions button').all_text_contents()==['Câmera','Editar','Apagar','Salvar']
+ row=frontal.locator('.posture-photo-actions').bounding_box();buttons=frontal.locator('.posture-photo-actions button').all()
+ assert all(abs(button.bounding_box()['y']-row['y'])<2 for button in buttons)
+ # Insert the bundled transparent PNG, resize and move it, then retain its placement on reload.
+ page.locator('[data-posture-edit="fotoF"]').click();dialog.locator('[data-action="logo"]').click();logo=svg.locator('image[data-logo]');expect(logo).to_have_count(1)
+ page.locator('#postureLogoSize').evaluate('(e)=>{e.value="55";e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}));}')
+ page.evaluate('()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
+ oldLogo=logo.bounding_box();stage=dialog.locator('.posture-stage').bounding_box()
+ page.mouse.move(oldLogo['x']+oldLogo['width']/2,oldLogo['y']+oldLogo['height']/2);page.mouse.down();page.mouse.move(stage['x']+stage['width']*.6,stage['y']+stage['height']*.72,steps=8);page.mouse.up()
+ assert float(logo.get_attribute('x'))>100 and float(logo.get_attribute('y'))<800
+ dialog.locator('[data-action="zoom-in"]').click();dialog.locator('[data-action="save-top"]').click();expect(dialog).not_to_be_visible();without=av()
+ placement=without['posturaEdicoes']['fotoF']['logo'];assert placement['src']=='assets/caio-macedo-logo.png' and placement['width']==.55 and .2<placement['x']<.5 and .6<placement['y']<.8
+ assert without['fotoFOriginal']==photos['portrait']
+ def green_pixels(src):return page.evaluate("""async src=>{const img=new Image();img.src=src;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);const d=ctx.getImageData(0,0,c.width,c.height).data;let count=0;for(let i=0;i<d.length;i+=4)if(d[i+1]-d[i]>70&&d[i+1]-d[i+2]>60)count++;return {count,width:img.width,height:img.height};}""",src)
+ result=green_pixels(without['fotoF']);assert result['count']>100 and result['width']==600 and result['height']==1000,result
+ with page.expect_download() as saved:frontal.get_by_role('button',name='Salvar',exact=True).click()
+ assert saved.value.suggested_filename=='Ana_Frontal_01_10_2026.jpg'
+ assert Path(saved.value.path()).read_bytes()==base64.b64decode(without['fotoF'].split(',')[1])
+ page.reload();open_photos();page.locator('[data-posture-edit="fotoF"]').click();expect(logo).to_have_count(1);expect(page.locator('#postureZoomValue')).to_have_text('100%')
+ assert abs(float(logo.get_attribute('x'))-placement['x']*600)<1
+ dialog.locator('[data-action="save"]').click();expect(dialog).not_to_be_visible();assert av()['fotoF']==without['fotoF'],'Logo must not be baked again on repeated edits'
+ page.locator('[data-posture-edit="fotoF"]').click();dialog.locator('[data-action="remove-logo"]').click();expect(logo).to_have_count(0)
+ dialog.locator('[data-action="undo"]').click();expect(logo).to_have_count(1)
+ # Remember a replacement PNG independently of the current photo's cancel/save choice.
+ page.locator('#postureLogoInput').set_input_files(str(ROOT/'treino36/assets/caio-macedo-logo.png'))
+ expect(logo).to_have_attribute('href',__import__('re').compile('data:image/png;base64,'))
+ assert page.evaluate("localStorage.getItem('treinoPostureLogo')").startswith('data:image/png;base64,')
+ dialog.locator('[data-action="close"]').click();assert av()['posturaEdicoes']['fotoF']['logo']==placement
  # The native camera picker opens within the editor, and cancelling preserves the old photo.
  frontal=page.locator('#obs-av-fotoF').locator('..')
- with page.expect_file_chooser() as chooser:frontal.get_by_role('button',name='📷 Câmera',exact=True).click()
+ with page.expect_file_chooser() as chooser:frontal.get_by_role('button',name='Câmera',exact=True).click()
  assert page.locator('#postureCameraInput').get_attribute('capture')=='environment'
  chooser.value.set_files({'name':'landscape.png','mimeType':'image/png','buffer':base64.b64decode(photos['landscape'].split(',')[1])})
  dialog.locator('.posture-stage img').evaluate('(e)=>e.decode()')
@@ -105,4 +150,4 @@ with sync_playwright() as p:
  records=page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')")
  assert records[0]['avaliacoes'][0]['fotoF']==photos['old'];assert records[0]['avaliacoes'][1]['fotoL'];assert 'fotoF' not in records[1]['avaliacoes'][0]
  assert not errors,errors
- browser.close();print('PASS: mobile fit, endpoint dragging/angles, free endpoint rotation of horizontal/vertical lines, no numeric rotation toolbar, hidden handles, independent persisted grid color/thickness/transparency, top save, undo/redo, baked optional grid verified by pixels, original retained/re-edit without double overlays, camera/gallery and cancel, actual PDF aspect ratios, immediate durable saves and isolation, quota rollback and confirmed deletion inside/outside editor')
+ browser.close();print('PASS: mobile fit, endpoint dragging/angles, free endpoint rotation of horizontal/vertical lines, no numeric rotation toolbar, hidden handles, independent persisted grid color/thickness/transparency, top save, undo/redo, baked optional grid verified by pixels, original retained/re-edit without double overlays, camera/gallery and cancel, actual PDF aspect ratios, native pinch zoom/reset and guide dragging while zoomed, bundled PNG logo drag/resize/persistence and exported pixels, remembered custom PNG, direct image download and compact four-action row, immediate durable saves and isolation, quota rollback and confirmed deletion inside/outside editor')
