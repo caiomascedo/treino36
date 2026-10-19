@@ -63,8 +63,9 @@ window.DietCalculations = (() => {
       else if (energies.length) { calories = sum(energies); source = explicit ? 'valores do texto' : 'macros (4/4/9)'; }
       else { calories = null; source = 'sem valores informados'; }
     } else missing = 0;
-    const tmb = basal(settings), factor = {baixa:1.2,moderada:1.3,intensa:1.4}[settings.activity] || 1.3;
-    const goal = number(settings.goal) ?? (tmb === null ? null : Math.round(tmb * factor));
+    const tmb = Object.hasOwn(settings,'obsTmb')?number(settings.obsTmb):basal(settings), factor = {baixa:1.2,moderada:1.3,intensa:1.4}[settings.activity] || 1.3;
+    const automaticGoal=Object.hasOwn(settings,'obsGoal')?number(settings.obsGoal):(tmb===null?null:Math.round(tmb*factor));
+    const goal = number(settings.goal) ?? automaticGoal;
     return {...totals,calories:calories === null ? null : Math.round(calories),source,missing,count,macrosFound:macrosFound||manualMacros,tmb,goal};
   }
   return {number,basal,nutrition};

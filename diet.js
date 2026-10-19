@@ -29,27 +29,23 @@ window.DietEditor = (() => {
   }
   let pdfLibrary;
   const C = () => window.DietCalculations;
-  const settingsKeys = ['sex','age','height','weight','activity','goal','calories','protein','carbs','fat'];
+  const settingsKeys = ['goal','calories','protein','carbs','fat'];
   const fmt = value => value === null ? '—' : Number(value.toFixed(1)).toLocaleString('pt-BR');
-  function profile(student) {
-    const ficha = (student?.infoGuias || []).find(g => g.id === student.avaliacaoFichaId) || student?.infoGuias?.at(-1) || student?.infoRelevante || {};
-    let person = {}, av = {};
-    if (student && window.AvaliacaoTreinoSync) {
-      try {const sync = AvaliacaoTreinoSync; person = sync.resolve(sync.read(sync.key),student) || {}; av = person.avaliacoes?.find(a => a.id === person.avaliacaoPreferidaId) || person.avaliacoes?.at(-1) || {};} catch(error) {}
-    }
-    const height = C().number(ficha.altura || av.ficha?.altura || person.altura);
-    return {sex:person.sexo || '',age:ficha.idade || av.ficha?.idade || person.idade || '',height:height === null ? '' : String(height < 3.5 ? Math.round(height*100) : height),weight:ficha.peso || av.peso || person.pesoAtual || '',activity:'moderada'};
+  function profile(student, config) {
+    let current=student,person={},av={};
+    if(student&&window.AvaliacaoTreinoSync){try{const sync=AvaliacaoTreinoSync;current=sync.read('treinoAlunos').find(s=>s.student_id===student.student_id)||student;person=sync.resolve(sync.read(sync.key),current)||{};av=person.avaliacoes?.find(a=>a.id===person.avaliacaoPreferidaId)||person.avaliacoes?.at(-1)||{};}catch(error){}}
+    const ficha=(current?.infoGuias||[]).find(g=>g.id===current.avaliacaoFichaId)||current?.infoGuias?.at(-1)||current?.infoRelevante||{};
+    const weight=ficha.peso||av.peso||person.pesoAtual||'',height=ficha.altura||av.ficha?.altura||person.altura||'',age=ficha.idade||av.ficha?.idade||person.idade||'';
+    const calc=config.obsCalories(weight,height,age,ficha.nivelTreino||'moderado');
+    return {tmb:calc?.tmb??C().number(av.tmb),daily:calc?.gastoTotal??null,deficit:calc?.deficit??null,surplus:calc?.superavit??null};
   }
   function mount(config) {
     const dialog = config.createDialog('dietDialog', '🥗 Dieta',
       '<button type="button" id="dietExpandBtn" aria-pressed="false">⛶ Ampliar</button><p id="dietStudentName"></p>' +
-      '<details id="dietCalculations"><summary>TMB, meta e calorias</summary><div class="diet-calc-grid">' +
-      '<label>Sexo para cálculo<select id="diet-sex"><option value="">Selecionar</option><option value="F">Feminino</option><option value="M">Masculino</option></select></label>' +
-      '<label>Idade<input id="diet-age" inputmode="decimal" placeholder="Anos"></label><label>Altura (cm)<input id="diet-height" inputmode="decimal"></label><label>Peso (kg)<input id="diet-weight" inputmode="decimal"></label>' +
-      '<label class="diet-wide">Atividade<select id="diet-activity"><option value="baixa">Baixa · ×1,2</option><option value="moderada">Moderada · ×1,3</option><option value="intensa">Intensa · ×1,4</option></select></label></div>' +
-      '<p>TMB estimada: <strong id="dietTmb">—</strong> kcal/dia <small>(Harris–Benedict)</small></p>' +
+      '<details id="dietCalculations"><summary>Meta e calorias</summary><p>TMB da OBS: <strong id="dietTmb">—</strong> kcal/dia</p><p class="diet-hint" id="dietObsStatus"></p><div class="diet-quick-goals">' +
+      '<button type="button" data-diet-goal="tmb">TMB</button><button type="button" data-diet-goal="daily">Manutenção</button><button type="button" data-diet-goal="deficit">Emagrecimento</button><button type="button" data-diet-goal="surplus">Hipertrofia</button></div>' +
       '<label for="diet-goal">Meta (kcal/dia)</label><div class="diet-goal-row"><button type="button" id="dietGoalMinus">−100</button><input id="diet-goal" inputmode="decimal" placeholder="Automática"><button type="button" id="dietGoalPlus">+100</button><button type="button" id="dietGoalAuto">Auto</button></div>' +
-      '<div class="diet-calc-grid"><label>Calorias do dia<input id="diet-calories" inputmode="decimal" placeholder="Automático"></label><label>Proteína (g)<input id="diet-protein" inputmode="decimal" placeholder="Do texto"></label><label>Carboidratos (g)<input id="diet-carbs" inputmode="decimal" placeholder="Do texto"></label><label>Gorduras (g)<input id="diet-fat" inputmode="decimal" placeholder="Do texto"></label></div><p class="diet-hint">Deixe os campos de meta e totais vazios para calcular automaticamente. Você pode corrigir os valores aqui.</p></details>' +
+      '<div class="diet-calc-grid"><label>Calorias do dia<input id="diet-calories" inputmode="decimal" placeholder="Automático"></label><label>Proteína (g)<input id="diet-protein" inputmode="decimal" placeholder="Do texto"></label><label>Carboidratos (g)<input id="diet-carbs" inputmode="decimal" placeholder="Do texto"></label><label>Gorduras (g)<input id="diet-fat" inputmode="decimal" placeholder="Do texto"></label></div><p class="diet-hint">Os valores da OBS são atualizados automaticamente. Deixe a meta vazia para usar a opção selecionada acima; os totais podem vir do texto ou ser corrigidos aqui.</p></details>' +
       '<div id="dietTotals" aria-live="polite"></div><label for="dietText">🧠 Cola inteligente</label>' +
       '<textarea id="dietText" placeholder="Cole a dieta completa aqui. As refeições serão organizadas automaticamente.\n\nCafé da manhã\n2 ovos\n1 fruta\n\nAlmoço\nArroz, feijão e frango"></textarea>' +
       '<details id="dietPreview"><summary>Refeições · editar</summary><div id="dietPreviewBody"></div></details>' +
@@ -60,10 +56,11 @@ window.DietEditor = (() => {
     const pdfButton = dialog.querySelector('#dietPdfBtn'), photoButton = dialog.querySelector('#dietPhotoBtn');
     const undo = dialog.querySelector('#dietUndoBtn'), redo = dialog.querySelector('#dietRedoBtn');
     const inputs = Object.fromEntries(settingsKeys.map(key => [key,dialog.querySelector('#diet-'+key)]));
-    let draftKey, settingsKey, name = '', timer, history = [], historyIndex = 0, lastGroup = '', lastTime = 0, busy = false;
+    let draftKey, settingsKey, name = '', timer, history = [], historyIndex = 0, lastGroup = '', lastTime = 0, busy = false, studentForDiet=null, goalMode='daily', source={tmb:null,daily:null,deficit:null,surplus:null};
     const inMemory = new Map();
     const includeCalculations=dialog.querySelector('#dietIncludeCalculations');
-    const settings = () => ({...Object.fromEntries(settingsKeys.map(key => [key,inputs[key].value])),includeCalculations:includeCalculations.checked});
+    const settings = () => ({...Object.fromEntries(settingsKeys.map(key => [key,inputs[key].value])),includeCalculations:includeCalculations.checked,goalMode});
+    const calculationSettings=()=>({...settings(),obsTmb:source.tmb??'',obsGoal:source[goalMode]??''});
     const state = () => ({text:text.value,settings:settings()});
     function save() {
       const value = state(); inMemory.set(draftKey,value);
@@ -80,15 +77,18 @@ window.DietEditor = (() => {
       lastGroup=group;lastTime=now;buttons();
     }
     function totals() {
-      const value=C().nutrition(parse(text.value),settings());
+      const value=C().nutrition(parse(text.value),calculationSettings());
       dialog.querySelector('#dietTmb').textContent=fmt(value.tmb);
+      dialog.querySelector('#dietObsStatus').textContent=value.tmb===null?'Preencha a ficha nas OBS para obter a TMB.':'Atualizada automaticamente pela ficha/OBS.';
+      const labels={tmb:'TMB',daily:'Manutenção',deficit:'Emagrecimento',surplus:'Hipertrofia'};
+      dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{const mode=button.dataset.dietGoal;button.disabled=source[mode]===null;button.textContent=labels[mode]+' · '+fmt(source[mode])+' kcal';button.setAttribute('aria-pressed',String(goalMode===mode&&!inputs.goal.value.trim()));});
       inputs.goal.placeholder=value.goal===null?'Preencha os dados acima':fmt(value.goal);
       inputs.calories.placeholder=value.calories===null?'Não informado':String(value.calories);
       for(const key of ['protein','carbs','fat'])inputs[key].placeholder=value.macrosFound?fmt(value[key]):'Não informado';
       const summary=dialog.querySelector('#dietTotals');summary.replaceChildren();
       const main=document.createElement('strong');main.textContent='Dia: '+fmt(value.calories)+' kcal · Meta: '+fmt(value.goal)+' kcal';summary.append(main);
       const macros=document.createElement('div');macros.textContent='Proteína '+(value.macrosFound?fmt(value.protein):'—')+' g · Carbo '+(value.macrosFound?fmt(value.carbs):'—')+' g · Gordura '+(value.macrosFound?fmt(value.fat):'—')+' g';summary.append(macros);
-      const source=document.createElement('small');source.textContent=value.source+(value.missing?' · '+value.missing+' refeição(ões) com contagem incompleta':'');summary.append(source);
+      const sourceLabel=document.createElement('small');sourceLabel.textContent=value.source+(value.missing?' · '+value.missing+' refeição(ões) com contagem incompleta':'');summary.append(sourceLabel);
       return value;
     }
     function nutrientLine(item) {return /^(?:macros?|carbo|prot|gord|total|calorias|kcal)\b/i.test(normalize(item));}
@@ -111,14 +111,15 @@ window.DietEditor = (() => {
     body.addEventListener('drop',event=>{event.preventDefault();});
     function move(direction) {
       const next=historyIndex+direction;if(next<0||next>=history.length)return;
-      const active=document.activeElement,position=active?.selectionStart;historyIndex=next;lastGroup='';const snapshot=JSON.parse(history[next]);text.value=snapshot.text;for(const key of settingsKeys)inputs[key].value=snapshot.settings[key]||'';includeCalculations.checked=snapshot.settings.includeCalculations===true;save();refresh();
+      const active=document.activeElement,position=active?.selectionStart;historyIndex=next;lastGroup='';const snapshot=JSON.parse(history[next]);text.value=snapshot.text;for(const key of settingsKeys)inputs[key].value=snapshot.settings[key]||'';includeCalculations.checked=snapshot.settings.includeCalculations===true;goalMode=snapshot.settings.goalMode||'daily';save();refresh();
       if(active===text){text.focus({preventScroll:true});text.setSelectionRange(Math.min(position||0,text.value.length),Math.min(position||0,text.value.length));}
     }
     for(const button of [undo,redo])button.onpointerdown=event=>event.preventDefault();
     undo.onclick=()=>move(-1);redo.onclick=()=>move(1);
     dialog.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&['z','y'].includes(event.key.toLowerCase())){event.preventDefault();event.stopPropagation();move(event.key.toLowerCase()==='y'||event.shiftKey?1:-1);}});
     dialog.querySelector('#dietExpandBtn').onclick=()=>{const expanded=dialog.classList.toggle('diet-expanded');dialog.querySelector('#dietExpandBtn').setAttribute('aria-pressed',String(expanded));dialog.querySelector('#dietExpandBtn').textContent=expanded?'↙ Minimizar':'⛶ Ampliar';};
-    function adjustGoal(delta){const current=C().nutrition(parse(text.value),settings()).goal;if(current===null){status.textContent='Preencha os dados da TMB ou digite uma meta.';return;}inputs.goal.value=String(Math.max(0,current+delta));change('goal-step',false);}
+    function adjustGoal(delta){const current=C().nutrition(parse(text.value),calculationSettings()).goal;if(current===null){status.textContent='Preencha os dados da TMB ou digite uma meta.';return;}inputs.goal.value=String(Math.max(0,current+delta));change('goal-step',false);}
+    dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{button.onclick=()=>{goalMode=button.dataset.dietGoal;inputs.goal.value='';change('goal-preset',false);};});
     dialog.querySelector('#dietGoalMinus').onclick=()=>adjustGoal(-100);dialog.querySelector('#dietGoalPlus').onclick=()=>adjustGoal(100);dialog.querySelector('#dietGoalAuto').onclick=()=>{inputs.goal.value='';change('goal-auto',false);};
     dialog.addEventListener('close',()=>clearTimeout(timer));
     async function getPDF() {
@@ -164,7 +165,7 @@ window.DietEditor = (() => {
     }
     async function exportDiet(asPhoto) {
       const sections=parse(text.value);if(!sections.length){status.textContent='Cole a dieta antes de exportar.';return;}
-      const pdfName=name,footer=config.footer(),exportKey=draftKey,metrics=C().nutrition(sections,settings()),withCalculations=includeCalculations.checked;
+      const pdfName=name,footer=config.footer(),exportKey=draftKey,metrics=C().nutrition(sections,calculationSettings()),withCalculations=includeCalculations.checked;
       const viewer=asPhoto?null:TreinoPDFViewer.reserve();busy=true;buttons();status.textContent=asPhoto?'Gerando foto…':'Gerando PDF…';
       try {
         const jsPDF=await getPDF(),doc=new jsPDF({unit:'mm',format:'a4',compress:true}),pages=report(doc,sections,metrics,pdfName,footer,withCalculations);
@@ -177,12 +178,14 @@ window.DietEditor = (() => {
     pdfButton.onclick=()=>exportDiet(false);photoButton.onclick=()=>exportDiet(true);
     const button=document.createElement('button');button.type='button';button.id='dietBtn';button.textContent='🥗 Dieta';
     button.onclick=()=>{
-      const student=config.student();name=config.name().trim();const id=encodeURIComponent(student?.student_id||name||'sem_aluno');draftKey='dieta36_rascunho_v1:'+id;settingsKey='dieta36_calculos_v1:'+id;status.textContent='';
+      const student=config.student();studentForDiet=student;name=config.name().trim();const id=encodeURIComponent(student?.student_id||name||'sem_aluno');draftKey='dieta36_rascunho_v1:'+id;settingsKey='dieta36_calculos_v1:'+id;status.textContent='';
       let saved=inMemory.get(draftKey)||{text:'',settings:{}};
       try{saved={...saved,text:localStorage.getItem(draftKey)??saved.text};saved.settings=JSON.parse(localStorage.getItem(settingsKey)||JSON.stringify(saved.settings));}catch(error){status.textContent='Não foi possível ler todos os ajustes do rascunho neste navegador.';}
-      text.value=saved.text;const initial={...profile(student),...saved.settings};for(const key of settingsKeys)inputs[key].value=initial[key]??'';includeCalculations.checked=saved.settings?.includeCalculations===true;
+      text.value=saved.text;source=profile(student,config);goalMode=['tmb','daily','deficit','surplus'].includes(saved.settings?.goalMode)?saved.settings.goalMode:'daily';const initial={...saved.settings};for(const key of settingsKeys)inputs[key].value=initial[key]??'';includeCalculations.checked=saved.settings?.includeCalculations===true;
       dialog.querySelector('#dietStudentName').textContent=name;preview.open=false;body.replaceChildren();history=[JSON.stringify(state())];historyIndex=0;lastGroup='';refresh(false);dialog.showModal();dialog.querySelector('#dietExpandBtn').focus({preventScroll:true});
     };
+    function refreshSource(){if(dialog.open){source=profile(studentForDiet,config);totals();}}
+    window.addEventListener('focus',refreshSource);window.addEventListener('storage',event=>{if(['treinoAlunos','avaliacao_fisica_alunos','treino36_assessment_drafts','treino36_obs_drafts'].includes(event.key))refreshSource();});
     return button;
   }
   return {mount,parse};
