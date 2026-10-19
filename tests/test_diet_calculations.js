@@ -25,3 +25,8 @@ assert.equal(C.nutrition(sections,{calories:'0'}).calories,0);
 assert.equal(C.nutrition(P('Almoço\nTotal: 1.850,5 kcal')).calories,1851);
 assert.equal(P('Almoço\n1.5 bananas')[0].items[0],'1.5 bananas');
 console.log('PASS: Harris–Benedict, actual-input-only estimates, comma/period parsing, explicit kcal vs macro totals, daily summary deduplication, manual overrides and punctuation cleanup');
+
+const synced=C.nutrition([],{sex:'M',age:'99',weight:'100',height:'200',obsTmb:'1486',obsGoal:'2303'});assert.equal(synced.tmb,1486);assert.equal(synced.goal,2303);
+assert.equal(C.nutrition([],{obsTmb:'',obsGoal:'',sex:'M',age:'30',weight:'70',height:'175'}).tmb,null);
+assert.equal(C.nutrition([],{obsTmb:'1536',obsGoal:'2381',goal:'2000'}).goal,2000);
+console.log('PASS: live OBS inputs override diet demographics; missing source stays empty and manual goals are preserved');
