@@ -35,5 +35,11 @@ with sync_playwright() as p:
   assert not any(all(abs(a-b)<.005 for a,b in zip(fill,[230/255,57/255,57/255])) for fill in fills)
   assert all(pg.rect.width<pg.rect.height for pg in pdf)
   pdf[0].get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save('/tmp/treino36-assessment-emerald.png')
+ page.evaluate("alunos[0].avaliacoes.forEach(av=>av.protocolo='registro')")
+ with page.expect_download() as registered:page.evaluate("gerarPDFAluno(10,{mode:'completo',viewer:null})")
+ with fitz.open(registered.value.path()) as manual_pdf:
+  manual_text=' '.join(pg.get_text() for pg in manual_pdf)
+  assert 'Registro sem %' in manual_text,manual_text
+  assert '10.00 mm' in manual_text and '9.00 mm' in manual_text,manual_text
  assert not errors,errors
  browser.close();print('PASS: actual assessment PDF emerald accents; positive deltas red and negative green across composition/extras/measures/paired values/skinfolds; original values neutral and layout retained')

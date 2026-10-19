@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('composition-extras.js','utf8'),ctx);
+const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('inbody-fields.js','utf8'),ctx);vm.runInContext(fs.readFileSync('composition-extras.js','utf8'),ctx);
 const classify=ctx.window.CompositionExtras.classification;
 const female={sexo:'F',idade:'30'},male={sexo:'M',idade:'30'};
 assert.equal(classify(female,{peso:'60',pesoGordura:'18'},'pesoGordura').text,'Saudável');
@@ -18,3 +18,19 @@ assert.equal(classify({}, {musculoEsqueleticoPct:'25'},'musculoEsqueleticoPct').
 assert.equal(classify({...female,idade:'39'},{musculoEsqueleticoPct:'24.2'},'musculoEsqueleticoPct').text,'Baixo');
 assert.equal(classify({...female,idade:'40'},{musculoEsqueleticoPct:'24.2'},'musculoEsqueleticoPct').text,'Saudável');
 console.log('PASS: adult age/sex references, kg converted with current weight, invalid/missing values, minors excluded and laudo overrides');
+
+const api=ctx.window.CompositionExtras;
+const legacy={composicaoExtras:['pesoGordura','massaMuscularPct','alturaCm','idadeReal']};
+assert(api.selectedBase(legacy).includes('gordura'));assert(!api.selected(legacy).includes('pesoGordura'));
+assert(!api.selected(legacy).includes('alturaCm'));assert(!api.selected(legacy).includes('idadeReal'));
+const preferred={...legacy,composicaoUnidades:{gordura:'pesoGordura'}};
+assert(!api.selectedBase(preferred).includes('gordura'));assert(api.selected(preferred).includes('pesoGordura'));
+assert(legacy.composicaoExtras.includes('pesoGordura'));
+assert.equal(classify(female,{controleGorduraInbody:'-6.7'},'controleGorduraInbody').text,'Meta do laudo');
+assert.equal(classify(female,{pontuacaoInbody:'120'},'pontuacaoInbody').text,'Pontuação do laudo');
+assert.equal(classify(female,{mineraisKg:'2.84'},'mineraisKg').text,'Consultar laudo');
+assert.equal(new Set(ctx.window.InBodyFields.fields.map(f=>f.key)).size,ctx.window.InBodyFields.fields.length);
+
+assert.equal(classify(female,{mineraisKg:'2.84',mineraisKgRefMin:'2.66',mineraisKgRefMax:'3.25'},'mineraisKg').text,'Normal');
+assert.equal(classify(female,{mineraisKg:'3.5',mineraisKgRefMin:'2.66',mineraisKgRefMax:'3.25'},'mineraisKg').text,'Acima');
+assert.equal(classify(female,{mineraisKg:'2.84',mineraisKgRefMin:'3',mineraisKgRefMax:'2'},'mineraisKg').text,'Faixa inválida');

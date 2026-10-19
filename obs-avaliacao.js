@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=28',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=29',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -22,7 +22,7 @@ window.ObsAssessmentEditor = (() => {
     const el=(tag,attrs={},text)=>{const node=document.createElement(tag);Object.entries(attrs).forEach(([key,value])=>node.setAttribute(key,value));if(text!==undefined)node.textContent=text;return node;};
     const status=el('p',{class:'obs-assessment-status',role:'status'});
     function current(target) {const wantedRecord=target?target.recordId:recordId,wantedAv=target?target.avId:avId;const records=cachedRecords||(cachedRecords=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key));const person=records.find(a=>String(a.id)===String(wantedRecord));if(!person)throw Error('O cadastro deste aluno não está disponível.');const av=person.avaliacoes.find(a=>String(a.id)===String(wantedAv));return{records,person,av};}
-    const calculatedFields = state => Object.fromEntries(['imc','tmb','agua','idadeMetabolica','_dobras'].filter(key=>key in state.av).map(key=>[key,state.av[key]]));
+    const calculatedFields = state => Object.fromEntries(['imc','tmb','agua','idadeMetabolica','_dobras','_dobrasAviso','_dobrasRegistro'].filter(key=>key in state.av).map(key=>[key,state.av[key]]));
     function notifyChanges(force=false) {
       if(changedRecords&&(force||!host.contains(document.activeElement))) { const records=changedRecords;changedRecords=null;config.changed(records); }
     }
@@ -114,12 +114,12 @@ window.ObsAssessmentEditor = (() => {
       if(sections[section])sections[section].forEach(f=>content.append(field(f[0],f[1],f[2],state)));
       if(section==='composicao'||section==='medidas'){
         const tools=el('div',{class:'composition-extras-tools'});host.insertBefore(tools,content);
-        CompositionExtras.mount(tools,content,{section,prefix:'obs-av-',fieldClass:'info-field',getState:current,input:(key,value,metadata)=>update(key,value,undefined,metadata),select:(keys,baseKeys)=>{
-          const state=current(),prefs=CompositionExtras.preferenceKeys(section);const draft=TreinoStorage.assessmentOperation(state.person.id,null,'person',{}, {[prefs.extra]:keys,[prefs.base]:baseKeys});TreinoAssessmentJournal.merge(state.records,[draft]);status.textContent='Campos salvos para este aluno.';clearTimeout(saveTimer);saveTimer=setTimeout(compact,1200);
+        CompositionExtras.mount(tools,content,{section,prefix:'obs-av-',fieldClass:'info-field',getState:current,input:(key,value,metadata)=>update(key,value,undefined,metadata),select:(keys,baseKeys,settings={})=>{
+          const state=current(),prefs=CompositionExtras.preferenceKeys(section);const draft=TreinoStorage.assessmentOperation(state.person.id,null,'person',{}, {[prefs.extra]:keys,[prefs.base]:baseKeys,...settings});TreinoAssessmentJournal.merge(state.records,[draft]);status.textContent='Campos salvos para este aluno.';clearTimeout(saveTimer);saveTimer=setTimeout(compact,1200);
         },error:error=>{status.textContent='Não foi possível salvar: '+error.message;}});
       }
       if(section==='dobras') {
-        const select=el('select',{id:'obsAssessmentProtocol','aria-label':'Protocolo de dobras'});[['jp7','Jackson-Pollock · 7 dobras'],['pollock3','Jackson-Pollock · 3 dobras'],['yuhasz6','Yuhasz · 6 dobras']].forEach(([id,label])=>{const option=el('option',{value:id},label);option.selected=id===(state.av.protocolo||'jp7');select.append(option);});select.onchange=()=>{update('protocolo',select.value);render();};content.append(select);
+        const select=el('select',{id:'obsAssessmentProtocol','aria-label':'Protocolo de dobras'});api.protocolOptions(state.av.protocolo).forEach(({id,label})=>{const option=el('option',{value:id},label);option.selected=id===(state.av.protocolo||'jp7');select.append(option);});select.onchange=()=>{update('protocolo',select.value);render();};content.append(select);content.append(el('p',{class:'skinfold-protocol-guide'},api.protocolGuide(state.av.protocolo||'jp7',state.person,state.av)));
         api.protocol(state.av.protocolo).campos(state.person.sexo).forEach(key=>content.append(field(key,api.skinfoldLabel(key)+' (mm)',false,state)));
         content.append(el('div',{class:'obs-skinfold-results'}));
       }

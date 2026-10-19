@@ -1,0 +1,15 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('skinfold-protocols.js','utf8'),ctx);
+const p=ctx.window.SkinfoldProtocols;
+assert.equal(p.validation('dw4','F',65),'');
+assert(p.validation('dw4','F',80).includes('16–72'));
+assert(p.validation('jp7','F',56));assert.equal(p.validation('jp7','M',61),'');assert(p.validation('jp7','M',62));
+assert(p.validation('pollock3','F',NaN).includes('idade'));
+assert(p.validation('carter6','M',65));assert.equal(p.validation('registro','F',90),'');
+assert(Math.abs(p.densityDW(40,65,'F')-(1.1339-.0645*Math.log10(40)))<1e-12);
+assert(Math.abs(p.densityDW(40,30,'M')-(1.1422-.0544*Math.log10(40)))<1e-12);
+assert.equal(p.densityDW(40,80,'F'),null);
+assert(p.catalog.carter6.campos().includes('panturrilha'));assert(!p.catalog.carter6.campos().includes('torax'));
+assert(p.catalog.yuhasz6.campos().includes('torax'));assert(p.catalog.yuhasz6.legacy);
+assert(!p.options('jp7').some(o=>o.id==='yuhasz6'));assert(p.options('yuhasz6').some(o=>o.id==='yuhasz6'));
+console.log('PASS: age/sex validation, elderly limits, DW density benchmarks, adipometer guidance and old/new six-site separation');

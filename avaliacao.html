@@ -5,12 +5,14 @@
 <script src="storage-compression.js?v=15"></script>
 <script src="assessment-journal.js?v=18"></script>
 <script src="composition-context.js?v=1"></script>
-<script src="composition-extras.js?v=7"></script>
-<link rel="stylesheet" href="composition-extras.css?v=6">
+<script src="inbody-fields.js?v=1"></script>
+<script src="composition-extras.js?v=8"></script>
+<link rel="stylesheet" href="composition-extras.css?v=7">
 <script src="obs-autosave-journal.js?v=1"></script>
 <script src="storage-adapter.js?v=20"></script>
 <script src="pdf-viewer.js?v=4"></script>
 <script src="assessment-pdf-style.js?v=1"></script>
+<script src="skinfold-protocols.js?v=1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
 
@@ -982,7 +984,7 @@ function adicionarAvaliacao(alunoId){
   const aluno=alunos.find(a=>a.id===alunoId);
   if(!aluno) return;
   if(!aluno.avaliacoes) aluno.avaliacoes=[];
-  const protocoloAnterior = aluno.avaliacoes.length ? (aluno.avaliacoes[aluno.avaliacoes.length-1].protocolo || 'jp7') : 'jp7';
+  const lastProtocol=aluno.avaliacoes.at(-1)?.protocolo||'jp7';const protocoloAnterior=lastProtocol==='yuhasz6'?'carter6':lastProtocol;
   const novaAvaliacao = {
     id:Date.now(),
     data:new Date().toLocaleDateString('pt-BR'),
@@ -1043,28 +1045,12 @@ function syncAvaliacao(alunoId,avId,campo,valor){
 }
 
 /* METADADOS DOS PROTOCOLOS DE DOBRAS CUTÂNEAS */
-const PROTOCOLOS_DOBRAS = {
-  pollock3:{
-    nome:'Jackson-Pollock (3 Dobras)',
-    nomeCurto:'3 Dobras',
-    campos:(sexo)=> sexo==='F' ? ['triceps','suprailiaca','pregaCoxa'] : ['torax','abdominal','pregaCoxa']
-  },
-  yuhasz6:{
-    nome:'Yuhasz (6 Dobras)',
-    nomeCurto:'6 Dobras',
-    campos:()=>['triceps','torax','subescapular','suprailiaca','abdominal','pregaCoxa']
-  },
-  jp7:{
-    nome:'Jackson-Pollock (7 Dobras)',
-    nomeCurto:'7 Dobras',
-    campos:()=>['triceps','axilar','torax','abdominal','suprailiaca','subescapular','pregaCoxa']
-  }
-};
+const PROTOCOLOS_DOBRAS = SkinfoldProtocols.catalog;
 function getProtocoloDef(protocolo){
   return PROTOCOLOS_DOBRAS[protocolo] || PROTOCOLOS_DOBRAS.jp7;
 }
 const LABELS_DOBRAS = {
-  triceps:'Tríceps', axilar:'Axilar Média', torax:'Tórax', abdominal:'Abdominal',
+  bicipital:'Bicipital', triceps:'Tríceps', axilar:'Axilar Média', torax:'Tórax', abdominal:'Abdominal',
   suprailiaca:'Suprailíaca', subescapular:'Subescapular', pregaCoxa:'Coxa', panturrilha:'Panturrilha Medial'
 };
 
@@ -1082,9 +1068,12 @@ function calcularIMCeDobras(aluno,avId){
   if(!PROTOCOLOS_DOBRAS[av.protocolo]) av.protocolo='jp7';
   const protocolo = av.protocolo || 'jp7';
   const def = getProtocoloDef(protocolo);
+  av._dobrasAviso=SkinfoldProtocols.validation(protocolo,aluno.sexo,idade);av._dobrasRegistro=null;
   const campos = def.campos(aluno.sexo);
   const vals = campos.map(k=>pf(av[k]));
-  if(vals.some(isNaN) || vals.every(v=>v===0)){ av._dobras=null; return; }
+  if(def.semCalculo){const filled=vals.filter(v=>Number.isFinite(v)&&v>0);av._dobras=null;av._dobrasRegistro=filled.length?{soma:filled.reduce((a,b)=>a+b,0),quantidade:filled.length}:null;return;}
+  if(av._dobrasAviso){av._dobras=null;return;}
+  if(vals.some(v=>!Number.isFinite(v)||v<=0)){ av._dobras=null; return; }
   const soma=vals.reduce((a,b)=>a+b,0);
 
   let dens=null, pctG;
@@ -1097,7 +1086,10 @@ function calcularIMCeDobras(aluno,avId){
       dens = 1.10938 - (0.0008267*soma) + (0.0000016*(soma*soma)) - (0.0002574*(idade||30));
     }
     pctG=Math.max(3,Math.min(50,(495/dens)-450));
-  } else if(protocolo==='yuhasz6'){
+  } else if(protocolo==='dw4'){
+    dens=SkinfoldProtocols.densityDW(soma,idade,aluno.sexo);pctG=dens?495/dens-450:NaN;
+    if(!Number.isFinite(pctG)||pctG<=0||pctG>=100){av._dobras=null;av._dobrasAviso='Valores fora do domínio da equação; confira as dobras.';return;}
+  } else if(protocolo==='yuhasz6'||protocolo==='carter6'){
     pctG = aluno.sexo==='F' ? (4.56+0.143*soma) : (3.64+0.097*soma);
     pctG=Math.max(3,Math.min(50,pctG));
   } else {
@@ -1111,7 +1103,7 @@ function calcularIMCeDobras(aluno,avId){
   const cintura=pf(av.cintura), quadril=pf(av.quadril);
   const rcq=(cintura&&quadril)?(cintura/quadril).toFixed(2):'—';
   av._dobras={soma,dens,pctG,mG,mM,rcq,protocolo};
-  if(!av.agua || av.agua==='NaN') av.agua=Number.isFinite(mM)?(mM*0.73).toFixed(1):'';
+  // Device water measurements are not inferred from a skinfold estimate.
   const gorduraRef = av.gordura || pctG.toFixed(1);
   av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, idade, gorduraRef);
 }
@@ -1449,6 +1441,8 @@ function toggleMetricGaugeLive(panelId, metricKey, valorInputId, sexo, idadeInpu
 
 /* PREVIEW DOBRAS */
 function renderizarPreviewDobras(av,aluno){
+  if(getProtocoloDef(av.protocolo).semCalculo)return `<div class="dobras-preview"><small>Registro sem estimativa de gordura. ${av._dobrasRegistro?`${av._dobrasRegistro.quantidade} locais registrados · soma ${av._dobrasRegistro.soma.toFixed(1)} mm. Compare os mesmos locais.`:'Preencha as medidas que deseja acompanhar.'}</small></div>`;
+  if(av._dobrasAviso)return `<div class="dobras-preview"><small>${escapeHtml(av._dobrasAviso)}</small></div>`;
   if(!av._dobras) return `<div class="dobras-preview"><small>⚠️ Preencha as dobras do protocolo "${getProtocoloDef(av.protocolo).nome}" acima para ver os resultados</small></div>`;
   const db=av._dobras;
   const nomeProtocolo=getProtocoloDef(db.protocolo).nome;
@@ -1498,7 +1492,7 @@ async function gerarPDFAluno(alunoId, options={}){
   const has=fields=>aluno.avaliacoes.some(av=>fields.some(key=>filled(av[key])));
   const includeComposition=mode==='completo'||mode==='medidas-composicao'||(mode==='auto'&&CompositionExtras.hasValues(aluno,aluno.avaliacoes));
   const includeMeasures=mode!=='auto'||CompositionExtras.hasValues(aluno,aluno.avaliacoes,'medidas');
-  const includeSkinfolds=mode==='completo'||mode==='medidas-dobras'||(mode==='auto'&&has(['triceps','axilar','torax','abdominal','suprailiaca','subescapular','pregaCoxa','panturrilha']));
+  const includeSkinfolds=mode==='completo'||mode==='medidas-dobras'||(mode==='auto'&&has(['bicipital','triceps','axilar','torax','abdominal','suprailiaca','subescapular','pregaCoxa','panturrilha']));
   if(!includeComposition&&!includeMeasures&&!includeSkinfolds) throw Error('Preencha a composição, medidas ou dobras para gerar o PDF automático.');
   const pdfRows=rows=>rows.map(row=>row.map(value=>String(value).replace(/\bNaN\b/g,'—'))).filter(row=>mode!=='auto'||row.slice(1).some(filled));
 
@@ -1585,6 +1579,7 @@ async function gerarPDFAluno(alunoId, options={}){
   
   const dobrasRows = [
     ['Protocolo', ...avs.map(av => getProtocoloDef(av.protocolo).nomeCurto)],
+    ['Bicipital', ...avs.map((av,idx)=>`${av.bicipital||'—'}${idx===0?'':formatDelta(av.bicipital,avs[idx-1].bicipital)}`)],
     ['Tríceps', ...avs.map((av, idx) => `${av.triceps||'—'}${idx===0 ? '' : formatDelta(av.triceps, avs[idx-1].triceps)}`)],
     ['Axilar Média', ...avs.map((av, idx) => `${av.axilar||'—'}${idx===0 ? '' : formatDelta(av.axilar, avs[idx-1].axilar)}`)],
     ['Tórax', ...avs.map((av, idx) => `${av.torax||'—'}${idx===0 ? '' : formatDelta(av.torax, avs[idx-1].torax)}`)],
@@ -1593,7 +1588,7 @@ async function gerarPDFAluno(alunoId, options={}){
     ['Subescapular', ...avs.map((av, idx) => `${av.subescapular||'—'}${idx===0 ? '' : formatDelta(av.subescapular, avs[idx-1].subescapular)}`)],
     ['Coxa', ...avs.map((av, idx) => `${av.pregaCoxa||'—'}${idx===0 ? '' : formatDelta(av.pregaCoxa, avs[idx-1].pregaCoxa)}`)],
     ['Panturrilha Medial', ...avs.map((av, idx) => `${av.panturrilha||'—'}${idx===0 ? '' : formatDelta(av.panturrilha, avs[idx-1].panturrilha)}`)],
-    ['Soma das Dobras', ...avs.map((av, idx) => av._dobras ? `${av._dobras.soma.toFixed(2)} mm${idx===0 ? '' : formatDelta(av._dobras.soma, avs[idx-1]._dobras?.soma)}` : '—')],
+    ['Soma das Dobras', ...avs.map((av, idx) => av._dobras ? `${av._dobras.soma.toFixed(2)} mm${idx===0 ? '' : formatDelta(av._dobras.soma, avs[idx-1]._dobras?.soma)}` : av._dobrasRegistro?`${av._dobrasRegistro.soma.toFixed(2)} mm (${av._dobrasRegistro.quantidade} locais)`:'—')],
     ['% Massa Gorda', ...avs.map((av, idx) => av._dobras ? `${av._dobras.pctG.toFixed(2)}%${idx===0 ? '' : formatDelta(av._dobras.pctG, avs[idx-1]._dobras?.pctG)}` : '—')],
     ['% Massa Magra', ...avs.map((av, idx) => av._dobras ? `${(100-av._dobras.pctG).toFixed(2)}%${idx===0 ? '' : formatDelta(100-av._dobras.pctG, avs[idx-1]._dobras ? 100-avs[idx-1]._dobras.pctG : undefined)}` : '—')],
     ['Massa Gorda (kg)', ...avs.map((av, idx) => av._dobras && Number.isFinite(av._dobras.mG) ? `${av._dobras.mG.toFixed(2)}${idx===0 ? '' : formatDelta(av._dobras.mG, avs[idx-1]._dobras?.mG)}` : '—')],
@@ -1935,12 +1930,11 @@ function renderizarAlunos(alunosParaRenderizar){
                 <div class="field">
                   <label>Protocolo</label>
                   <select onchange="trocarProtocoloDobras(${aluno.id},${av.id},this.value)">
-                    <option value="jp7" ${(av.protocolo||'jp7')==='jp7'?'selected':''}>Jackson-Pollock (7 Dobras) — principal</option>
-                    <option value="pollock3" ${av.protocolo==='pollock3'?'selected':''}>Jackson-Pollock (3 Dobras)</option>
-                    <option value="yuhasz6" ${av.protocolo==='yuhasz6'?'selected':''}>Yuhasz (6 Dobras)</option>
+                    ${SkinfoldProtocols.options(av.protocolo).map(option=>`<option value="${option.id}" ${option.id===(av.protocolo||'jp7')?'selected':''}>${option.label}</option>`).join('')}
                   </select>
                 </div>
               </div>
+              <p class="skinfold-protocol-guide">${escapeHtml(SkinfoldProtocols.guidance(av.protocolo||'jp7',aluno.sexo,pf(av.ficha?.idade??aluno.idade)))}</p>
               <div class="sec-label">${getProtocoloDef(av.protocolo).nome} (mm)</div>
               <div class="grid3">${renderizarCamposDobras(aluno,av)}</div>
               <div id="dobras-preview-${aluno.id}-${av.id}">${renderizarPreviewDobras(av,aluno)}</div>
@@ -1971,7 +1965,7 @@ function renderizarAlunos(alunosParaRenderizar){
   container.querySelectorAll('[data-extra-record]').forEach(root=>{
     const person=alunos.find(a=>String(a.id)===root.dataset.extraRecord),av=person.avaliacoes.find(a=>String(a.id)===root.dataset.extraAv);
     const section=root.dataset.extraSection;
-    CompositionExtras.mount(root,root.nextElementSibling,{section,prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value,metadata={})=>{Object.assign(av,{[key]:value,...metadata});TreinoStorage.stageAssessment(person.id,av.id,{[key]:value,...metadata});consolidarExtras();},select:(keys,baseKeys)=>{const prefs=CompositionExtras.preferenceKeys(section),settings={[prefs.extra]:keys,[prefs.base]:baseKeys};Object.assign(person,settings);TreinoStorage.assessmentOperation(person.id,null,'person',{},settings);consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
+    CompositionExtras.mount(root,root.nextElementSibling,{section,prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value,metadata={})=>{Object.assign(av,{[key]:value,...metadata});TreinoStorage.stageAssessment(person.id,av.id,{[key]:value,...metadata});consolidarExtras();},select:(keys,baseKeys,additionalSettings={})=>{const prefs=CompositionExtras.preferenceKeys(section),settings={[prefs.extra]:keys,[prefs.base]:baseKeys,...additionalSettings};Object.assign(person,settings);TreinoStorage.assessmentOperation(person.id,null,'person',{},settings);consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
   });
   compactarAvaliacoes();
 }
@@ -2050,7 +2044,7 @@ document.getElementById('ordemAluno').addEventListener('change', function(){
 
 window.TreinoAssessmentEngine = {
   compressImage:comprimirImagem, calculate:calcularIMCeDobras, classify:getClassificacaoTexto, gauge:renderizarGauge,
-  protocol:getProtocoloDef, skinfoldLabel:key=>LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
+  protocol:getProtocoloDef, protocolOptions:current=>SkinfoldProtocols.options(current), protocolGuide:(id,person,av)=>SkinfoldProtocols.guidance(id,person.sexo,pf(av.ficha?.idade??person.idade)), skinfoldLabel:key=>LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
   async pdf(records,id,type,options={}) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id,options); else await gerarPDFAluno(id,options); }
 };
 if(avaliacaoParams.get('embed')==='treino36-engine') window.parent.postMessage({type:'treino36-engine-ready'},location.origin);

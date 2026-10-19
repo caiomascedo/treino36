@@ -63,8 +63,12 @@ with sync_playwright() as p:
     assert calculated['soma'] == 91 and calculated['rcq'] == '0.80', calculated
     assert abs(calculated['pctG'] - ((4.95 / (1.112 - 0.00043499*91 + 0.00000055*91*91 - 0.00028826*30))-4.5)*100) < 0.001
     protocol = frame.locator('select[onchange^="trocarProtocoloDobras"]')
-    for name, total in [('pollock3',41),('yuhasz6',80),('jp7',91)]:
+    for name, total in [('pollock3',41),('carter6',80),('jp7',91)]:
         protocol.select_option(name)
+        if name == 'carter6':
+            calf = frame.locator('input[onchange*="\'panturrilha\'"]')
+            calf.fill('12')
+            calf.press('Tab')
         result = page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0]._dobras")
         assert result['protocolo'] == name and result['soma'] == total, result
     frame.locator('.av-content [data-section="composicao"]').click()
