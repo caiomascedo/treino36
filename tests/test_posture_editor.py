@@ -41,6 +41,25 @@ with sync_playwright() as p:
  page.locator('[data-posture-edit="fotoF"]').click();page.locator('#postureGrid').uncheck();dialog.locator('[data-action="save"]').click();expect(dialog).not_to_be_visible();without=av()
  pixel=pixels(without['fotoF']);assert abs(pixel[1]-pixel[0])<5,pixel
  assert without['fotoFOriginal']==photos['portrait'] and len(without['posturaEdicoes']['fotoF']['lines'])==3
+ # Rotate a constrained horizontal line, hide the handles and independently recolor the grid.
+ page.locator('[data-posture-edit="fotoF"]').click();page.locator('#postureLine').select_option(index=1)
+ def set_angle(degrees):
+  page.locator('#postureAngle').evaluate('(e,value)=>{e.value=value;e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}));}',str(degrees))
+ set_angle(35);expect(page.locator('#postureAngleValue')).to_have_text('35°')
+ dialog.locator('[data-action="rotate-right"]').click();expect(page.locator('#postureAngleValue')).to_have_text('40°')
+ page.locator('#postureHandles').uncheck();expect(svg.locator('circle')).to_have_count(0);assert svg.locator('[data-part="body"]').count()==3
+ page.locator('#postureGrid').check()
+ page.locator('#postureGridColor').evaluate('(e)=>{e.value="#2563eb";e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}));}')
+ assert page.locator('#postureColor').input_value()=='#ef4444'
+ dialog.locator('[data-action="save-top"]').click();expect(dialog).not_to_be_visible();without=av()
+ settings=without['posturaEdicoes']['fotoF'];assert settings['showHandles'] is False and settings['gridColor']=='#2563eb'
+ rotated=settings['lines'][1];assert rotated['kind']=='line'
+ assert abs(page.evaluate('(line)=>PostureEditor.angle(line,600,1000)',rotated)-40)<.01
+ pixel=pixels(without['fotoF']);assert pixel[2]-pixel[0]>20,pixel
+ page.locator('[data-posture-edit="fotoF"]').click();expect(page.locator('#postureHandles')).not_to_be_checked();expect(svg.locator('circle')).to_have_count(0)
+ assert page.locator('#postureGridColor').input_value()=='#2563eb';page.locator('#postureLine').select_option(index=1);expect(page.locator('#postureAngleValue')).to_have_text('40°')
+ page.locator('#postureHandles').check();expect(svg.locator('circle')).to_have_count(2)
+ dialog.locator('[data-action="close"]').click();assert av()['posturaEdicoes']['fotoF']['showHandles'] is False
  # The native camera picker opens within the editor, and cancelling preserves the old photo.
  frontal=page.locator('#obs-av-fotoF').locator('..')
  with page.expect_file_chooser() as chooser:frontal.get_by_role('button',name='📷 Câmera',exact=True).click()
@@ -64,8 +83,9 @@ with sync_playwright() as p:
  dialog.locator('[data-action="save"]').click();expect(dialog).to_be_visible();expect(page.locator('#postureStatus')).to_contain_text('Não foi possível salvar')
  page.evaluate("()=>{TreinoStorage.stageAssessment=stageBefore;}");assert av()['fotoF']==without['fotoF'];dialog.locator('[data-action="close"]').click()
  page.once('dialog',lambda d:d.dismiss());frontal.get_by_role('button',name='Apagar',exact=True).click();assert av()['fotoF']==without['fotoF']
- page.once('dialog',lambda d:d.accept());frontal.get_by_role('button',name='Apagar',exact=True).click();assert av()['fotoF'] is None and av()['fotoFOriginal'] is None and 'fotoF' not in av()['posturaEdicoes']
+ page.locator('[data-posture-edit="fotoF"]').click();page.once('dialog',lambda d:d.dismiss());dialog.locator('[data-action="delete-photo"]').click();expect(dialog).to_be_visible();assert av()['fotoF']==without['fotoF']
+ page.once('dialog',lambda d:d.accept());dialog.locator('[data-action="delete-photo"]').click();expect(dialog).not_to_be_visible();assert av()['fotoF'] is None and av()['fotoFOriginal'] is None and 'fotoF' not in av()['posturaEdicoes']
  records=page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')")
  assert records[0]['avaliacoes'][0]['fotoF']==photos['old'];assert records[0]['avaliacoes'][1]['fotoL'];assert 'fotoF' not in records[1]['avaliacoes'][0]
  assert not errors,errors
- browser.close();print('PASS: mobile fit, endpoint dragging/angles, undo/redo, baked optional grid verified by pixels, original retained/re-edit without double overlays, camera/gallery and cancel, actual PDF aspect ratios, immediate durable saves and isolation, quota rollback and confirmed deletion')
+ browser.close();print('PASS: mobile fit, endpoint dragging/angles, rotation slider/buttons, hidden handles, independent persisted grid color, top save, undo/redo, baked optional grid verified by pixels, original retained/re-edit without double overlays, camera/gallery and cancel, actual PDF aspect ratios, immediate durable saves and isolation, quota rollback and confirmed deletion inside/outside editor')
