@@ -62,7 +62,7 @@ with sync_playwright() as p:
  page.screenshot(path='/tmp/treino36-diet-controls.png')
  assert page.locator('.diet-history').evaluate("el=>getComputedStyle(el).position==='sticky'")
  expect(page.locator('#dietIncludeCalculations')).not_to_be_checked()
- page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===1')
+ page.locator('#dietPdfBtn').click();expect(page.locator('.pdf-file-send')).to_be_enabled();page.locator('.pdf-file-send').click();page.locator('.pdf-file-close').click();page.wait_for_function('shared.length===1')
  data=page.evaluate("""async()=>{const file=shared[0].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
@@ -102,7 +102,7 @@ with sync_playwright() as p:
  page.locator('#dietPhotoPreviewDialog [data-close]').click();expect(page.locator('#dietPhotoImages img')).to_have_count(0);assert photoUrl in page.evaluate('photoRevoked')
  page.locator('#dietText').fill(saved)
  page.locator('#dietIncludeCalculations').check();page.locator('#dietUndoBtn').click();expect(page.locator('#dietIncludeCalculations')).not_to_be_checked();page.locator('#dietRedoBtn').click();expect(page.locator('#dietIncludeCalculations')).to_be_checked()
- page.locator('#dietPdfBtn').click();page.wait_for_function('shared.length===3')
+ page.locator('#dietPdfBtn').click();expect(page.locator('.pdf-file-send')).to_be_enabled();page.locator('.pdf-file-send').click();page.locator('.pdf-file-close').click();page.wait_for_function('shared.length===3')
  data=page.evaluate("""async()=>{const file=shared[2].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
