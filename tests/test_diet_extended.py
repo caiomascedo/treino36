@@ -73,11 +73,15 @@ with sync_playwright() as p:
  page.locator('#dietText').fill(saved+'\n\nJantar\n'+'\n'.join('Alimento de teste '+str(i) for i in range(24)))
  downloads=[];page.on('download',lambda file:downloads.append(file))
  # Record the actual canvas text: image keeps pupil/goal and omits trainer signature.
- page.evaluate("""()=>{window.photoText=[];const original=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(value,...args){photoText.push(value);return original.call(this,value,...args);};}""")
+ page.evaluate("""()=>{window.photoText=[];window.photoPositions=[];const original=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(value,...args){photoText.push(value);photoPositions.push({text:value,y:args[1]});return original.call(this,value,...args);};}""")
  page.locator('#dietPhotoBtn').click();expect(page.locator('#dietPhotoPreviewDialog')).to_be_visible();expect(page.locator('#dietPhotoSaveBtn')).to_be_enabled(timeout=20000)
  page.wait_for_function("document.querySelector('#dietPhotoImages img')?.naturalWidth===1240")
  expect(page.locator('#dietPhotoImages img')).to_be_visible();assert len(downloads)==0
  drawn=page.evaluate('photoText');assert any('Dieta — Ana' in line for line in drawn),drawn;assert any('Meta: 2.303 kcal/dia' in line for line in drawn),drawn;assert not any('Caio' in line or 'Maced' in line for line in drawn),drawn;assert not any(re.fullmatch(r'\d+/\d+',line) for line in drawn),drawn;assert any('Alimento de teste 23' in line for line in drawn),drawn
+ positions=page.evaluate("photoPositions.filter(p=>p.text.includes('Alimento de teste ')).map(p=>p.y)")
+ assert len(positions)==24,positions
+ gaps=[b-a for a,b in zip(positions,positions[1:])]
+ assert max(gaps)-min(gaps)<1,(positions,gaps)
  page.locator('#dietPhotoExpandBtn').click();expect(page.locator('#dietPhotoExpandBtn')).to_have_attribute('aria-pressed','true')
  page.screenshot(path='/tmp/treino36-diet-photo-preview.png')
  page.evaluate("Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>false})")

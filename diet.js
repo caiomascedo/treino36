@@ -170,10 +170,15 @@ window.DietEditor = (() => {
       const scale=1240/110,chunkSize=3;
       for(let start=0;start<pages.length;start+=chunkSize){
         if(!dialog.open||draftKey!==exportKey||photoSession.closed)return;
-        const chunk=pages.slice(start,start+chunkSize).map(commands=>{const contentBottom=Math.max(12,...commands.map(command=>command.y));return {commands,height:Math.ceil((contentBottom+8)*scale)};});
-        const canvas=document.createElement('canvas');canvas.width=1240;canvas.height=chunk.reduce((sum,page)=>sum+page.height,0);
+        // Join content baselines, without carrying PDF page margins into the image.
+        let last=null;
+        const commands=pages.slice(start,start+chunkSize).flatMap(page=>{
+          const first=page[0],shift=last&&first?last.y+last.size*.43+(first.bold&&first.size===12?5:0)-first.y:0;
+          const joined=page.map(command=>({...command,y:command.y+shift}));last=joined.at(-1)||last;return joined;
+        });
+        const canvas=document.createElement('canvas');canvas.width=1240;canvas.height=Math.ceil(((last?.y||12)+8)*scale);
         const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);
-        let offset=0;for(const page of chunk){page.commands.forEach(command=>{ctx.fillStyle='rgb('+command.color.join(',')+')';ctx.font=(command.bold?'bold ':'')+(command.size*25.4/72*scale)+'px Arial';ctx.textAlign=command.align||'left';ctx.fillText(command.text,command.x*scale,command.y*scale+offset);});offset+=page.height;}
+        for(const command of commands){ctx.fillStyle='rgb('+command.color.join(',')+')';ctx.font=(command.bold?'bold ':'')+(command.size*25.4/72*scale)+'px Arial';ctx.textAlign=command.align||'left';ctx.fillText(command.text,command.x*scale,command.y*scale);}
         const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));canvas.width=canvas.height=1;
         if(!blob)throw Error('Não foi possível gerar a foto.');
         if(!dialog.open||draftKey!==exportKey||photoSession.closed)return;
