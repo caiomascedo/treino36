@@ -77,6 +77,35 @@
   }
   let compacting,compactingObs;
   window.TreinoStorage = {
+    usage(){let bytes=0;for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);bytes+=(key.length+(originalGet.call(localStorage,key)||'').length)*2;}return bytes;},
+    async optimizePhotos(progress=()=>{}){
+      const converted=new Map(),keys=[];let photos=0,failed=0,conflicts=0;
+      for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(/^(treino|avaliacao)/.test(key)&&!/logo/i.test(key))keys.push(key);}
+      const before=this.usage();
+      async function resize(src){
+        if(converted.has(src))return converted.get(src);
+        let result=src;
+        try{const image=new Image();image.src=src;await image.decode();const ratio=Math.min(1,900/image.naturalWidth,1200/image.naturalHeight);
+          // Never repeatedly recompress an already optimized image.
+          if(ratio<.99){const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*ratio));canvas.height=Math.max(1,Math.round(image.naturalHeight*ratio));const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);const reduced=canvas.toDataURL('image/jpeg',.78);canvas.width=canvas.height=1;if(reduced.length<src.length)result=reduced;}
+        }catch(error){failed++;}
+        converted.set(src,result);return result;
+      }
+      async function visit(value,path=[]){
+        if(typeof value==='string'&&/^data:image\/(jpeg|png|webp);base64,/i.test(value)&&!path.some(key=>/logo/i.test(key))){const reduced=await resize(value);if(reduced!==value)photos++;return reduced;}
+        if(value&&typeof value==='object')for(const key of Object.keys(value))value[key]=await visit(value[key],[...path,key]);
+        return value;
+      }
+      for(let i=0;i<keys.length;i++){
+        const key=keys[i],raw=originalGet.call(localStorage,key);progress(i+1,keys.length);
+        try{let data;try{data=JSON.parse(unpack(raw));}catch(error){continue;}const next=pack(JSON.stringify(await visit(data)));
+          // Each key is replaced atomically, only when smaller and unchanged since reading.
+          if(originalGet.call(localStorage,key)!==raw){conflicts++;continue;}
+          if(next.length<raw.length){originalSet.call(localStorage,key,next);cacheFor(localStorage).delete(key);}
+        }catch(error){failed++;}
+      }
+      return {before,after:this.usage(),photos,failed,conflicts};
+    },
     stageObs(studentId,patch,photos=false){
       const key=photos?photoKey:obsKey,drafts=JSON.parse(unpack(originalGet.call(localStorage,key))||'[]');
       let draft=drafts.find(d=>String(d.studentId)===String(studentId));if(!draft){draft={studentId};drafts.push(draft);}
