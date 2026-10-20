@@ -66,7 +66,35 @@ window.DietCalculations = (() => {
     const tmb = Object.hasOwn(settings,'obsTmb')?number(settings.obsTmb):basal(settings), factor = {baixa:1.2,moderada:1.3,intensa:1.4}[settings.activity] || 1.3;
     const automaticGoal=Object.hasOwn(settings,'obsGoal')?number(settings.obsGoal):(tmb===null?null:Math.round(tmb*factor));
     const goal = number(settings.goal) ?? automaticGoal;
+    if(settings.macroAuto&&['protein','carbs','fat','calories'].every(key=>number(settings[key])!==null))source='macros pelo peso';
     return {...totals,calories:calories === null ? null : Math.round(calories),source,missing,count,macrosFound:macrosFound||manualMacros,tmb,goal};
   }
-  return {number,basal,nutrition};
+  function weightMacros(weight,carbRatio) {
+    const kg=number(weight),ratio=number(carbRatio);
+    if(kg===null||kg<=0)throw Error('Informe um peso válido para calcular os macros.');
+    if(ratio===null||ratio<0)throw Error('Informe os carboidratos em g/kg para este objetivo.');
+    const round=value=>Math.round((value+Number.EPSILON)*10)/10;
+    const macros={protein:round(kg*2),carbs:round(kg*ratio),fat:round(kg*.8)};
+    if(!Object.values(macros).every(Number.isFinite))throw Error('Valores muito grandes para calcular.');
+    const calories=Math.round(energy(macros));if(!Number.isFinite(calories))throw Error('Valores muito grandes para calcular.');
+    return {...macros,calories,weight:kg,carbRatio:ratio};
+  }
+  function evaluate(expression) {
+    const source=String(expression).replace(/\s/g,'').replace(/[×x]/g,'*').replace(/÷/g,'/').replace(/[−–]/g,'-');
+    if(!source||source.length>160)throw Error('Digite uma conta de até 160 caracteres.');
+    const tokens=source.match(/(?:\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?|[.,]\d+)|[()+*/-]/g)||[];
+    if(tokens.join('')!==source)throw Error('Use números, parênteses e + − × ÷.');
+    let at=0;
+    function atom(){
+      const token=tokens[at++];
+      if(token==='+'||token==='-')return (token==='-'?-1:1)*atom();
+      if(token==='('){const result=add();if(tokens[at++]!==')')throw Error('Confira os parênteses.');return result;}
+      const result=number(/^[.,]/.test(token||'')?'0'+token:token);if(result===null)throw Error('Confira a conta digitada.');return result;
+    }
+    function multiply(){let value=atom();while(['*','/'].includes(tokens[at])){const operator=tokens[at++],right=atom();if(operator==='/'&&right===0)throw Error('Não é possível dividir por zero.');value=operator==='*'?value*right:value/right;}return value;}
+    function add(){let value=multiply();while(['+','-'].includes(tokens[at])){const operator=tokens[at++],right=multiply();value=operator==='+'?value+right:value-right;}return value;}
+    const result=add();if(at!==tokens.length||!Number.isFinite(result))throw Error('Confira a conta digitada.');
+    return Number(result.toPrecision(12));
+  }
+  return {number,basal,nutrition,weightMacros,evaluate};
 })();
