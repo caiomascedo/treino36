@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=40',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=41',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -124,7 +124,7 @@ window.ObsAssessmentEditor = (() => {
       if(sections[section])sections[section].forEach(f=>content.append(field(f[0],f[1],f[2],state)));
       if(section==='composicao'||section==='medidas'){
         const tools=el('div',{class:'composition-extras-tools'});host.insertBefore(tools,content);
-        CompositionExtras.mount(tools,content,{section,prefix:'obs-av-',fieldClass:'info-field',getState:current,input:(key,value,metadata)=>update(key,value,undefined,metadata),select:(keys,baseKeys,settings={})=>{
+        CompositionExtras.mount(tools,content,{section,prefix:'obs-av-',fieldClass:'info-field',getState:current,input:(key,value,metadata)=>update(key,value,undefined,metadata),importValues:change=>{const state=current();CompositionReader.commit(state,change,api.calculate);render();status.textContent='Dados selecionados do laudo preenchidos e salvos.';clearTimeout(saveTimer);saveTimer=setTimeout(compact,100);},select:(keys,baseKeys,settings={})=>{
           const state=current(),prefs=CompositionExtras.preferenceKeys(section);const draft=TreinoStorage.assessmentOperation(state.person.id,null,'person',{}, {[prefs.extra]:keys,[prefs.base]:baseKeys,...settings});TreinoAssessmentJournal.merge(state.records,[draft]);status.textContent='Campos salvos para este aluno.';clearTimeout(saveTimer);saveTimer=setTimeout(compact,1200);
         },error:error=>{status.textContent='Não foi possível salvar: '+error.message;}});
       }

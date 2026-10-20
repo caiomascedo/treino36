@@ -52,6 +52,7 @@ with sync_playwright() as p:
     page.locator('#obsAssessmentSections [data-assessment-section="fotos"]').click()
     photo=bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789c636000020000050001a5f645400000000049454e44ae426082')
     page.locator('#obs-av-fotoF').set_input_files({'name':'foto.png','mimeType':'image/png','buffer':photo})
+    page.locator('#postureEditorDialog [data-action=save]').click()
     expect(page.locator('.obs-assessment-photo img').first).to_be_visible()
     page.locator('#obs-av-resumo').fill('Postura registrada nas Obs')
     page.locator('#obsAssessment-save').click()

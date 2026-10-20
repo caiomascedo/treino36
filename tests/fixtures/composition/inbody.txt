@@ -1,0 +1,45 @@
+InBody120
+Altura 164 cm
+Idade 30
+Sexo Feminino
+Data/Hora 11/05/2022 12:11
+Análise da Composição Corporal
+Quantidade total de água no corpo Água Corporal Total (L) 27,2 (28,8-35,2)
+Para a construção de músculos Proteína (kg) 7,2 (7,7-9,4)
+Para fortalecer os ossos Minerais (kg) 2,84 (2,66-3,25)
+Para armazenar energia extra Massa de Gordura (kg) 19,7 (11,3-18,1)
+A soma acima Peso (kg) 56,9 (48,0-65,0)
+Pontuação InBody 67/100 Pontos
+Controle de Peso
+Peso Ideal 56,5 kg
+Controle de Peso -0,4 kg
+Controle de Gordura -6,7 kg
+Controle Muscular +6,3 kg
+Dados adicionais
+Massa Muscular Esquelética 19,7 kg (21,5-26,2)
+Massa Livre de Gordura 37,2 kg (39,1-47,8)
+Taxa Metabólica Basal 1174 kcal (1221-1411)
+Relação Cintura-Quadril 0,86 (0,75-0,85)
+Nível de Gordura Visceral 10 (1-9)
+Grau de Obesidade 101 % (90-110)
+Análise de Obesidade
+IMC (kg/m²) 21,2
+PGC (%) 34,6
+Análise da Massa Magra Segmentar
+Braço esquerdo 1,61 kg 91,0 % Normal
+Braço direito 1,61 kg 90,6 % Normal
+Tronco 16,4 kg 81,7 % Abaixo
+Perna esquerda 5,41 kg 79,7 % Abaixo
+Perna direita 5,41 kg 78,8 % Abaixo
+Análise da Gordura Segmentar
+Braço esquerdo 1,5 kg 153,5 % Normal
+Braço direito 1,5 kg 153,0 % Normal
+Tronco 10,0 kg 187,7 % Acima
+Perna esquerda 2,9 kg 119,7 % Normal
+Perna direita 2,9 kg 119,2 % Normal
+Histórico da Composição Corporal
+Peso 99,9 kg
+Impedância
+BD BE TR PD PE
+20 kHz 474,1 470,6 27,6 356,2 349,0
+100 kHz 439,5 438,3 25,2 326,1 319,1

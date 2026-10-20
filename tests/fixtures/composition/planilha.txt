@@ -1,0 +1,19 @@
+AVALIAÇÃO DE BIOIMPEDÂNCIA
+Registro corporal — avaliação individual
+Métrica Valor Classificação
+Data e hora 23/09/2026 18:52
+Nome Exemplo
+Peso (kg) 58,7 Alto
+IMC 25,4 Alto
+Gordura corporal (%) 35,4 Alto
+Peso da gordura (kg) 20,8 Alto
+Massa muscular esquelética (%) 34,1 Excelente
+Massa muscular esquelética (kg) 20,0 Excelente
+Registro de massa muscular (%) 59,8 Saudável
+Massa muscular (kg) 35,0 Saudável
+Água (%) Não informado
+Peso da água (kg) Não informado
+Gordura visceral Não informado
+Metabolismo (kcal/dia) 1197,8 Baixo
+Altura (cm) 152
+Idade real 17

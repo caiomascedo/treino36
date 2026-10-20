@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert'),ctx={window:{}};vm.runInNewContext(fs.readFileSync('workout-import.js','utf8'),ctx);const W=ctx.window.WorkoutImport;
+const text=W.clean(fs.readFileSync('tests/fixtures/workout-youtube.txt','utf8'));
+assert(!/youtube|enoutube/i.test(text));for(const section of ['A','B','C','D','E'])assert(text.includes(section+'. '));
+const lines=text.split('\n');assert.equal(lines.filter(l=>!/^([A-E])\./.test(l)).length,34);
+for(const fragment of ['4×12 + 12','Leg Press 45°','peso 10kg de cada 3x','50% é unilateral','2iồi de iso','3ồi cada rep','80 Kg','Conforme A Execução Dela.','15 Kg De Cada Lado','100kg'])assert(text.includes(fragment),fragment);
+for(const badge of ['•YouTube','ENouTube','- YouTube','You Tube','Youtub'])assert.equal(W.clean(badge),'');
+assert.equal(W.clean('Puxador 3x12 YouTube'),'Puxador 3x12');assert.equal(W.clean('Cadeira Extensora - 3x12 + 10 + 10 unilateral'), 'Cadeira Extensora - 3x12 + 10 + 10 unilateral');
+assert.equal(W.clean('Remada 3x12 https://www.youtube.com/watch?v=abc'),'Remada 3x12');
+assert.equal(W.clean('Elevação Y 3x12'),'Elevação Y 3x12');assert.equal(W.clean('Supino⠿Remada'),'Supino\nRemada');
+console.log('PASS: all 34 supplied workout exercises and A–E headings, video badge/OCR variants/URLs removed, continuation lines joined, loads/repetitions/uncertain OCR characters preserved');
