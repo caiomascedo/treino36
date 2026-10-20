@@ -39,14 +39,15 @@ window.DietEditor = (() => {
   let pdfLibrary;
   const C = () => window.DietCalculations;
   const settingsKeys = ['goal','calories','protein','carbs','fat'];
-  const fmt = value => value === null ? '—' : Number(value.toFixed(1)).toLocaleString('pt-BR');
+  const fmt = value => value === null ? '—' : Number(value.toFixed(2)).toLocaleString('pt-BR');
   function profile(student, config) {
     let current=student,person={},av={};
     if(student&&window.AvaliacaoTreinoSync){try{const sync=AvaliacaoTreinoSync;current=sync.read('treinoAlunos').find(s=>s.student_id===student.student_id)||student;person=sync.resolve(sync.read(sync.key),current)||{};av=person.avaliacoes?.find(a=>a.id===person.avaliacaoPreferidaId)||person.avaliacoes?.at(-1)||{};}catch(error){}}
     const ficha=(current?.infoGuias||[]).find(g=>g.id===current.avaliacaoFichaId)||current?.infoGuias?.at(-1)||current?.infoRelevante||{};
     const weight=ficha.peso||av.peso||person.pesoAtual||'',height=ficha.altura||av.ficha?.altura||person.altura||'',age=ficha.idade||av.ficha?.idade||person.idade||'';
-    const calc=config.obsCalories(weight,height,age,ficha.nivelTreino||'moderado');
-    return {weight:C().number(weight),tmb:calc?.tmb??C().number(av.tmb),daily:calc?.gastoTotal??null,deficit:calc?.deficit??null,surplus:calc?.superavit??null};
+    const context=C().calorieContext(current,ficha);
+    const calc=config.obsCalories(weight,height,age,context.activity,context.sex);
+    return {weight:C().measurement(weight),tmb:calc?.tmb??null,daily:calc?.gastoTotal??null,deficit:calc?.deficit??null,surplus:calc?.superavit??null};
   }
   function mount(config) {
     const dialog = config.createDialog('dietDialog', '🥗 Dieta',
@@ -69,7 +70,7 @@ window.DietEditor = (() => {
     let draftKey, settingsKey, name = '', timer, history = [], historyIndex = 0, lastGroup = '', lastTime = 0, busy = false, studentForDiet=null, goalMode='daily', macroAuto=false, source={tmb:null,daily:null,deficit:null,surplus:null};
     const inMemory = new Map();
     const includeCalculations=dialog.querySelector('#dietIncludeCalculations');
-    const settings = () => ({...Object.fromEntries(settingsKeys.map(key => [key,inputs[key].value])),includeCalculations:includeCalculations.checked,goalMode,macroAuto});
+    const settings = () => ({...Object.fromEntries(settingsKeys.map(key => [key,inputs[key].value])),includeCalculations:includeCalculations.checked,goalMode,macroAuto,calorieReference:"unimed-classic-v1"});
     const calculationSettings=()=>({...settings(),obsTmb:source.tmb??'',obsGoal:source[goalMode]??''});
     const state = () => ({text:text.value,settings:settings()});
     function save() {
@@ -103,7 +104,7 @@ window.DietEditor = (() => {
     function totals() {
       const value=C().nutrition(parse(text.value),calculationSettings());
       dialog.querySelector('#dietTmb').textContent=fmt(value.tmb);
-      dialog.querySelector('#dietObsStatus').textContent=value.tmb===null?'Preencha a ficha nas OBS para obter a TMB.':'Atualizada automaticamente pela ficha/OBS.';
+      dialog.querySelector('#dietObsStatus').textContent=value.tmb===null?'Informe sexo, idade, peso e altura na ficha/OBS. Para a manutenção, selecione também a atividade física.':'Referência Unimed (clássica) · sexo e atividade física da ficha/OBS.';
       const labels={tmb:'TMB',daily:'Manutenção',deficit:'Emagrecimento',surplus:'Hipertrofia'};
       dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{const mode=button.dataset.dietGoal;button.disabled=mode==='tmb'&&source[mode]===null;button.textContent=labels[mode]+' · '+fmt(source[mode])+' kcal';button.setAttribute('aria-pressed',String(goalMode===mode&&!inputs.goal.value.trim()));});
       inputs.goal.placeholder=value.goal===null?'Preencha os dados acima':fmt(value.goal);
@@ -230,7 +231,7 @@ window.DietEditor = (() => {
       const student=config.student();studentForDiet=student;name=config.name().trim();const id=encodeURIComponent(student?.student_id||name||'sem_aluno');draftKey='dieta36_rascunho_v1:'+id;settingsKey='dieta36_calculos_v1:'+id;status.textContent='';
       let saved=inMemory.get(draftKey)||{text:'',settings:{}};
       try{saved={...saved,text:localStorage.getItem(draftKey)??saved.text};saved.settings=JSON.parse(localStorage.getItem(settingsKey)||JSON.stringify(saved.settings));}catch(error){status.textContent='Não foi possível ler todos os ajustes do rascunho neste navegador.';}
-      text.value=saved.text;source=profile(student,config);macroAuto=saved.settings?.macroAuto===true;macroNotice.textContent='';tools.reset();goalMode=['tmb','daily','deficit','surplus'].includes(saved.settings?.goalMode)?saved.settings.goalMode:'daily';const initial={...saved.settings};for(const key of settingsKeys)inputs[key].value=initial[key]??'';includeCalculations.checked=saved.settings?.includeCalculations===true;if(macroAuto){deriveMacros();save();}
+      text.value=saved.text;source=profile(student,config);macroAuto=saved.settings?.macroAuto===true;macroNotice.textContent='';tools.reset();goalMode=['tmb','daily','deficit','surplus'].includes(saved.settings?.goalMode)?saved.settings.goalMode:'daily';const initial={...saved.settings};for(const key of settingsKeys)inputs[key].value=initial[key]??'';includeCalculations.checked=saved.settings?.includeCalculations===true;if(macroAuto){if(saved.settings?.calorieReference!=='unimed-classic-v1')for(const key of ['calories','protein','carbs','fat'])inputs[key].value='';deriveMacros();save();}
       dialog.querySelector('#dietStudentName').textContent=name;preview.open=false;body.replaceChildren();history=[JSON.stringify(state())];historyIndex=0;lastGroup='';refresh(false);dialog.showModal();dialog.querySelector('#dietExpandBtn').focus({preventScroll:true});
     };
     function refreshSource(){if(dialog.open){source=profile(studentForDiet,config);if(macroAuto){deriveMacros();save();record('macro-obs');}totals();}}

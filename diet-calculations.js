@@ -10,12 +10,25 @@ window.DietCalculations = (() => {
     const n = Number(text); return Number.isFinite(n) ? n : null;
   }
   function basal(settings) {
-    const age = number(settings.age), weight = number(settings.weight), rawHeight = number(settings.height);
-    if (!['F','M'].includes(settings.sex) || !age || !weight || !rawHeight) return null;
-    const height = rawHeight < 3.5 ? rawHeight * 100 : rawHeight;
-    // Harris–Benedict, matching the reference diet editor without fabricated defaults.
-    const value = settings.sex === 'F' ? 655 + 9.6 * weight + 1.8 * height - 4.7 * age : 66 + 13.7 * weight + 5 * height - 6.8 * age;
-    return value > 0 ? Math.round(value) : null;
+    return calorieEstimate(settings.weight,settings.height,settings.age,settings.sex,settings.activity)?.tmb??null;
+  }
+  // Reference: https://unimed.coop.br/portalunimed/aplicativos/tmb/ (classic calculator).
+  // Its female height coefficient is 1.7; activity factors also differ by sex.
+  function measurement(value){return number(String(value??'').trim().replace(/\s*(?:kg|cm|m|anos?)$/i,'').trim());}
+  function calorieContext(student,ficha={}){
+    let record={};
+    if(student&&window.AvaliacaoTreinoSync){try{const sync=window.AvaliacaoTreinoSync,records=sync.read(sync.key);record=records.find(r=>String(r.id)===String(ficha.avaliacaoCadastroId)&&sync.isLinked(r,student.student_id))||sync.resolve(records,student)||{};}catch(error){}}
+    return {sex:ficha.sexoCalorico??record.sexo??'',activity:ficha.atividadeCalorica??''};
+  }
+  function calorieEstimate(weight,height,age,sex,activity){
+    const kg=measurement(weight),rawHeight=measurement(height),years=measurement(age),cm=rawHeight!==null&&rawHeight<3.5?rawHeight*100:rawHeight;
+    if(!['F','M'].includes(sex)||kg===null||kg<=10||kg>350||cm===null||cm<60||cm>260||years===null||years<=0||years>125)return null;
+    const round=value=>Math.round((value+Number.EPSILON)*100)/100;
+    const raw=sex==='F'?655+9.6*kg+1.7*cm-4.7*years:66+13.7*kg+5*cm-6.8*years;
+    if(raw<=0)return null;
+    const factor=(sex==='F'?{nenhuma:1.2,moderada:1.3,intensa:1.4}:{nenhuma:1.25,moderada:1.35,intensa:1.45})[activity];
+    const daily=factor?round(raw*factor):null;
+    return {tmb:round(raw),gastoTotal:daily,deficit:daily===null?null:round(daily-400),superavit:daily===null?null:round(daily+300),nivel:activity,fator:factor??null,sexo:sex};
   }
   const macroPatterns = {
     protein: /\b(?:proteinas?|prot|p)\s*[:=]?\s*(\d+(?:[.,]\d+)*)\s*g\b/gi,
@@ -63,8 +76,9 @@ window.DietCalculations = (() => {
       else if (energies.length) { calories = sum(energies); source = explicit ? 'valores do texto' : 'macros (4/4/9)'; }
       else { calories = null; source = 'sem valores informados'; }
     } else missing = 0;
-    const tmb = Object.hasOwn(settings,'obsTmb')?number(settings.obsTmb):basal(settings), factor = {baixa:1.2,moderada:1.3,intensa:1.4}[settings.activity] || 1.3;
-    const automaticGoal=Object.hasOwn(settings,'obsGoal')?number(settings.obsGoal):(tmb===null?null:Math.round(tmb*factor));
+    const estimate=calorieEstimate(settings.weight,settings.height,settings.age,settings.sex,settings.activity);
+    const tmb = Object.hasOwn(settings,'obsTmb')?number(settings.obsTmb):estimate?.tmb??null;
+    const automaticGoal=Object.hasOwn(settings,'obsGoal')?number(settings.obsGoal):estimate?.gastoTotal??null;
     const goal = number(settings.goal) ?? automaticGoal;
     if(settings.macroAuto&&['protein','carbs','fat','calories'].every(key=>number(settings[key])!==null))source='macros pelo peso';
     return {...totals,calories:calories === null ? null : Math.round(calories),source,missing,count,macrosFound:macrosFound||manualMacros,tmb,goal};
@@ -109,5 +123,5 @@ window.DietCalculations = (() => {
     const result=add();if(at!==tokens.length||!Number.isFinite(result))throw Error('Confira a conta digitada.');
     return Number(result.toPrecision(12));
   }
-  return {number,basal,nutrition,weightMacros,objectiveMacros,evaluate};
+  return {number,basal,nutrition,weightMacros,objectiveMacros,evaluate,calorieEstimate,calorieContext,measurement};
 })();

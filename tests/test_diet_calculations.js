@@ -3,8 +3,8 @@ const context={window:{}};
 vm.runInNewContext(fs.readFileSync('diet-calculations.js','utf8'),context);
 vm.runInNewContext(fs.readFileSync('diet.js','utf8'),context);
 const C=context.window.DietCalculations,P=context.window.DietEditor.parse;
-assert.equal(C.basal({sex:'F',age:'30',weight:'60',height:'165'}),1387);
-assert.equal(C.basal({sex:'F',age:'30',weight:'60',height:'1,65'}),1387);
+assert.equal(C.basal({sex:'F',age:'30',weight:'60',height:'165'}),1370.5);
+assert.equal(C.basal({sex:'F',age:'30',weight:'60',height:'1,65'}),1370.5);
 assert.equal(C.basal({sex:'M',age:'30',weight:'70',height:'175'}),1696);
 assert.equal(C.basal({sex:'',age:'30',weight:'70',height:'175'}),null);
 assert.equal(C.basal({sex:'M',age:'',weight:'70',height:'175'}),null);
@@ -13,7 +13,7 @@ let sections=P('Café da manhã\n2 ovos · 140 kcal\nPão · 100 kcal\nTotal: 24
 assert.equal(sections.length,2);assert(!sections.some(s=>s.items.includes(';')));
 let value=C.nutrition(sections,{sex:'F',age:'30',weight:'60',height:'165',activity:'moderada'});
 assert.equal(value.calories,688); // 240 explicit + 448 from the second meal; never double-count the explicit total.
-assert.equal(value.protein,47);assert.equal(value.carbs,95);assert.equal(value.fat,20);assert.equal(value.tmb,1387);assert.equal(value.goal,1803);
+assert.equal(value.protein,47);assert.equal(value.carbs,95);assert.equal(value.fat,20);assert.equal(value.tmb,1370.5);assert.equal(value.goal,1781.65);
 value=C.nutrition(P('Café da manhã\nMacros:\nCarbo: 45g | Prot: 12g | Gord: 8g\nResumo diário\nCarbo: 100g | Prot: 80g | Gord: 50g\nTotal: 1170 kcal'));
 assert.equal(value.calories,1170);assert.equal(value.carbs,100);assert.equal(value.protein,80);assert.equal(value.fat,50);
 assert.equal(C.nutrition(P('Almoço\nArroz e frango')).calories,null);
@@ -24,7 +24,7 @@ value=C.nutrition(sections,{protein:'100',carbs:'200',fat:'50'});assert.equal(va
 assert.equal(C.nutrition(sections,{calories:'0'}).calories,0);
 assert.equal(C.nutrition(P('Almoço\nTotal: 1.850,5 kcal')).calories,1851);
 assert.equal(P('Almoço\n1.5 bananas')[0].items[0],'1.5 bananas');
-console.log('PASS: Harris–Benedict, actual-input-only estimates, comma/period parsing, explicit kcal vs macro totals, daily summary deduplication, manual overrides and punctuation cleanup');
+console.log('PASS: Unimed classic reference, actual-input-only estimates, comma/period parsing, explicit kcal vs macro totals, daily summary deduplication, manual overrides and punctuation cleanup');
 
 const synced=C.nutrition([],{sex:'M',age:'99',weight:'100',height:'200',obsTmb:'1486',obsGoal:'2303'});assert.equal(synced.tmb,1486);assert.equal(synced.goal,2303);
 assert.equal(C.nutrition([],{obsTmb:'',obsGoal:'',sex:'M',age:'30',weight:'70',height:'175'}).tmb,null);

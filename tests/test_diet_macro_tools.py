@@ -16,7 +16,7 @@ with sync_playwright() as p:
   if u.hostname=='app.test' and path.is_file():r.fulfill(body=path.read_bytes(),content_type={'.js':'application/javascript','.css':'text/css'}.get(path.suffix,'text/html'))
   else:r.fulfill(status=404)
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.goto('http://app.test/treino36/')
- page.evaluate('''()=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',infoRelevante:{peso:'56',altura:'1.65',idade:'30'},treino:{A:['Agachamento 3x10']}},{student_id:'b',nome:'Bia',treino:{A:['Supino 3x10']}}]));localStorage.setItem('avaliacao_fisica_alunos','[]');}''');page.reload()
+ page.evaluate('''()=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',infoRelevante:{peso:'56',altura:'1.65',idade:'30',sexoCalorico:'F',atividadeCalorica:'moderada'},treino:{A:['Agachamento 3x10']}},{student_id:'b',nome:'Bia',treino:{A:['Supino 3x10']}}]));localStorage.setItem('avaliacao_fisica_alunos','[]');}''');page.reload()
  original=page.evaluate("AvaliacaoTreinoSync.read('treinoAlunos')")
  def opened():
   assert page.locator('#dietBtn').count(),errors

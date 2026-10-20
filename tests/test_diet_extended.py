@@ -18,12 +18,12 @@ with sync_playwright() as p:
   else:r.fulfill(status=404,body='')
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto('http://app.test/treino36/')
- page.evaluate("""()=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',infoRelevante:{idade:'30',altura:'1.65',peso:'60'},treino:{A:['Agachamento 3x10']},avaliacaoId:10},{student_id:'b',nome:'Bruno',treino:{A:['Supino 3x10']}}]));localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Ana',treinoStudentIds:['a'],sexo:'F',idade:'30',altura:'1.65',avaliacoes:[{id:11,peso:'65'}]}]));}""");page.evaluate("value=>localStorage.setItem('dieta36_rascunho_v1:a',value)",'Almoço\nArroz e feijão');page.reload()
+ page.evaluate("""()=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',infoRelevante:{idade:'30',altura:'1.65',peso:'60',atividadeCalorica:'moderada'},treino:{A:['Agachamento 3x10']},avaliacaoId:10},{student_id:'b',nome:'Bruno',treino:{A:['Supino 3x10']}}]));localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Ana',treinoStudentIds:['a'],sexo:'F',idade:'30',altura:'1.65',avaliacoes:[{id:11,peso:'65'}]}]));}""");page.evaluate("value=>localStorage.setItem('dieta36_rascunho_v1:a',value)",'Almoço\nArroz e feijão');page.reload()
  original=page.evaluate("[localStorage.getItem('treinoAlunos'),localStorage.getItem('avaliacao_fisica_alunos')]")
  page.locator('#dietBtn').click();expect(page.locator('#dietText')).to_have_value('Almoço\nArroz e feijão');page.locator('#dietCalculations > summary').click()
- expect(page.locator('#dietTmb')).to_have_text('1.486');expect(page.locator('#dietTotals')).to_contain_text('2.303')
+ expect(page.locator('#dietTmb')).to_have_text('1.370,5');expect(page.locator('#dietTotals')).to_contain_text('1.781,65')
  for key in ['sex','age','height','weight','activity']:assert page.locator('#diet-'+key).count()==0
- for mode,value in [('tmb','1.486'),('deficit','1.903'),('surplus','2.603'),('daily','2.303')]:
+ for mode,value in [('tmb','1.370,5'),('deficit','1.381,65'),('surplus','2.081,65'),('daily','1.781,65')]:
   page.locator('[data-diet-goal="'+mode+'"]').click();expect(page.locator('#dietTotals')).to_contain_text('Meta: '+value)
 
  # Explicitly return to text-derived totals after checking the automatic goal presets.
@@ -68,7 +68,7 @@ with sync_playwright() as p:
  data=page.evaluate("""async()=>{const file=shared[0].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
-  for value in ['Meta: 2.303 kcal/dia','Proteína: 100','Carbo: 200','Gordura: 50','300 kcal']:assert value in pdf,(value,pdf)
+  for value in ['Meta: 1.781,65 kcal/dia','Proteína: 100','Carbo: 200','Gordura: 50','300 kcal']:assert value in pdf,(value,pdf)
   for value in ['TMB estimada:','Calorias do dia:']:assert value not in pdf,(value,pdf)
   assert '• ;' not in pdf
   assert 'Caio' not in pdf and 'Maced' not in pdf,pdf
@@ -79,7 +79,7 @@ with sync_playwright() as p:
  page.locator('#dietPhotoBtn').click();expect(page.locator('#dietPhotoPreviewDialog')).to_be_visible();expect(page.locator('#dietPhotoSaveBtn')).to_be_enabled(timeout=20000)
  page.wait_for_function("document.querySelector('#dietPhotoImages img')?.naturalWidth===1240")
  expect(page.locator('#dietPhotoImages img')).to_be_visible();assert len(downloads)==0
- drawn=page.evaluate('photoText');assert any('Dieta — Ana' in line for line in drawn),drawn;assert any('Meta: 2.303 kcal/dia' in line for line in drawn),drawn;assert not any('Caio' in line or 'Maced' in line for line in drawn),drawn;assert not any(re.fullmatch(r'\d+/\d+',line) for line in drawn),drawn;assert any('Alimento de teste 23' in line for line in drawn),drawn
+ drawn=page.evaluate('photoText');assert any('Dieta — Ana' in line for line in drawn),drawn;assert any('Meta: 1.781,65 kcal/dia' in line for line in drawn),drawn;assert not any('Caio' in line or 'Maced' in line for line in drawn),drawn;assert not any(re.fullmatch(r'\d+/\d+',line) for line in drawn),drawn;assert any('Alimento de teste 23' in line for line in drawn),drawn
  positions=page.evaluate("photoPositions.filter(p=>p.text.includes('Alimento de teste ')).map(p=>p.y)")
  assert len(positions)==24,positions
  gaps=[b-a for a,b in zip(positions,positions[1:])]
@@ -108,7 +108,7 @@ with sync_playwright() as p:
  data=page.evaluate("""async()=>{const file=shared[2].files[0];return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(file);});}""")
  with fitz.open(stream=base64.b64decode(data),filetype='pdf') as doc:
   pdf=' '.join(p.get_text() for p in doc)
-  for value in ['TMB estimada: 1.486','Meta: 2.303','Calorias do dia: 1.850','Proteína: 100']:assert value in pdf,(value,pdf)
+  for value in ['TMB estimada: 1.370,5','Meta: 1.781,65','Calorias do dia: 1.850','Proteína: 100']:assert value in pdf,(value,pdf)
  page.reload();page.locator('#dietBtn').click();expect(page.locator('#dietIncludeCalculations')).to_be_checked()
  page.locator('#dietDialog [data-close]').click();page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bruno"] .aluno-nome').click();page.locator('#dietBtn').click();expect(page.locator('#dietText')).to_have_value('');expect(page.locator('#dietTmb')).to_have_text('—');expect(page.locator('#dietIncludeCalculations')).not_to_be_checked();expect(page.locator('#dietUndoBtn')).to_be_disabled()
  assert page.evaluate("[localStorage.getItem('treinoAlunos'),localStorage.getItem('avaliacao_fisica_alunos')]")==original
@@ -117,10 +117,10 @@ with sync_playwright() as p:
  if not page.locator('#dietCalculations').evaluate('el=>el.open'):page.locator('#dietCalculations > summary').click()
  page.locator('#diet-goal').fill('2000')
  page.evaluate("""()=>{const students=JSON.parse(localStorage.getItem('treinoAlunos'));students.find(s=>s.student_id==='a').infoRelevante.peso='65';localStorage.setItem('treinoAlunos',JSON.stringify(students));window.dispatchEvent(new Event('focus'));}""")
- expect(page.locator('#dietTmb')).to_have_text('1.536');expect(page.locator('#dietTotals')).to_contain_text('Meta: 2.000')
- page.locator('#dietGoalAuto').click();expect(page.locator('#dietTotals')).to_contain_text('Meta: 2.381');page.locator('[data-diet-goal="tmb"]').click();expect(page.locator('#dietTotals')).to_contain_text('Meta: 1.536')
+ expect(page.locator('#dietTmb')).to_have_text('1.418,5');expect(page.locator('#dietTotals')).to_contain_text('Meta: 2.000')
+ page.locator('#dietGoalAuto').click();expect(page.locator('#dietTotals')).to_contain_text('Meta: 1.844,05');page.locator('[data-diet-goal="tmb"]').click();expect(page.locator('#dietTotals')).to_contain_text('Meta: 1.418,5')
  page.evaluate("""()=>{const students=JSON.parse(localStorage.getItem('treinoAlunos'));students.find(s=>s.student_id==='a').infoRelevante.peso='70';localStorage.setItem('treinoAlunos',JSON.stringify(students));window.dispatchEvent(new Event('focus'));}""")
- expect(page.locator('#dietTmb')).to_have_text('1.586');expect(page.locator('#dietTotals')).to_contain_text('Meta: 1.586')
- page.reload();page.locator('#dietBtn').click();expect(page.locator('#dietTmb')).to_have_text('1.586');expect(page.locator('#dietIncludeCalculations')).to_be_checked()
+ expect(page.locator('#dietTmb')).to_have_text('1.466,5');expect(page.locator('#dietTotals')).to_contain_text('Meta: 1.466,5')
+ page.reload();page.locator('#dietBtn').click();expect(page.locator('#dietTmb')).to_have_text('1.466,5');expect(page.locator('#dietIncludeCalculations')).to_be_checked()
  assert not errors,errors
  browser.close();print('PASS: original draft retained, automatic OBS TMB, no duplicate demographics, quick targets, editable kcal/macros, meal editing and floating undo/redo, immediate persistence, expanded layout, PDF with goal/macros by default and optional TMB/calorie summary, real image preview before PNG download, separate paste expansion with cursor retained, independent pupils and unchanged datasets')
