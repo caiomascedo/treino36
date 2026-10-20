@@ -1,6 +1,9 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('workout-sequence.js','utf8'),ctx);const s=ctx.window.WorkoutSequence;
 for(const division of ['A','AB','ABC','ABCD','ABCDE','ABCDEF']){
  const student={student_id:'a',treino_id:'w',secaoFAtiva:division.includes('F'),treino:Object.fromEntries([...division].map(key=>[key,['Agachamento 3x10']]))};
+ assert.equal(s.tracking(student),false);assert.equal(s.summary(student),'');student.acompanharSequencia=true;
+ assert.equal(s.enabled(student),division.length<5);
+ if(division.length>=5)assert.equal(s.summary(student),'');
  assert.equal(s.describe(student).next,'A');
  for(const key of division){assert.equal(s.describe(student).next,key);student.sequenciaTreino=s.mark(student,key,'2026-10-20T15:00:00Z');assert.equal(s.get(student).ultima,key);}
  assert.equal(s.describe(student).next,'A');assert.equal(s.get(student).anterior?.anterior,null);

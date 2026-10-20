@@ -1476,8 +1476,8 @@ window.AvaliacaoTreinoSync = (function () {
 </script>
 <script src="avaliacao-import.js?v=20"></script>
 <script src="workout-validity.js?v=2"></script>
-<script src="workout-sequence.js?v=1"></script>
-<link rel="stylesheet" href="workout-sequence.css?v=1">
+<script src="workout-sequence.js?v=2"></script>
+<link rel="stylesheet" href="workout-sequence.css?v=2">
 <script src="obs-notes.js?v=6"></script>
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
@@ -6679,6 +6679,7 @@ window.AvaliacaoTreinoSync = (function () {
               titulos: cleanTitulos,
               historicoTreinos: cleanHistorico
             };
+            if (typeof item.acompanharSequencia==='boolean') alunoSan.acompanharSequencia=item.acompanharSequencia;
             if (item.sequenciaTreino) alunoSan.sequenciaTreino = WorkoutSequence.sanitize(item.sequenciaTreino);
             if (item.avaliacaoId) alunoSan.avaliacaoId = item.avaliacaoId;
             if (item.favorito !== undefined) alunoSan.favorito = !!item.favorito;
@@ -9169,18 +9170,21 @@ window.AvaliacaoTreinoSync = (function () {
   document.querySelector('.global-buttons').after(toolsRow);
   document.getElementById('createWorkoutBtn').onclick=function(){abrirGerador();};document.getElementById('historyWorkoutBtn').onclick=function(){abrirHistorico();};document.getElementById('compareWorkoutBtn').onclick=function(){abrirHistorico(null,true);};
   var validityEditor=WorkoutValidity.mount({createDialog:criarDialogo,selected:alunoNaTela,find:function(id){return alunos.find(function(a){return a.student_id===id;});},save:salvarLocalStorage,message:exibirMensagem,button:document.getElementById('workoutValidityBtn'),summary:document.getElementById('workoutValiditySummary')});
+  function salvarMarcacaoTreino(student,fields){
+    var fresh=AvaliacaoTreinoSync.read('treinoAlunos').find(function(a){return a.student_id===student.student_id;});
+    if(!fresh||fresh.treino_id!==student.treino_id||JSON.stringify(fresh.sequenciaTreino||null)!==JSON.stringify(student.sequenciaTreino||null)||!!fresh.acompanharSequencia!==!!student.acompanharSequencia)throw Error('A marcação mudou em outra janela. Confira e tente novamente.');
+    TreinoStorage.stageObs(student.student_id,{studentFields:fields});
+    var local=alunos.find(function(a){return a.student_id===student.student_id;});if(local)Object.assign(local,fields);
+    TreinoStorage.compactObs().catch(function(){ /* The small marker is already durable. */ });
+  }
   var sequenceTracker=WorkoutSequence.mount(document.getElementById('workoutSequence'),{
     selected:alunoNaTela,
     read:function(id){return AvaliacaoTreinoSync.read('treinoAlunos').find(function(a){return a.student_id===id;});},
     matches:function(student){return !diferencaDados(capturarTreinoAtual(),student);},
     beforeChange:concluirAutoSave,
-    save:function(student,value){
-      var fresh=AvaliacaoTreinoSync.read('treinoAlunos').find(function(a){return a.student_id===student.student_id;});
-      if(!fresh||fresh.treino_id!==student.treino_id||JSON.stringify(fresh.sequenciaTreino||null)!==JSON.stringify(student.sequenciaTreino||null))throw Error('A marcação mudou em outra janela. Confira e tente novamente.');
-      TreinoStorage.stageObs(student.student_id,{studentFields:{sequenciaTreino:value}});
-      var local=alunos.find(function(a){return a.student_id===student.student_id;});if(local)local.sequenciaTreino=value;
-      TreinoStorage.compactObs().catch(function(){ /* The small marker is already durable. */ });
-    }
+    save:function(student,value){salvarMarcacaoTreino(student,{sequenciaTreino:value});},
+    setEnabled:function(student,value){salvarMarcacaoTreino(student,{acompanharSequencia:value});},
+    options:document.querySelector('#moreOptions .more-options-menu'),message:exibirMensagem
   });
   if(document.getElementById('listIconBtn')) document.getElementById('listIconBtn').onclick=mostrarListaAlunos;
   if(document.getElementById('obsIconBtn')) document.getElementById('obsIconBtn').onclick=function(){abrirObservacoes();};
