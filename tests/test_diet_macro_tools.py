@@ -67,6 +67,21 @@ with sync_playwright() as p:
  page.locator('#dietCalcClear').click();expect(page.locator('#dietCalcExpression')).to_have_value('');expect(page.locator('#dietCalcCopy')).to_be_disabled()
  keys('56×3⌫2');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 112')
  page.locator('#dietCalcClear').click();keys('1÷0');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_contain_text('zero');expect(page.locator('#dietCalcCopy')).to_be_disabled()
+ # iPhone key positions, light background, percent/sign, chaining and quick copy.
+ expected=['⌫','AC','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','+/−','0',',','=']
+ assert page.locator('.diet-mini-keys button').all_text_contents()==expected
+ assert page.locator('.diet-iphone-calculator').evaluate("el=>getComputedStyle(el).backgroundColor")=='rgb(255, 255, 255)'
+ page.locator('#dietCalcClear').click();keys('1933,26−500');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 1433,26')
+ page.locator('#dietCalcCopy').click();assert page.evaluate('copied.at(-1)')=='1433,26'
+ page.locator('#dietCalcClear').click();keys('1933,26+500');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 2433,26')
+ keys('+2');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 2435,26')
+ page.locator('#dietCalcClear').click();keys('200+10%');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 220')
+ page.locator('#dietCalcClear').click();keys('5');page.locator('[data-diet-calc-key="+/−"]').click();page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= -5')
+ keys('1');expect(page.locator('#dietCalcExpression')).to_have_value('1')
+ page.locator('#dietCopyGoal').click();goal=page.locator('[data-diet-goal="surplus"]').inner_text().split(' · ')[1].removesuffix(' kcal').replace('.','');assert page.evaluate('copied.at(-1)')==goal
+ for width in [320,390]:
+  page.set_viewport_size({'width':width,'height':844});assert page.locator('#dietDialog').evaluate('el=>el.scrollWidth<=el.clientWidth+1')
+ page.locator('#dietCalcClear').click();keys('1933,26+500');page.locator('#dietCalcEvaluate').click();page.locator('.diet-iphone-calculator').screenshot(path='/tmp/treino36-calculator-white.png')
  page.reload();opened();expect_macros(112,224,44.8,1747)
  page.screenshot(path='/tmp/diet-macro-tools-mobile.png')
  page.locator('#dietDialog [data-close]').click();page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bia"] .aluno-nome').click();opened();expect(page.locator('#diet-protein')).to_have_value('');page.locator('[data-diet-goal="deficit"]').click();expect(page.locator('#dietMacroNotice')).to_contain_text('peso válido');expect(page.locator('#diet-protein')).to_have_value('')

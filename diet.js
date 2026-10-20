@@ -47,14 +47,14 @@ window.DietEditor = (() => {
     const weight=ficha.peso||av.peso||person.pesoAtual||'',height=ficha.altura||av.ficha?.altura||person.altura||'',age=ficha.idade||av.ficha?.idade||person.idade||'';
     const context=C().calorieContext(current,ficha);
     const calc=config.obsCalories(weight,height,age,context.activity,context.sex);
-    return {weight:C().measurement(weight),tmb:calc?.tmb??null,daily:calc?.gastoTotal??null,deficit:calc?.deficit??null,surplus:calc?.superavit??null};
+    return {sex:context.sex,activity:context.activity,weight:C().measurement(weight),tmb:calc?.tmb??null,daily:calc?.gastoTotal??null,deficit:calc?.deficit??null,surplus:calc?.superavit??null};
   }
   function mount(config) {
     const dialog = config.createDialog('dietDialog', '🥗 Dieta',
       '<button type="button" id="dietExpandBtn" aria-pressed="false">⛶ Ampliar</button><p id="dietStudentName"></p>' +
-      '<details id="dietCalculations"><summary>Meta e calorias</summary><p>TMB da OBS: <strong id="dietTmb">—</strong> kcal/dia</p><p class="diet-hint" id="dietObsStatus"></p><div class="diet-quick-goals">' +
+      '<details id="dietCalculations"><summary>Meta e calorias</summary><div class="diet-calc-grid diet-context"><label>Sexo para cálculo<select id="dietSex"><option value="">Selecionar</option><option value="F">Feminino</option><option value="M">Masculino</option></select></label><label>Atividade física<select id="dietActivity"><option value="">Selecionar</option><option value="nenhuma">Nenhuma atividade física</option><option value="moderada">Moderada · 30 min, 4×/sem</option><option value="intensa">Intensa · corrida 1 h, 4×/sem ou mais</option></select></label></div><p>TMB da OBS: <strong id="dietTmb">—</strong> kcal/dia</p><p class="diet-hint" id="dietObsStatus"></p><div class="diet-quick-goals">' +
       '<button type="button" data-diet-goal="tmb">TMB</button><button type="button" data-diet-goal="daily">Manutenção</button><button type="button" data-diet-goal="deficit">Emagrecimento</button><button type="button" data-diet-goal="surplus">Hipertrofia</button></div>' +
-      '<label for="diet-goal">Meta (kcal/dia)</label><div class="diet-goal-row"><button type="button" id="dietGoalMinus">−100</button><input id="diet-goal" inputmode="decimal" placeholder="Automática"><button type="button" id="dietGoalPlus">+100</button><button type="button" id="dietGoalAuto">Auto</button></div>' +
+      '<label for="diet-goal">Meta (kcal/dia)</label><div class="diet-goal-row"><button type="button" id="dietGoalMinus">−100</button><input id="diet-goal" inputmode="decimal" placeholder="Automática"><button type="button" id="dietGoalPlus">+100</button><button type="button" id="dietGoalAuto">Auto</button><button type="button" id="dietCopyGoal">Copiar meta</button></div>' +
       '<div class="diet-calc-grid"><label>Calorias do dia<input id="diet-calories" inputmode="decimal" placeholder="Automático"></label><label>Proteína (g)<input id="diet-protein" inputmode="decimal" placeholder="Do texto"></label><label>Carboidratos (g)<input id="diet-carbs" inputmode="decimal" placeholder="Do texto"></label><label>Gorduras (g)<input id="diet-fat" inputmode="decimal" placeholder="Do texto"></label></div>' + DietTools.markup() + '<p class="diet-hint">Os valores da OBS são atualizados automaticamente. Deixe a meta vazia para usar a opção selecionada acima; os totais podem vir do texto ou ser corrigidos aqui.</p></details>' +
       '<div id="dietTotals" aria-live="polite"></div><div class="diet-paste-header"><label for="dietText">🧠 Cola inteligente</label><div><button type="button" id="dietPasteClearBtn">Limpar texto</button><button type="button" id="dietPasteExpandBtn" aria-pressed="false">⛶ Ampliar</button></div></div>' +
       '<textarea id="dietText" placeholder="Cole a dieta completa aqui. As refeições serão organizadas automaticamente.\n\nCafé da manhã\n2 ovos\n1 fruta\n\nAlmoço\nArroz, feijão e frango"></textarea>' +
@@ -70,7 +70,7 @@ window.DietEditor = (() => {
     let draftKey, settingsKey, name = '', timer, history = [], historyIndex = 0, lastGroup = '', lastTime = 0, busy = false, studentForDiet=null, goalMode='daily', macroAuto=false, source={tmb:null,daily:null,deficit:null,surplus:null};
     const inMemory = new Map();
     const includeCalculations=dialog.querySelector('#dietIncludeCalculations');
-    const settings = () => ({...Object.fromEntries(settingsKeys.map(key => [key,inputs[key].value])),includeCalculations:includeCalculations.checked,goalMode,macroAuto,calorieReference:"unimed-classic-v1"});
+    const settings = () => ({...Object.fromEntries(settingsKeys.map(key => [key,inputs[key].value])),includeCalculations:includeCalculations.checked,goalMode,macroAuto,calorieReference:"unimed-classic-goals500-v2"});
     const calculationSettings=()=>({...settings(),obsTmb:source.tmb??'',obsGoal:source[goalMode]??''});
     const state = () => ({text:text.value,settings:settings()});
     function save() {
@@ -97,14 +97,16 @@ window.DietEditor = (() => {
       }catch(error){macroNotice.textContent=error.message+' Os campos anteriores foram mantidos.';if(strict)throw error;return null;}
     }
     const tools=DietTools.mount(dialog,{
+      goal:()=>totals().goal,
       values:()=>{const value=totals();return {calories:value.calories,protein:value.macrosFound?value.protein:null,carbs:value.macrosFound?value.carbs:null,fat:value.macrosFound?value.fat:null};},
       clear:keys=>{macroAuto=false;macroNotice.textContent='';for(const key of keys)inputs[key].value='';change('clear-values',false);},
       message:value=>{status.textContent=value;}
     });
     function totals() {
       const value=C().nutrition(parse(text.value),calculationSettings());
+      dialog.querySelector('#dietSex').value=source.sex||'';dialog.querySelector('#dietActivity').value=source.activity||'';
       dialog.querySelector('#dietTmb').textContent=fmt(value.tmb);
-      dialog.querySelector('#dietObsStatus').textContent=value.tmb===null?'Informe sexo, idade, peso e altura na ficha/OBS. Para a manutenção, selecione também a atividade física.':'Referência Unimed (clássica) · sexo e atividade física da ficha/OBS.';
+      dialog.querySelector('#dietObsStatus').textContent=value.tmb===null?'Selecione o sexo acima e preencha idade, peso e altura na OBS.':source.daily===null?'Selecione a atividade física acima para ver as kcal dos objetivos.':'Referência Unimed (clássica) · Manutenção = gasto da atividade selecionada · Emagrecimento −500 kcal · Hipertrofia +500 kcal.';
       const labels={tmb:'TMB',daily:'Manutenção',deficit:'Emagrecimento',surplus:'Hipertrofia'};
       dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{const mode=button.dataset.dietGoal;button.disabled=mode==='tmb'&&source[mode]===null;button.textContent=labels[mode]+' · '+fmt(source[mode])+' kcal';button.setAttribute('aria-pressed',String(goalMode===mode&&!inputs.goal.value.trim()));});
       inputs.goal.placeholder=value.goal===null?'Preencha os dados acima':fmt(value.goal);
@@ -231,8 +233,12 @@ window.DietEditor = (() => {
       const student=config.student();studentForDiet=student;name=config.name().trim();const id=encodeURIComponent(student?.student_id||name||'sem_aluno');draftKey='dieta36_rascunho_v1:'+id;settingsKey='dieta36_calculos_v1:'+id;status.textContent='';
       let saved=inMemory.get(draftKey)||{text:'',settings:{}};
       try{saved={...saved,text:localStorage.getItem(draftKey)??saved.text};saved.settings=JSON.parse(localStorage.getItem(settingsKey)||JSON.stringify(saved.settings));}catch(error){status.textContent='Não foi possível ler todos os ajustes do rascunho neste navegador.';}
-      text.value=saved.text;source=profile(student,config);macroAuto=saved.settings?.macroAuto===true;macroNotice.textContent='';tools.reset();goalMode=['tmb','daily','deficit','surplus'].includes(saved.settings?.goalMode)?saved.settings.goalMode:'daily';const initial={...saved.settings};for(const key of settingsKeys)inputs[key].value=initial[key]??'';includeCalculations.checked=saved.settings?.includeCalculations===true;if(macroAuto){if(saved.settings?.calorieReference!=='unimed-classic-v1')for(const key of ['calories','protein','carbs','fat'])inputs[key].value='';deriveMacros();save();}
+      text.value=saved.text;source=profile(student,config);macroAuto=saved.settings?.macroAuto===true;macroNotice.textContent='';tools.reset();goalMode=['tmb','daily','deficit','surplus'].includes(saved.settings?.goalMode)?saved.settings.goalMode:'daily';const initial={...saved.settings};for(const key of settingsKeys)inputs[key].value=initial[key]??'';includeCalculations.checked=saved.settings?.includeCalculations===true;if(macroAuto){if(saved.settings?.calorieReference!=='unimed-classic-goals500-v2')for(const key of ['calories','protein','carbs','fat'])inputs[key].value='';deriveMacros();save();}
       dialog.querySelector('#dietStudentName').textContent=name;preview.open=false;body.replaceChildren();history=[JSON.stringify(state())];historyIndex=0;lastGroup='';refresh(false);dialog.showModal();dialog.querySelector('#dietExpandBtn').focus({preventScroll:true});
+    };
+    for(const [id,key] of [['dietSex','sexoCalorico'],['dietActivity','atividadeCalorica']])dialog.querySelector('#'+id).onchange=()=>{
+      try{config.updateCalorieContext(studentForDiet,{[key]:dialog.querySelector('#'+id).value});refreshSource();}
+      catch(error){totals();status.textContent=error.message;}
     };
     function refreshSource(){if(dialog.open){source=profile(studentForDiet,config);if(macroAuto){deriveMacros();save();record('macro-obs');}totals();}}
     window.addEventListener('focus',refreshSource);window.addEventListener('storage',event=>{if(['treinoAlunos','avaliacao_fisica_alunos','treino36_assessment_drafts','treino36_obs_drafts'].includes(event.key))refreshSource();});
