@@ -1347,6 +1347,9 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 .hide-buttons .workout-grip, .temp-hide-buttons .workout-grip { display: none !important; }
 @media print { .workout-grip, .workout-ghost { display: none !important; } .workout-drag-origin { opacity: 1; outline: none; } }
 
+
+#kcalContainer .info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#kcalContainer .info-field{min-width:0}
+#infoSexoCalorico,#infoAtividadeCalorica{width:100%;min-width:0;box-sizing:border-box;padding:8px;border:1px solid #cbd5e1;border-radius:7px;background:white;color:#29465a;font-size:14px}
 </style>
 <script>
 
@@ -1482,10 +1485,10 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=4"></script>
-<script src="diet-calculations.js?v=4"></script>
+<script src="diet-calculations.js?v=5"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=2"></script>
-<script src="diet.js?v=10"></script>
+<script src="diet.js?v=11"></script>
 <link rel="stylesheet" href="diet.css?v=8">
 <script src="posture-editor.js?v=6"></script>
 <link rel="stylesheet" href="posture-editor.css?v=6">
@@ -9267,7 +9270,7 @@ window.AvaliacaoTreinoSync = (function () {
             '</div>'+
           '</div>'+
           '<div class="info-field full-width">'+
-            '<label>Nível de Treino (para calcular Kcal diárias):</label>'+
+            '<label>Nível de treino:</label>'+
             '<div id="treinoLevelSelector" class="treino-level-selector">'+
               '<button type="button" class="level-btn" data-level="leve"><span>Leve</span><small>1–3x/sem</small></button>'+
               '<button type="button" class="level-btn active" data-level="moderado"><span>Moderado</span><small>3–5x/sem</small></button>'+
@@ -9289,6 +9292,8 @@ window.AvaliacaoTreinoSync = (function () {
                 '<span id="kcalBadge" class="kcal-badge">Aguardando dados</span>'+
                 '<button type="button" id="copyKcalBtn" class="copy-imc-btn" title="Copiar Kcal" hidden>📋 Copiar Kcal</button>'+
               '</div>'+
+              '<div class="info-grid" style="margin:8px 0"><div class="info-field"><label for="infoSexoCalorico">Sexo para cálculo:</label><select id="infoSexoCalorico"><option value="">Selecionar</option><option value="F">Feminino</option><option value="M">Masculino</option></select></div><div class="info-field"><label for="infoAtividadeCalorica">Atividade física:</label><select id="infoAtividadeCalorica"><option value="">Selecionar</option><option value="nenhuma">Nenhuma atividade física</option><option value="moderada">Moderada · 30 min, 4×/sem</option><option value="intensa">Intensa · corrida 1 h, 4×/sem ou mais</option></select></div></div>'+
+              '<p style="font-size:.78rem;margin:6px 0">Estimativa pela <a href="https://unimed.coop.br/portalunimed/aplicativos/tmb/" target="_blank" rel="noopener">Unimed · calculadora clássica</a>. Atividade física é selecionada separadamente do nível de treino.</p>'+
               '<div id="kcalDetails" class="kcal-details">Informe idade, peso, altura e nível de treino para calcular o gasto calórico.</div>'+
             '</div>'+
           '</div>'+
@@ -9429,29 +9434,18 @@ window.AvaliacaoTreinoSync = (function () {
     atualizarVisualizacaoKcal();
   }
 
-  function calcularKcal(pesoStr, altStr, idadeStr, nivel) {
-    var pMatch = String(pesoStr).replace(',', '.').match(/(\d+(?:\.\d+)?)/);
-    var aMatch = String(altStr).replace(',', '.').match(/(\d+(?:\.\d+)?)/);
-    var iMatch = String(idadeStr).match(/(\d{1,2})/);
-    if (!pMatch || !aMatch || !iMatch) return null;
-    var peso = parseFloat(pMatch[1]);
-    var alt = parseFloat(aMatch[1]);
-    if (alt > 3.0) alt = alt / 100.0;
-    var idade = parseInt(iMatch[1], 10);
-    if (!peso || !alt || !idade || peso <= 10 || alt < 0.6) return null;
-
-    var tmb = Math.round(10 * peso + 6.25 * (alt * 100) - 5 * idade + 5);
-    var fatores = { leve: 1.375, moderado: 1.55, pesado: 1.725 };
-    var fator = fatores[nivel] || 1.55;
-    var get = Math.round(tmb * fator);
-    return {
-      tmb: tmb,
-      gastoTotal: get,
-      deficit: Math.round(get - 400),
-      superavit: Math.round(get + 300),
-      nivel: nivel || 'moderado'
-    };
+  function calcularKcal(pesoStr, altStr, idadeStr, atividade, sexo) {
+    return DietCalculations.calorieEstimate(pesoStr, altStr, idadeStr, sexo, atividade);
   }
+
+  function contextoCaloricoAtual() {
+    return {sex:document.getElementById('infoSexoCalorico').value,activity:document.getElementById('infoAtividadeCalorica').value};
+  }
+  function kcalDaFicha(peso,altura,idade) {
+    var context=contextoCaloricoAtual();
+    return calcularKcal(peso,altura,idade,context.activity,context.sex);
+  }
+  function formatarKcal(value) {return value===null?'—':Number(value.toFixed(2)).toLocaleString('pt-BR',{maximumFractionDigits:2});}
 
   function atualizarVisualizacaoKcal() {
     var pEl = document.getElementById('infoPeso');
@@ -9465,17 +9459,17 @@ window.AvaliacaoTreinoSync = (function () {
     var peso = pEl ? pEl.value : '';
     var altura = aEl ? aEl.value : '';
     var idade = iEl ? iEl.value : '';
-    var calc = calcularKcal(peso, altura, idade, infoNivelTreinoAtual);
+    var calc = kcalDaFicha(peso, altura, idade);
 
     if (calc) {
-      badge.textContent = calc.gastoTotal + ' kcal/dia (' + (calc.nivel.toUpperCase()) + ')';
+      badge.textContent = calc.gastoTotal===null?'Selecione a atividade física':formatarKcal(calc.gastoTotal)+' kcal/dia ('+calc.nivel.toUpperCase()+')';
       badge.style.display = 'inline-block';
-      details.innerHTML = 'Gasto Total: <strong>~' + calc.gastoTotal + ' kcal/dia</strong> · Basal (TMB): <strong>~' + calc.tmb + ' kcal</strong><br>' +
-        'Emagrecimento (-400 kcal): <strong>~' + calc.deficit + ' kcal</strong> · Hipertrofia (+300 kcal): <strong>~' + calc.superavit + ' kcal</strong>';
+      details.innerHTML = 'Basal (TMB): <strong>~'+formatarKcal(calc.tmb)+' kcal</strong><br>'+
+        (calc.gastoTotal===null?'Selecione a atividade física para estimar manutenção e metas.':'Manutenção: <strong>~'+formatarKcal(calc.gastoTotal)+' kcal/dia</strong> · Fator: '+calc.fator+'<br>Emagrecimento (-400 kcal): <strong>~'+formatarKcal(calc.deficit)+' kcal</strong> · Hipertrofia (+300 kcal): <strong>~'+formatarKcal(calc.superavit)+' kcal</strong>');
       if (copyBtn) copyBtn.hidden = false;
     } else {
-      badge.textContent = 'Aguardando idade, peso e altura';
-      details.textContent = 'Informe idade, peso, altura e nível de treino para calcular o gasto calórico.';
+      badge.textContent = 'Aguardando sexo, idade, peso e altura';
+      details.textContent = 'Preencha sexo, idade, peso e altura. Selecione também a atividade física para calcular a manutenção.';
       if (copyBtn) copyBtn.hidden = true;
     }
   }
@@ -9611,6 +9605,8 @@ window.AvaliacaoTreinoSync = (function () {
       email: document.getElementById('infoEmail').value.trim(),
       whats: document.getElementById('infoWhats').value.trim(),
       nivelTreino: infoNivelTreinoAtual,
+      sexoCalorico: document.getElementById('infoSexoCalorico').value,
+      atividadeCalorica: document.getElementById('infoAtividadeCalorica').value,
       avaliacaoOrigemId: previousInfo.avaliacaoOrigemId || null,
       avaliacaoOrigemData: previousInfo.avaliacaoOrigemData || '',
       avaliacaoCadastroId: previousInfo.avaliacaoCadastroId || null
@@ -9634,6 +9630,9 @@ window.AvaliacaoTreinoSync = (function () {
     document.getElementById('infoEmail').value = g.email || '';
     document.getElementById('infoWhats').value = g.whats || '';
     infoNivelTreinoAtual = g.nivelTreino || 'moderado';
+    var calorieContext=DietCalculations.calorieContext(alunoDasObservacoes(),g);
+    document.getElementById('infoSexoCalorico').value=calorieContext.sex;
+    document.getElementById('infoAtividadeCalorica').value=calorieContext.activity;
 
     document.querySelectorAll('#treinoLevelSelector .level-btn').forEach(function(b) {
       b.classList.toggle('active', b.dataset.level === infoNivelTreinoAtual);
@@ -9749,7 +9748,7 @@ window.AvaliacaoTreinoSync = (function () {
     var whats = document.getElementById('infoWhats').value.trim();
 
     var calcImc = calcularImcEPesoIdeal(peso, altura);
-    var calcKcal = calcularKcal(peso, altura, idade, infoNivelTreinoAtual);
+    var calcKcal = kcalDaFicha(peso, altura, idade);
 
     var linhas = ['📋 FICHA DO ALUNO' + (infoGuiasAtuais[infoGuiaAtivaIndex] ? ' (' + infoGuiasAtuais[infoGuiaAtivaIndex].titulo + ')' : '')];
     if (nome) linhas.push('Nome: ' + nome);
@@ -9761,9 +9760,9 @@ window.AvaliacaoTreinoSync = (function () {
       linhas.push('Peso Ideal: ' + calcImc.pesoMin + ' kg – ' + calcImc.pesoMax + ' kg');
     }
     if (calcKcal) {
-      linhas.push('Nível de Treino: ' + (calcKcal.nivel.toUpperCase()));
-      linhas.push('Gasto Calórico Total: ~' + calcKcal.gastoTotal + ' kcal/dia (TMB: ~' + calcKcal.tmb + ' kcal)');
-      linhas.push('Meta Emagrecimento: ~' + calcKcal.deficit + ' kcal | Meta Hipertrofia: ~' + calcKcal.superavit + ' kcal');
+      linhas.push('Referência: Unimed (clássica) · Sexo: '+calcKcal.sexo+' · Atividade física: '+(calcKcal.nivel||'não informada'));
+      linhas.push('Gasto Calórico Total: ~' + formatarKcal(calcKcal.gastoTotal) + ' kcal/dia (TMB: ~' + formatarKcal(calcKcal.tmb) + ' kcal)');
+      linhas.push('Meta Emagrecimento: ~' + formatarKcal(calcKcal.deficit) + ' kcal | Meta Hipertrofia: ~' + formatarKcal(calcKcal.superavit) + ' kcal');
     }
     if (dataNasc) linhas.push('Data de nasc.: ' + dataNasc);
     if (whats) linhas.push('WhatsApp: ' + whats);
@@ -10303,6 +10302,8 @@ window.AvaliacaoTreinoSync = (function () {
     salvarGuiaInfoAtual();
   });
 
+  ['infoSexoCalorico','infoAtividadeCalorica'].forEach(function(id){document.getElementById(id).addEventListener('change',function(){atualizarVisualizacaoKcal();salvarGuiaInfoAtual();});});
+
   // Seletor de Nível de Treino
   document.getElementById('treinoLevelSelector').addEventListener('click', function(e) {
     var b = e.target.closest('.level-btn');
@@ -10332,7 +10333,7 @@ window.AvaliacaoTreinoSync = (function () {
 
   document.getElementById('clearAllInfoBtn').onclick = function() {
     if (!confirm('Deseja limpar todos os dados desta ficha?')) return;
-    ['infoIdade', 'infoPeso', 'infoAltura', 'infoDataNasc', 'infoNomeCompleto', 'infoEmail', 'infoWhats'].forEach(function(id) {
+    ['infoIdade', 'infoPeso', 'infoAltura', 'infoDataNasc', 'infoNomeCompleto', 'infoEmail', 'infoWhats', 'infoSexoCalorico', 'infoAtividadeCalorica'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -10351,7 +10352,7 @@ window.AvaliacaoTreinoSync = (function () {
       obterCadastroAvaliacaoObs(student);
       var records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key),record=AvaliacaoTreinoSync.resolve(records,student);
       var id=Date.now();while(record.avaliacoes.some(function(av){return av.id===id;}))id++;
-      var fields={};['idade','altura','dataNasc','nomeCompleto','email','whats','nivelTreino'].forEach(function(key){fields[key]=base[key]||'';});
+      var fields={};['idade','altura','dataNasc','nomeCompleto','email','whats','nivelTreino','sexoCalorico','atividadeCalorica'].forEach(function(key){fields[key]=base[key]||'';});
       var draft=TreinoStorage.assessmentOperation(record.id,id,'add',{id:id,data:new Date().toLocaleDateString('pt-BR'),peso:base.peso||'',protocolo:'jp7',ficha:fields},{avaliacaoPreferidaId:id,avaliacaoSemRegistros:false,pesoAtual:base.peso||'',pesoAtualAvaliacaoId:id});
       TreinoAssessmentJournal.merge(records,[draft]);
       if(obsNativeEditor&&!document.getElementById('obsNativeAssessment').hidden)obsNativeEditor.minimize();
@@ -10376,9 +10377,9 @@ window.AvaliacaoTreinoSync = (function () {
     var p = document.getElementById('infoPeso').value;
     var a = document.getElementById('infoAltura').value;
     var i = document.getElementById('infoIdade').value;
-    var calc = calcularKcal(p, a, i, infoNivelTreinoAtual);
+    var calc = kcalDaFicha(p, a, i);
     if (!calc) return;
-    var texto = 'Gasto Calórico: ~' + calc.gastoTotal + ' kcal/dia (TMB: ' + calc.tmb + ' kcal) · Nível: ' + calc.nivel.toUpperCase() + ' · Emagrecimento: ~' + calc.deficit + ' kcal · Hipertrofia: ~' + calc.superavit + ' kcal';
+    var texto = 'Referência Unimed (clássica) · Sexo: '+calc.sexo+' · Atividade física: '+(calc.nivel||'não informada')+' · Manutenção: ~'+formatarKcal(calc.gastoTotal)+' kcal/dia · TMB: '+formatarKcal(calc.tmb)+' kcal · Emagrecimento: ~'+formatarKcal(calc.deficit)+' kcal · Hipertrofia: ~'+formatarKcal(calc.superavit)+' kcal';
     navigator.clipboard.writeText(texto).then(function() {
       exibirMensagem('📋 Kcal copiadas!', '#1e6f3f', false);
     });
