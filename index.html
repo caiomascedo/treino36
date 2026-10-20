@@ -1476,6 +1476,8 @@ window.AvaliacaoTreinoSync = (function () {
 </script>
 <script src="avaliacao-import.js?v=20"></script>
 <script src="workout-validity.js?v=2"></script>
+<script src="workout-sequence.js?v=1"></script>
+<link rel="stylesheet" href="workout-sequence.css?v=1">
 <script src="obs-notes.js?v=6"></script>
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
@@ -1551,6 +1553,7 @@ window.AvaliacaoTreinoSync = (function () {
       </div>
     </details>
   </div>
+  <section id="workoutSequence" aria-label="Sequência de treinos do aluno" hidden></section>
   <div class="format-bar">
     <button id="boldBtn" class="format-btn">B (Negrito)</button>
     <button id="undoBtn" class="format-btn">↩️ Desfazer</button>
@@ -6301,6 +6304,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (clearBtn) clearBtn.hidden = !val;
     atualizarEstrelaBusca();
     renderizarBarraFavoritos();
+    if(typeof sequenceTracker!=='undefined'&&sequenceTracker)sequenceTracker.refresh();
   }
   function registrarAlunoSelecionado(nome) {
     nome = String(nome || '').trim();
@@ -6389,6 +6393,7 @@ window.AvaliacaoTreinoSync = (function () {
     // Consultar um treino não é um novo lançamento; o histórico começa nele.
     initHistory();
     if (typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs();
+    if(typeof sequenceTracker!=='undefined'&&sequenceTracker)sequenceTracker.refresh();
     return true;
   }
   function buscarAluno(nome) {
@@ -6674,6 +6679,7 @@ window.AvaliacaoTreinoSync = (function () {
               titulos: cleanTitulos,
               historicoTreinos: cleanHistorico
             };
+            if (item.sequenciaTreino) alunoSan.sequenciaTreino = WorkoutSequence.sanitize(item.sequenciaTreino);
             if (item.avaliacaoId) alunoSan.avaliacaoId = item.avaliacaoId;
             if (item.favorito !== undefined) alunoSan.favorito = !!item.favorito;
             if (typeof garantirHistorico === 'function') garantirHistorico(alunoSan);
@@ -6898,6 +6904,7 @@ window.AvaliacaoTreinoSync = (function () {
           + '<div class="aluno-nome">' + escHtml(a.nome) + (a.arquivadoNaLista?' <span class="sub-badge">📦 Arquivado</span>':'') + badgeSel + badgeFav + badgeNovo + '</div>'
           + '<button type="button" class="archive-aluno-btn" data-nome="' + escAttr(a.nome) + '" title="' + (a.arquivadoNaLista?'Restaurar na lista':'Arquivar na lista') + '" aria-label="' + (a.arquivadoNaLista?'Restaurar ':'Arquivar ') + escAttr(a.nome) + '">' + (a.arquivadoNaLista?'↩':'📦') + '</button></div><div class="aluno-info">'
           + '<div class="aluno-data">' + escHtml(resumoDataTreino(a)) + assessmentBadge + (isSelecionado ? ' · <strong style="color:#16a34a;">🟢 Aluno ativo na tela</strong>' : '') + '</div></div>'
+          + (WorkoutSequence.summary(a)?'<div class="lista-sequencia-treino">'+escHtml(WorkoutSequence.summary(a))+'</div>':'')
           + '<div class="aluno-actions">'
           + '<button class="fav-aluno-btn' + (isFav ? ' fav-ativo' : '') + '" data-nome="' + escAttr(a.nome) + '" title="' + (isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + svgEstrela(isFav, 13) + (isFav ? ' Favorito' : ' Favoritar') + '</button>'
           + '<button class="hist-aluno-btn history-student-btn' + (isSelecionado ? ' hist-selecionado' : '') + '" data-nome="' + escAttr(a.nome) + '"' + (isSelecionado ? ' style="background:#0284c7!important;font-weight:700;box-shadow:0 1px 3px rgba(2,132,199,0.35);"' : '') + '>📜 Histórico</button>'
@@ -8453,7 +8460,7 @@ window.AvaliacaoTreinoSync = (function () {
     return a;
   }
   function snapshotAluno(a) {
-    return {workout_id:a.treino_id,student_id:a.student_id,name:a.treinoNome||a.nome||('Treino de '+a.nome),student_name:a.nome,original_student_name:a.nome,created_at:a.treinoCriadoEm||a.criadoEm||null,activated_at:a.treinoAtivadoEm||a.atualizadoEm||null,archived_at:null,status:'active',validadeTreino:cloneData(WorkoutValidity.get(a)),treino:cloneData(a.treino),titulos:cloneData(a.titulos||{}),secaoFAtiva:!!a.secaoFAtiva};
+    return {workout_id:a.treino_id,student_id:a.student_id,name:a.treinoNome||a.nome||('Treino de '+a.nome),student_name:a.nome,original_student_name:a.nome,created_at:a.treinoCriadoEm||a.criadoEm||null,activated_at:a.treinoAtivadoEm||a.atualizadoEm||null,archived_at:null,status:'active',validadeTreino:cloneData(WorkoutValidity.get(a)),sequenciaTreino:cloneData(WorkoutSequence.get(a)),treino:cloneData(a.treino),titulos:cloneData(a.titulos||{}),secaoFAtiva:!!a.secaoFAtiva};
   }
   function arquivarTreino(a) {
     garantirHistorico(a);
@@ -8461,6 +8468,7 @@ window.AvaliacaoTreinoSync = (function () {
       var old=snapshotAluno(a);old.status='archived';old.archived_at=new Date().toISOString();a.historicoTreinos.push(old);
     }
     delete a.validadeTreino;
+    delete a.sequenciaTreino;
     a.treino_id=novoId('treino');a.treinoCriadoEm=new Date().toISOString();a.treinoAtivadoEm=a.treinoCriadoEm;a.treinoProtegido=false;
   }
   function alunoVinculado() { return alunos.find(function(a){return a.student_id===alunoVinculadoId;})||null; }
@@ -8523,6 +8531,7 @@ window.AvaliacaoTreinoSync = (function () {
       }
     }
     if(!salvarLocalStorage()){Object.keys(a).forEach(function(k){delete a[k];});Object.assign(a,old);return false;}
+    if(typeof sequenceTracker!=='undefined'&&sequenceTracker)sequenceTracker.refresh();
     return true;
   }
   function salvarAlunoAtual(registrarLancamento) {
@@ -9160,6 +9169,19 @@ window.AvaliacaoTreinoSync = (function () {
   document.querySelector('.global-buttons').after(toolsRow);
   document.getElementById('createWorkoutBtn').onclick=function(){abrirGerador();};document.getElementById('historyWorkoutBtn').onclick=function(){abrirHistorico();};document.getElementById('compareWorkoutBtn').onclick=function(){abrirHistorico(null,true);};
   var validityEditor=WorkoutValidity.mount({createDialog:criarDialogo,selected:alunoNaTela,find:function(id){return alunos.find(function(a){return a.student_id===id;});},save:salvarLocalStorage,message:exibirMensagem,button:document.getElementById('workoutValidityBtn'),summary:document.getElementById('workoutValiditySummary')});
+  var sequenceTracker=WorkoutSequence.mount(document.getElementById('workoutSequence'),{
+    selected:alunoNaTela,
+    read:function(id){return AvaliacaoTreinoSync.read('treinoAlunos').find(function(a){return a.student_id===id;});},
+    matches:function(student){return !diferencaDados(capturarTreinoAtual(),student);},
+    beforeChange:concluirAutoSave,
+    save:function(student,value){
+      var fresh=AvaliacaoTreinoSync.read('treinoAlunos').find(function(a){return a.student_id===student.student_id;});
+      if(!fresh||fresh.treino_id!==student.treino_id||JSON.stringify(fresh.sequenciaTreino||null)!==JSON.stringify(student.sequenciaTreino||null))throw Error('A marcação mudou em outra janela. Confira e tente novamente.');
+      TreinoStorage.stageObs(student.student_id,{studentFields:{sequenciaTreino:value}});
+      var local=alunos.find(function(a){return a.student_id===student.student_id;});if(local)local.sequenciaTreino=value;
+      TreinoStorage.compactObs().catch(function(){ /* The small marker is already durable. */ });
+    }
+  });
   if(document.getElementById('listIconBtn')) document.getElementById('listIconBtn').onclick=mostrarListaAlunos;
   if(document.getElementById('obsIconBtn')) document.getElementById('obsIconBtn').onclick=function(){abrirObservacoes();};
 
