@@ -10,6 +10,7 @@ with sync_playwright() as p:
  def route(r):
   u=urlparse(r.request.url)
   if u.hostname=='space.test' and u.path=='/blank':r.fulfill(body='<html></html>',content_type='text/html');return
+  if u.path=='/photo-vault.js':r.fulfill(body='window.PhotoVault=undefined;',content_type='application/javascript');return
   path=ROOT/u.path.lstrip('/')
   if path.is_dir():path/='index.html'
   if u.hostname=='space.test' and path.is_file():r.fulfill(body=path.read_bytes(),content_type={'.js':'application/javascript','.css':'text/css'}.get(path.suffix,'text/html'))
@@ -23,7 +24,7 @@ with sync_playwright() as p:
  const person={id:10,nome:'Exemplo',avaliacoes:[{id:11,peso:'58.7',resumo:'Preservar',fotoF:photo,fotoFOriginal:photo,fotosExtras:[{id:'extra',src:photo,label:'Espelho'}],posturaEdicoes:{fotoF:{lines:[{x1:.1,x2:.8,y1:.5,y2:.5}],logo:{src:logo,x:.1,y:.2,width:.3}}}}]};
  localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([person]));localStorage.setItem('treinoAlunos','[]');return {photo,logo,before:TreinoStorage.usage()};
  }''')
- page.reload();page.locator('#moreOptions > summary').click();page.locator('#storageSpaceBtn').click();expect(page.locator('#storageSpaceDialog')).to_be_visible();expect(page.locator('[data-usage]')).to_contain_text('Dados locais usados:')
+ page.reload();page.locator('#moreOptions > summary').click();page.locator('#storageSpaceBtn').click();expect(page.locator('#storageSpaceDialog')).to_be_visible();expect(page.locator('[data-usage]')).to_contain_text('Cadastros locais:')
  page.locator('[data-optimize]').click();expect(page.locator('#storageSpaceDialog [role=status]')).to_contain_text('Espaço liberado:',timeout=30000)
  result=page.evaluate('''async()=>{const av=JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0],image=new Image();image.src=av.fotoF;await image.decode();return {av,width:image.naturalWidth,height:image.naturalHeight,used:TreinoStorage.usage()};}''')
  assert result['width']==900 and result['height']==1200

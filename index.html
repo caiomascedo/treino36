@@ -18,9 +18,10 @@
 <script src="composition-extras.js?v=13"></script>
 <link rel="stylesheet" href="composition-extras.css?v=9">
 <script src="obs-autosave-journal.js?v=1"></script>
-<script src="storage-adapter.js?v=23"></script>
+<script src="photo-vault.js?v=1"></script>
+<script src="storage-adapter.js?v=24"></script>
 <script src="storage-photo-manager.js?v=1" defer></script>
-<script src="storage-space.js?v=2" defer></script>
+<script src="storage-space.js?v=3" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1484,11 +1485,11 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js?v=20"></script>
+<script src="avaliacao-import.js?v=21"></script>
 <script src="workout-validity.js?v=2"></script>
 <script src="workout-sequence.js?v=3"></script>
 <link rel="stylesheet" href="workout-sequence.css?v=3">
-<script src="obs-notes.js?v=6"></script>
+<script src="obs-notes.js?v=7"></script>
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=4"></script>
@@ -1497,11 +1498,11 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="diet-tools.js?v=3"></script>
 <script src="diet.js?v=15"></script>
 <link rel="stylesheet" href="diet.css?v=12">
-<script src="posture-editor.js?v=6"></script>
+<script src="posture-editor.js?v=7"></script>
 <link rel="stylesheet" href="posture-editor.css?v=6">
-<script src="assessment-photos.js?v=3"></script>
+<script src="assessment-photos.js?v=4"></script>
 <link rel="stylesheet" href="assessment-photos.css?v=2">
-<script src="obs-avaliacao.js?v=43"></script>
+<script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
 </head>
 <body>
@@ -4942,7 +4943,9 @@ window.AvaliacaoTreinoSync = (function () {
 }
 </script>
 <script>
-(function(){
+(async function(){
+  const storageLoading=document.createElement('div');storageLoading.id='photoStorageLoading';storageLoading.setAttribute('role','status');storageLoading.style.cssText='position:fixed;inset:0;z-index:999999;background:white;display:grid;place-items:center;padding:24px;color:#29465a';storageLoading.textContent='Preparando o armazenamento das fotos. Seus dados estão preservados…';document.body.append(storageLoading);
+  await TreinoStorage.ready;
   const SECOES_BASE = ['A','B','C','D','E'];
   let SECOES = [...SECOES_BASE];
   let secaoFAtiva = false;
@@ -6572,9 +6575,10 @@ window.AvaliacaoTreinoSync = (function () {
       var file = e.target.files[0];
       if (!file) return;
       var reader = new FileReader();
-      reader.onload = function(ev) {
+      reader.onload = async function(ev) {
         try {
           var raw = JSON.parse(ev.target.result);
+          await PhotoVault.prepare(raw);
           if (typeof AvaliacoesJSON !== 'undefined' && AvaliacoesJSON && AvaliacoesJSON.isAssessmentPayload(raw)) {
             AvaliacoesJSON.preview(raw, function() {
               if (typeof atualizarFichaDaAvaliacao === 'function') atualizarFichaDaAvaliacao();
@@ -11330,7 +11334,8 @@ window.AvaliacaoTreinoSync = (function () {
   observeEditableChanges();
   if (typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs();
   
-})();
+  storageLoading.remove();
+})().catch(error=>{const loading=document.getElementById('photoStorageLoading');if(loading)loading.textContent=error.message+' Atualize a página para tentar novamente. Não apague os dados do site.';});
 </script>
 </body>
 </html>

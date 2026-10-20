@@ -1,6 +1,8 @@
 /* Lossless local storage for Treino36. Existing JSON and exports keep their schema. */
 (() => {
   const prefix = 'treino36:lz:1:';
+  const hydrate=value=>window.PhotoVault?PhotoVault.hydrate(value):value;
+  const dehydrate=value=>window.PhotoVault?PhotoVault.dehydrate(value):value;
   const originalGet = Storage.prototype.getItem;
   const originalSet = Storage.prototype.setItem;
   const journalKey = 'treino36_assessment_drafts';
@@ -16,12 +18,13 @@
     cache.set(key, {raw, decoded});
   };
   const unpack = value => {
-    if (value === null || !value.startsWith(prefix)) return value;
+    if (value === null || !value.startsWith(prefix)) return hydrate(value);
     const decoded = LZString.decompressFromUTF16(value.slice(prefix.length));
     if (decoded === null) throw Error('Não foi possível ler os dados guardados. Preserve o backup JSON.');
-    return decoded;
+    return hydrate(decoded);
   };
   const pack = value => {
+    value=dehydrate(value);
     if (value.length < 512) return value;
     const compressed = prefix + LZString.compressToUTF16(value);
     return compressed.length < value.length ? compressed : value;
@@ -107,7 +110,7 @@
       }
       for(let i=0;i<keys.length;i++){
         const key=keys[i],raw=originalGet.call(localStorage,key);progress(i+1,keys.length);
-        try{let data;try{data=JSON.parse(unpack(raw));}catch(error){continue;}const next=pack(JSON.stringify(await visit(data)));
+        try{let data;try{data=JSON.parse(unpack(raw));}catch(error){continue;}const optimized=await visit(data);if(window.PhotoVault)await PhotoVault.prepare(optimized);const next=pack(JSON.stringify(optimized));
           // Each key is replaced atomically, only when smaller and unchanged since reading.
           if(originalGet.call(localStorage,key)!==raw){conflicts++;continue;}
           if(next.length<raw.length){originalSet.call(localStorage,key,next);cacheFor(localStorage).delete(key);}
@@ -124,7 +127,7 @@
       }
       if(patch.createStudent)draft.createStudent=patch.createStudent;
       draft.studentFields={...draft.studentFields,...patch.studentFields};
-      originalSet.call(localStorage,key,JSON.stringify(drafts));
+      originalSet.call(localStorage,key,photos?pack(JSON.stringify(drafts)):dehydrate(JSON.stringify(drafts)));
     },
     pruneObsInfo(studentId,ids){
       const raw=originalGet.call(localStorage,obsKey);if(!raw||raw==='[]')return;
@@ -132,7 +135,7 @@
       const before=JSON.stringify(draft),keep=id=>ids.some(value=>String(value)===String(id));
       if(draft.info)draft.info=draft.info.filter(g=>keep(g.id));if(draft.infoOrder)draft.infoOrder=draft.infoOrder.filter(keep);
       if(draft.studentFields?.infoRelevante&&!keep(draft.studentFields.infoRelevante.id))delete draft.studentFields.infoRelevante;
-      if(before!==JSON.stringify(draft))originalSet.call(localStorage,obsKey,JSON.stringify(drafts));
+      if(before!==JSON.stringify(draft))originalSet.call(localStorage,obsKey,dehydrate(JSON.stringify(drafts)));
     },
     hasObsDrafts(){return [obsKey,photoKey].some(key=>{const raw=originalGet.call(localStorage,key);return raw&&raw!=='[]';});},
     compactObs(){
@@ -140,7 +143,7 @@
       compactingObs=(async()=>{const key='treinoAlunos',raw=originalGet.call(localStorage,key),journal=originalGet.call(localStorage,obsKey),photos=originalGet.call(localStorage,photoKey);if((!journal||journal==='[]')&&(!photos||photos==='[]'))return null;
         const result=await runWorker({task:'compactObs',raw,journal,photos});
         if(originalGet.call(localStorage,key)!==raw||originalGet.call(localStorage,obsKey)!==journal||originalGet.call(localStorage,photoKey)!==photos)return null;
-        originalSet.call(localStorage,key,result.packed);originalSet.call(localStorage,obsKey,'[]');originalSet.call(localStorage,photoKey,'[]');remember(cacheFor(localStorage),key,result.packed,result.decoded);return result.records;
+        originalSet.call(localStorage,key,result.packed);originalSet.call(localStorage,obsKey,'[]');originalSet.call(localStorage,photoKey,'[]');remember(cacheFor(localStorage),key,result.packed,hydrate(result.decoded));return JSON.parse(hydrate(result.decoded));
       })().finally(()=>{compactingObs=null;});return compactingObs;
     },
     stageAssessment(recordId,avId,fields,personFields={}) {
@@ -154,7 +157,7 @@
       const serialized=JSON.stringify(drafts);
       const hasPhotoEdit=Object.keys(fields).some(key=>key==='fotosExtras'||/^foto[FLD](Original)?$/.test(key));
       const previous=originalGet.call(localStorage,journalKey);
-      originalSet.call(localStorage,journalKey,hasPhotoEdit||previous?.startsWith(prefix)?pack(serialized):serialized);
+      originalSet.call(localStorage,journalKey,hasPhotoEdit||previous?.startsWith(prefix)?pack(serialized):dehydrate(serialized));
     },
     assessmentOperation(recordId,avId,operation,fields={},personFields={}) {
       const drafts = JSON.parse(unpack(originalGet.call(localStorage,journalKey)) || '[]');
@@ -162,16 +165,17 @@
       const previous = operation==='person' ? drafts.find(item=>String(item.recordId)===String(recordId)&&String(item.avId)===String(avId)&&item.operation==='person') : null;
       const draft = {recordId,avId,operation,fields,personFields:{...previous?.personFields,...personFields}}; kept.push(draft);
       const serialized=JSON.stringify(kept),previousRaw=originalGet.call(localStorage,journalKey);
-      originalSet.call(localStorage,journalKey,previousRaw?.startsWith(prefix)?pack(serialized):serialized);
+      originalSet.call(localStorage,journalKey,previousRaw?.startsWith(prefix)?pack(serialized):dehydrate(serialized));
       return draft;
     },
     clearAssessmentDrafts() { originalSet.call(localStorage,journalKey,'[]'); },
     async writeJSON(key,value) {
       const before = originalGet.call(localStorage,key);
-      const result = await runWorker({task:'serialize',value});
+      if(window.PhotoVault)await PhotoVault.prepare(value);
+      const result = await runWorker({task:'serialize',value:JSON.parse(dehydrate(JSON.stringify(value)))});
       if (originalGet.call(localStorage,key) !== before) return false;
       originalSet.call(localStorage,key,result.packed);
-      remember(cacheFor(localStorage),key,result.packed,result.decoded);
+      remember(cacheFor(localStorage),key,result.packed,hydrate(result.decoded));
       return true;
     },
     compactAssessments() {
@@ -185,12 +189,28 @@
         if (originalGet.call(localStorage,key) !== raw || originalGet.call(localStorage,journalKey) !== journal) return null;
         originalSet.call(localStorage,key,result.packed);
         originalSet.call(localStorage,journalKey,'[]');
-        remember(cacheFor(localStorage),key,result.packed,result.decoded);
-        return result.records;
+        remember(cacheFor(localStorage),key,result.packed,hydrate(result.decoded));
+        return JSON.parse(hydrate(result.decoded));
       })().finally(() => { compacting = null; });
       return compacting;
     }
   };
+  TreinoStorage.migration={failed:[]};
+  TreinoStorage.ready=(async()=>{
+    if(!window.PhotoVault)return;
+    await PhotoVault.ready;
+    if(!PhotoVault.available){for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(!/^(treino|avaliacao)/.test(key))continue;const raw=originalGet.call(localStorage,key)||'',text=raw.startsWith(prefix)?LZString.decompressFromUTF16(raw.slice(prefix.length)):raw;if(text?.includes('treino36:photo:'))throw Error('Não foi possível abrir as fotos guardadas. Seus dados foram mantidos. Feche outras abas e atualize a página.');}return;}
+    const keys=[];for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(/^(treino|avaliacao)/.test(key))keys.push(key);}
+    for(const key of keys){const before=originalGet.call(localStorage,key);if(!before)continue;
+      try{const decoded=unpack(before);await PhotoVault.prepare(decoded);const next=pack(decoded);
+        if(originalGet.call(localStorage,key)===before&&next!==before){originalSet.call(localStorage,key,next);cacheFor(localStorage).delete(key);}
+      }catch(error){TreinoStorage.migration.failed.push(key);console.warn('O arquivo anterior foi preservado:',key,error.name);}
+    }
+  })();
+  window.addEventListener('storage',event=>{
+    if(!window.PhotoVault||!event.newValue||!/^(treino|avaliacao)/.test(event.key||''))return;
+    try{unpack(event.newValue);}catch(error){event.stopImmediatePropagation();PhotoVault.refresh().then(()=>{try{unpack(event.newValue);}catch(error){return;}window.dispatchEvent(new StorageEvent('storage',{key:event.key,newValue:event.newValue,oldValue:event.oldValue,url:event.url,storageArea:localStorage}));}).catch(()=>{});}
+  },true);
   // Replace one key at a time. A failed migration always leaves that original key intact.
   try {
     for (let i = 0; i < localStorage.length; i++) {
