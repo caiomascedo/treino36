@@ -30,6 +30,8 @@ with sync_playwright() as p:
  engine=next(f for f in page.frames if 'treino36-engine' in f.url)
  legacy=engine.evaluate("""()=>{const person={id:1,sexo:'M',idade:'30',altura:'1.8',avaliacoes:[{id:2,peso:'80',protocolo:'yuhasz6',triceps:'10',torax:'12',subescapular:'15',suprailiaca:'14',abdominal:'13',pregaCoxa:'16'}]};TreinoAssessmentEngine.calculate(person,2);return person.avaliacoes[0]}""")
  assert legacy['protocolo']=='yuhasz6' and legacy['_dobras']['soma']==80 and legacy['torax']=='12',legacy
+ checks=engine.evaluate('''()=>{const person={id:1,sexo:'M',idade:'30',altura:'1.8',avaliacoes:[{id:2,peso:'80',protocolo:'carter6',triceps:'10',torax:'12',subescapular:'15',suprailiaca:'14',abdominal:'13',pregaCoxa:'16',panturrilha:'9'}]};TreinoAssessmentEngine.calculate(person,2);const initial={...person.avaliacoes[0]._dobras};person.avaliacoes[0].torax='90';TreinoAssessmentEngine.calculate(person,2);const changed={...person.avaliacoes[0]._dobras};person.avaliacoes[0].panturrilha='';TreinoAssessmentEngine.calculate(person,2);return {initial,changed,missing:person.avaliacoes[0]._dobras};}''')
+ assert checks['initial']==checks['changed'] and checks['initial']['soma']==77 and checks['missing'] is None,checks
  library=context.new_page();library.goto('http://app.test/treino36/avaliacao.html?embed=treino36&treinoStudentId=a')
  expect(library.locator('select[onchange^="trocarProtocoloDobras"]')).to_have_value('registro');expect(library.locator('.skinfold-protocol-guide')).to_contain_text('adipômetro')
  assert not errors,errors

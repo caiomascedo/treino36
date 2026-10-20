@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=38',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=39',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -129,8 +129,9 @@ window.ObsAssessmentEditor = (() => {
       }
       if(section==='dobras') {
         const select=el('select',{id:'obsAssessmentProtocol','aria-label':'Protocolo de dobras'});api.protocolOptions(state.av.protocolo).forEach(({id,label})=>{const option=el('option',{value:id},label);option.selected=id===(state.av.protocolo||'jp7');select.append(option);});select.onchange=()=>{update('protocolo',select.value);render();};content.append(select);content.append(el('p',{class:'skinfold-protocol-guide'},api.protocolGuide(state.av.protocolo||'jp7',state.person,state.av)));
-        api.protocol(state.av.protocolo).campos(state.person.sexo).forEach(key=>content.append(field(key,api.skinfoldLabel(key)+' (mm)',false,state)));
-        SkinfoldGuides.mount(content,{fields:api.protocol(state.av.protocolo).campos(state.person.sexo),protocol:state.av.protocolo,sex:state.person.sexo,input:key=>content.querySelector('#obs-av-'+key)});
+        const definition=api.protocol(state.av.protocolo),fields=[...definition.campos(state.person.sexo),...(definition.adicionais||[])];
+        fields.forEach(key=>content.append(field(key,api.skinfoldLabel(key)+' (mm)'+((definition.adicionais||[]).includes(key)?' · adicional':''),false,state)));
+        SkinfoldGuides.mount(content,{fields,protocol:state.av.protocolo,sex:state.person.sexo,input:key=>content.querySelector('#obs-av-'+key)});
         content.append(el('div',{class:'obs-skinfold-results'}));
       }
       if(section==='fotos') {

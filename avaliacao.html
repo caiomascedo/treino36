@@ -6,7 +6,7 @@
 <script src="assessment-journal.js?v=18"></script>
 <script src="composition-context.js?v=1"></script>
 <script src="inbody-fields.js?v=1"></script>
-<script src="skinfold-guides.js?v=1"></script>
+<script src="skinfold-guides.js?v=2"></script>
 <link rel="stylesheet" href="skinfold-guides.css?v=1">
 <script src="composition-extras.js?v=11"></script>
 <link rel="stylesheet" href="composition-extras.css?v=9">
@@ -14,7 +14,7 @@
 <script src="storage-adapter.js?v=20"></script>
 <script src="pdf-viewer.js?v=4"></script>
 <script src="assessment-pdf-style.js?v=1"></script>
-<script src="skinfold-protocols.js?v=1"></script>
+<script src="skinfold-protocols.js?v=2"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
 
@@ -1112,9 +1112,10 @@ function calcularIMCeDobras(aluno,avId){
 
 const LABELS_DOBRAS_EXTRA = {pregaCoxa:'Coxa (prega)'};
 function renderizarCamposDobras(aluno, av){
-  const campos = getProtocoloDef(av.protocolo).campos(aluno.sexo);
+  const def = getProtocoloDef(av.protocolo);
+  const campos = [...def.campos(aluno.sexo),...(def.adicionais||[])];
   return campos.map(k=>{
-    const label = LABELS_DOBRAS_EXTRA[k] || LABELS_DOBRAS[k];
+    const label = (LABELS_DOBRAS_EXTRA[k] || LABELS_DOBRAS[k])+((def.adicionais||[]).includes(k)?' · adicional':'');
     return `<div class="field"><label for="skinfold-${aluno.id}-${av.id}-${k}">${label}</label><input type="text" inputmode="decimal" id="skinfold-${aluno.id}-${av.id}-${k}" data-skinfold-key="${k}" value="${escapeHtml(av[k]||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'${k}',this.value)"></div>`;
   }).join('');
 }
@@ -1594,10 +1595,11 @@ async function gerarPDFAluno(alunoId, options={}){
   
   const dobrasRows = [
     ['Protocolo', ...avs.map(av => getProtocoloDef(av.protocolo).nomeCurto)],
+    ...(avs.some(av=>av.protocolo==='carter6'&&av.torax)?[['¹ Peitoral adicional', ...avs.map(av=>av.protocolo==='carter6'?'Registro adicional; fora do cálculo':'—')]]:[]),
     ['Bicipital', ...avs.map((av,idx)=>`${av.bicipital||'—'}${idx===0?'':formatDelta(av.bicipital,avs[idx-1].bicipital)}`)],
     ['Tríceps', ...avs.map((av, idx) => `${av.triceps||'—'}${idx===0 ? '' : formatDelta(av.triceps, avs[idx-1].triceps)}`)],
     ['Axilar Média', ...avs.map((av, idx) => `${av.axilar||'—'}${idx===0 ? '' : formatDelta(av.axilar, avs[idx-1].axilar)}`)],
-    ['Tórax', ...avs.map((av, idx) => `${av.torax||'—'}${idx===0 ? '' : formatDelta(av.torax, avs[idx-1].torax)}`)],
+    [avs.some(av=>av.protocolo==='carter6'&&av.torax)?'Tórax / peitoral¹':'Tórax / peitoral', ...avs.map((av, idx) => `${av.torax||'—'}${idx===0 ? '' : formatDelta(av.torax, avs[idx-1].torax)}`)],
     ['Abdominal', ...avs.map((av, idx) => `${av.abdominal||'—'}${idx===0 ? '' : formatDelta(av.abdominal, avs[idx-1].abdominal)}`)],
     ['Suprailíaca', ...avs.map((av, idx) => `${av.suprailiaca||'—'}${idx===0 ? '' : formatDelta(av.suprailiaca, avs[idx-1].suprailiaca)}`)],
     ['Subescapular', ...avs.map((av, idx) => `${av.subescapular||'—'}${idx===0 ? '' : formatDelta(av.subescapular, avs[idx-1].subescapular)}`)],
@@ -2013,7 +2015,7 @@ function renderizarAlunos(alunosParaRenderizar){
   });
   container.querySelectorAll('[data-skinfold-record]').forEach(grid=>{
     const person=alunos.find(a=>String(a.id)===grid.dataset.skinfoldRecord),av=person.avaliacoes.find(a=>String(a.id)===grid.dataset.skinfoldAv);
-    SkinfoldGuides.mount(grid,{fields:getProtocoloDef(av.protocolo).campos(person.sexo),protocol:av.protocolo,sex:person.sexo,input:key=>grid.querySelector('[data-skinfold-key="'+key+'"]')});
+    SkinfoldGuides.mount(grid,{fields:[...getProtocoloDef(av.protocolo).campos(person.sexo),...(getProtocoloDef(av.protocolo).adicionais||[])],protocol:av.protocolo,sex:person.sexo,input:key=>grid.querySelector('[data-skinfold-key="'+key+'"]')});
   });
   compactarAvaliacoes();
 }
