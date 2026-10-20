@@ -1476,8 +1476,8 @@ window.AvaliacaoTreinoSync = (function () {
 </script>
 <script src="avaliacao-import.js?v=20"></script>
 <script src="workout-validity.js?v=2"></script>
-<script src="workout-sequence.js?v=2"></script>
-<link rel="stylesheet" href="workout-sequence.css?v=2">
+<script src="workout-sequence.js?v=3"></script>
+<link rel="stylesheet" href="workout-sequence.css?v=3">
 <script src="obs-notes.js?v=6"></script>
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
@@ -1553,11 +1553,11 @@ window.AvaliacaoTreinoSync = (function () {
       </div>
     </details>
   </div>
-  <section id="workoutSequence" aria-label="Sequência de treinos do aluno" hidden></section>
   <div class="format-bar">
     <button id="boldBtn" class="format-btn">B (Negrito)</button>
     <button id="undoBtn" class="format-btn">↩️ Desfazer</button>
     <button id="redoBtn" class="format-btn">↪️ Refazer</button>
+    <section id="workoutSequence" aria-label="Sequência de treinos do aluno" hidden></section>
     <span id="saveStatus" class="save-status" hidden></span>
   </div>
   <div id="resultMsg" class="result-message"></div>
@@ -9170,6 +9170,18 @@ window.AvaliacaoTreinoSync = (function () {
   document.querySelector('.global-buttons').after(toolsRow);
   document.getElementById('createWorkoutBtn').onclick=function(){abrirGerador();};document.getElementById('historyWorkoutBtn').onclick=function(){abrirHistorico();};document.getElementById('compareWorkoutBtn').onclick=function(){abrirHistorico(null,true);};
   var validityEditor=WorkoutValidity.mount({createDialog:criarDialogo,selected:alunoNaTela,find:function(id){return alunos.find(function(a){return a.student_id===id;});},save:salvarLocalStorage,message:exibirMensagem,button:document.getElementById('workoutValidityBtn'),summary:document.getElementById('workoutValiditySummary')});
+  function treinoExibidoConfereSequencia(student){
+    var shown=capturarTreinoAtual();if(!shown||shown.student_id!==student.student_id)return false;
+    var normalized=function(value){return String(value||'').replace(/\s+/g,' ').trim().toLowerCase();};
+    var expected=Object.assign({},student,{treino:{},titulos:{}}),actual=Object.assign({},shown,{treino:{},titulos:{}});
+    var scratch=document.createElement('div'),isExercise=function(line){return line&&!/seção vazia|nenhum exercício|sem exercícios|sem treino cadastrado|nenhum aluno/.test(line);};
+    ['A','B','C','D','E','F'].forEach(function(key){
+      expected.treino[key]=(student.treino[key]||[]).map(function(line){scratch.innerHTML=formatExerciseLine(line)||'';return normalized(scratch.textContent);}).filter(isExercise);
+      actual.treino[key]=(shown.treino[key]||[]).map(normalized).filter(isExercise);
+      expected.titulos[key]=normalized(student.titulos&&student.titulos[key]);actual.titulos[key]=normalized(shown.titulos[key]);
+    });
+    return !diferencaDados(actual,expected);
+  }
   function salvarMarcacaoTreino(student,fields){
     var fresh=AvaliacaoTreinoSync.read('treinoAlunos').find(function(a){return a.student_id===student.student_id;});
     if(!fresh||fresh.treino_id!==student.treino_id||JSON.stringify(fresh.sequenciaTreino||null)!==JSON.stringify(student.sequenciaTreino||null)||!!fresh.acompanharSequencia!==!!student.acompanharSequencia)throw Error('A marcação mudou em outra janela. Confira e tente novamente.');
@@ -9180,7 +9192,7 @@ window.AvaliacaoTreinoSync = (function () {
   var sequenceTracker=WorkoutSequence.mount(document.getElementById('workoutSequence'),{
     selected:alunoNaTela,
     read:function(id){return AvaliacaoTreinoSync.read('treinoAlunos').find(function(a){return a.student_id===id;});},
-    matches:function(student){return !diferencaDados(capturarTreinoAtual(),student);},
+    matches:treinoExibidoConfereSequencia,
     beforeChange:concluirAutoSave,
     save:function(student,value){salvarMarcacaoTreino(student,{sequenciaTreino:value});},
     setEnabled:function(student,value){salvarMarcacaoTreino(student,{acompanharSequencia:value});},
