@@ -26,6 +26,8 @@ with sync_playwright() as p:
  for mode,value in [('tmb','1.486'),('deficit','1.903'),('surplus','2.603'),('daily','2.303')]:
   page.locator('[data-diet-goal="'+mode+'"]').click();expect(page.locator('#dietTotals')).to_contain_text('Meta: '+value)
 
+ # Explicitly return to text-derived totals after checking the automatic goal presets.
+ page.locator('#dietClearValues').click()
  text='Café da manhã\n2 ovos · 140 kcal\nPão · 100 kcal\nTotal: 240 kcal\nMacros:\nCarbo: 45g | Prot: 12g | Gord: 8g\n;\n• ;\nAlmoço\nMacros:\nCarbo: 50g | Prot: 35g | Gord: 12g'
  page.locator('#dietText').fill(text);expect(page.locator('#dietTotals')).to_contain_text('688 kcal')
  compactHeight=page.locator('#dietText').bounding_box()['height'];assert compactHeight<=150

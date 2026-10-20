@@ -22,15 +22,14 @@ with sync_playwright() as p:
   assert page.locator('#dietBtn').count(),errors
   page.locator('#dietBtn').click()
   if page.locator('#dietCalculations').get_attribute('open') is None:page.locator('#dietCalculations > summary').click()
- def ratios():
-  if page.locator('#dietMacroTools').get_attribute('open') is None:page.locator('#dietMacroTools > summary').click()
  def expect_macros(p,c,f,k):
   for key,value in [('protein',p),('carbs',c),('fat',f),('calories',k)]:expect(page.locator('#diet-'+key)).to_have_value(str(value))
  opened();page.locator('#dietText').fill('Almoço\nArroz e frango')
- page.locator('[data-diet-goal="deficit"]').click();page.locator('#dietCalculateMacros').click();expect_macros(112,112,44.8,1299);expect(page.locator('#dietMacroAuto')).to_be_checked()
- # Each factor remains independently configurable; goal buttons then update automatically.
- ratios();page.locator('#diet-carbDaily').fill('3');page.locator('#diet-carbSurplus').fill('4')
- page.locator('[data-diet-goal="daily"]').click();expect_macros(112,168,44.8,1523)
+ page.locator('[data-diet-goal="deficit"]').click();expect_macros(112,112,44.8,1299)
+ assert page.locator('#dietMacroTools, #dietCalculateMacros, #dietMacroAuto').count()==0
+ page.locator('[data-diet-goal="daily"]').click();page.locator('#diet-goal').fill('2000');expect_macros(112,287.2,44.8,2000)
+ expect(page.locator('#dietMacroNotice')).to_contain_text('Carbo completa a meta')
+ page.locator('#diet-goal').fill('800');expect_macros(112,287.2,44.8,2000);expect(page.locator('#dietMacroNotice')).to_contain_text('menor que')
  page.locator('[data-diet-goal="surplus"]').click();expect_macros(112,224,44.8,1747)
  page.locator('[data-diet-goal="deficit"]').click();expect_macros(112,112,44.8,1299)
  # Live OBS updates recalculate and persist automatically, with no guessed weight.
@@ -48,24 +47,29 @@ with sync_playwright() as p:
  with fitz.open(pdf_download.value.path()) as pdf:
   contents='\n'.join(p.get_text() for p in pdf)
   for expected in ['1.299 kcal','Proteína: 112 g','Carbo: 112 g','Gordura: 44,8 g','macros pelo peso']:assert expected in contents,(expected,contents)
- page.get_by_role('button',name='Limpar Proteína',exact=True).click();expect(page.locator('#diet-protein')).to_have_value('');expect(page.locator('#dietMacroAuto')).not_to_be_checked();page.locator('#dietUndoBtn').click();expect_macros(112,112,44.8,1299);expect(page.locator('#dietMacroAuto')).to_be_checked()
+ page.get_by_role('button',name='Limpar Proteína',exact=True).click();expect(page.locator('#diet-protein')).to_have_value('');page.locator('#dietUndoBtn').click();expect_macros(112,112,44.8,1299)
  page.locator('#dietClearValues').click()
  for key in ['calories','protein','carbs','fat']:expect(page.locator('#diet-'+key)).to_have_value('')
  expect(page.locator('#dietText')).to_have_value('Almoço\nArroz e frango');page.locator('#dietUndoBtn').click();expect_macros(112,112,44.8,1299)
- # Manual entry and calculator application switch off automatic replacement.
- page.locator('#diet-protein').fill('120');expect(page.locator('#dietMacroAuto')).not_to_be_checked();page.locator('[data-diet-goal="daily"]').click();expect(page.locator('#diet-protein')).to_have_value('120')
- page.locator('#dietMiniCalculator > summary').click();page.locator('#dietCalcExpression').fill('56 × 0,8');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 44,8');page.locator('#dietCalcCopy').click();assert page.evaluate('copied.at(-1)')=='44,8'
- page.locator('#dietCalcTarget').select_option('fat');page.locator('#dietCalcApply').click();expect(page.locator('#diet-fat')).to_have_value('44.8')
- page.locator('#dietCalcClear').click();expect(page.locator('#dietCalcExpression')).to_have_value('');expect(page.locator('#dietCalcApply')).to_be_disabled()
- for key in ['5','6','×','2']:page.locator('[data-diet-calc-key="'+key+'"]').click()
- page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 112');page.locator('#dietCalcTarget').select_option('protein');page.locator('#dietCalcApply').click();expect(page.locator('#diet-protein')).to_have_value('112')
- page.locator('#dietCalcExpression').fill('1/0');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_contain_text('zero');expect(page.locator('#dietCalcApply')).to_be_disabled()
- # Invalid weight/factor cannot replace any previously valid figures.
- ratios();page.locator('#diet-macroWeight').fill('inválido');before=[page.locator('#diet-'+key).input_value() for key in ['calories','protein','carbs','fat']];page.locator('#dietCalculateMacros').click();expect(page.locator('#dietMacroNotice')).to_contain_text('peso válido');assert before==[page.locator('#diet-'+key).input_value() for key in ['calories','protein','carbs','fat']]
- page.locator('#diet-macroWeight').fill('60');page.locator('#dietCalculateMacros').click();expect_macros(120,180,48,1632)
- page.reload();opened();expect_macros(120,180,48,1632);expect(page.locator('#dietMacroAuto')).to_be_checked();ratios();expect(page.locator('#diet-carbDaily')).to_have_value('3');expect(page.locator('#diet-macroWeight')).to_have_value('60')
+ # Manual correction is retained until an explicit objective click.
+ page.locator('#diet-protein').fill('120');page.locator('#diet-goal').fill('2100');expect(page.locator('#diet-protein')).to_have_value('120')
+ page.locator('[data-diet-goal="surplus"]').click();expect_macros(112,224,44.8,1747)
+ # The calculator has its own keypad, cannot summon an editable text keyboard, and never changes macros.
+ page.locator('#dietMiniCalculator > summary').click()
+ assert page.locator('#dietCalcExpression').evaluate('(el)=>el.readOnly && el.inputMode==="none"')
+ assert page.locator('#dietCalcTarget, #dietCalcApply').count()==0
+ expect(page.locator('.diet-mini-keys #dietCalcEvaluate')).to_have_text('=')
+ def keys(text):
+  for key in text:page.locator('[data-diet-calc-key="'+key+'"]').click()
+ keys('56×0,8');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 44,8');page.locator('#dietCalcCopy').click();assert page.evaluate('copied.at(-1)')=='44,8'
+ assert page.evaluate('document.activeElement.id')!='dietCalcExpression'
+ expect_macros(112,224,44.8,1747)
+ page.locator('#dietCalcClear').click();expect(page.locator('#dietCalcExpression')).to_have_value('');expect(page.locator('#dietCalcCopy')).to_be_disabled()
+ keys('56×3⌫2');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_have_text('= 112')
+ page.locator('#dietCalcClear').click();keys('1÷0');page.locator('#dietCalcEvaluate').click();expect(page.locator('#dietCalcResult')).to_contain_text('zero');expect(page.locator('#dietCalcCopy')).to_be_disabled()
+ page.reload();opened();expect_macros(112,224,44.8,1747)
  page.screenshot(path='/tmp/diet-macro-tools-mobile.png')
- page.locator('#dietDialog [data-close]').click();page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bia"] .aluno-nome').click();opened();expect(page.locator('#diet-protein')).to_have_value('');expect(page.locator('#dietMacroAuto')).not_to_be_checked();expect(page.locator('#diet-carbDaily')).to_have_value('');page.locator('#dietCalculateMacros').click();expect(page.locator('#dietMacroNotice')).to_contain_text('peso válido')
+ page.locator('#dietDialog [data-close]').click();page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bia"] .aluno-nome').click();opened();expect(page.locator('#diet-protein')).to_have_value('');page.locator('[data-diet-goal="deficit"]').click();expect(page.locator('#dietMacroNotice')).to_contain_text('peso válido');expect(page.locator('#diet-protein')).to_have_value('')
  assert page.evaluate("AvaliacaoTreinoSync.read('treinoAlunos')")==original
  assert not errors,errors
- browser.close();print('PASS: 56kg macros, independent goal ratios and auto changes, actual clipboard text, per-field/all clear with undo, calculator keys/results/application/errors, invalid-input preservation, manual override, reload, independent pupils and unchanged OBS/workouts')
+ browser.close();print('PASS: one-click macros, maintenance remainder/errors, live OBS weight, clipboard/fallback, PDF, clear/undo, manual correction, keypad-only calculator/errors, persistence and pupil isolation; OBS/workouts unchanged')
