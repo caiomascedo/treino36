@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=36',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=37',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -149,7 +149,7 @@ window.ObsAssessmentEditor = (() => {
               flush();if(String(recordId)===String(target.recordId)&&String(avId)===String(target.avId)){const currentBox=host.querySelector('#obs-av-'+key)?.closest('.obs-assessment-photo');if(currentBox){const img=currentBox.querySelector('img');img.src=result.photo;img.hidden=false;currentBox.querySelectorAll('button').forEach(button=>button.disabled=false);}}
             }});
           }
-          input.onchange=()=>{const file=input.files[0];input.value='';if(file)openEditor({file});};edit.onclick=()=>openEditor();image.onclick=()=>openEditor();camera.onclick=()=>openEditor({camera:true});
+          input.onchange=()=>{const file=input.files[0];input.value='';if(file)openEditor({file});};edit.onclick=()=>openEditor();image.tabIndex=0;image.setAttribute('role','button');image.setAttribute('aria-label','Ampliar foto '+label);image.onclick=()=>postureEditor.preview(current().av[key],label+' · '+current().person.nome);image.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();image.click();}};camera.onclick=()=>openEditor({camera:true});
           remove.onclick=()=>{if(!confirm('Apagar a foto '+label+' e suas marcações desta avaliação?'))return;try{deletePhoto({recordId,avId},current().av[key]||null);}catch(error){status.textContent=error.message;}};
           download.onclick=()=>{const state=current(),src=state.av[key];if(!src)return;const extension=src.startsWith('data:image/png')?'png':src.startsWith('data:image/webp')?'webp':'jpg',filename=[state.person.nome,label,state.av.data||''].join('_').replace(/[^\p{L}\p{N}_-]+/gu,'_');const link=el('a',{href:src,download:filename+'.'+extension});document.body.append(link);link.click();link.remove();status.textContent='Foto pronta para salvar no aparelho.';};
           const actions=el('div',{class:'posture-photo-actions'});actions.append(camera,edit,remove,download);box.append(el('label',{for:input.id},label),image,input,actions);content.append(box);

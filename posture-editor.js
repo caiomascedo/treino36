@@ -33,7 +33,7 @@ window.PostureEditor=(()=>{
     const dialog=el('dialog',{class:'posture-editor',id:'postureEditorDialog','aria-labelledby':'postureEditorTitle'});
     dialog.innerHTML='<header><strong id="postureEditorTitle">Editor postural</strong><button type="button" data-action="save-top">Salvar foto</button><button type="button" data-action="close">Fechar</button></header>'+
       '<div class="posture-toolbar"><button type="button" data-action="gallery">Abrir foto</button><button type="button" data-action="camera">📷 Câmera</button><button type="button" data-action="vertical">+ Vertical</button><button type="button" data-action="horizontal">+ Horizontal</button><button type="button" data-action="ruler">+ Régua</button><button type="button" data-action="logo">+ Minha logo</button><button type="button" data-action="expand" aria-pressed="false">⛶ Ampliar</button></div>'+
-      '<div class="posture-options"><label><input type="checkbox" id="postureGrid"> Mostrar grade na foto</label><label>Grade <select id="postureSpacing" aria-label="Espaçamento da grade"><option value="5">Fina</option><option value="10">Média</option><option value="15">Ampla</option><option value="20">Grande</option><option value="25">Muito grande</option></select></label><label>Cor da grade <input type="color" id="postureGridColor" value="#10b981"></label><label>Cor da linha <input type="color" id="postureColor" value="#ef4444"></label><label><input type="checkbox" id="postureHandles" checked> Mostrar bolinhas</label></div>'+
+      '<div class="posture-options"><label><input type="checkbox" id="postureGrid"> Mostrar grade na foto</label><label>Grade <select id="postureSpacing" aria-label="Espaçamento da grade"><option value="5">Fina</option><option value="10">Média</option><option value="15">Ampla</option><option value="20">Grande</option><option value="25">Muito grande</option></select></label><label>Cor da grade <input type="color" id="postureGridColor" value="#10b981"></label><label>Cor da linha <input type="color" id="postureColor" value="#ef4444"></label><span class="posture-line-copy-tools"><label><input type="checkbox" id="postureHandles" checked> Mostrar bolinhas</label><button type="button" data-action="copy-line" title="Copiar a linha ou régua selecionada">Copiar</button><button type="button" data-action="paste-line" title="Colar linha ou régua copiada">Colar</button></span></div>'+
       '<div class="posture-grid-style"><label>Espessura <input type="range" id="postureGridThickness" min="1" max="6" step="1" value="1" aria-label="Espessura da grade"><output id="postureGridThicknessValue" for="postureGridThickness">1×</output></label><label>Transparência <input type="range" id="postureGridTransparency" min="0" max="100" step="5" value="50" aria-label="Transparência da grade"><output id="postureGridTransparencyValue" for="postureGridTransparency">50%</output></label></div>'+
       '<div class="posture-logo-options" hidden><label>Tamanho da logo <input type="range" id="postureLogoSize" min="5" max="90" step="1" value="40" aria-label="Tamanho da logo"></label><button type="button" data-action="logo-file">Trocar PNG</button><button type="button" data-action="remove-logo">Retirar logo</button></div>'+
       '<div class="posture-zoom"><button type="button" data-action="zoom-out" aria-label="Diminuir foto">−</button><output id="postureZoomValue" aria-live="off">100%</output><button type="button" data-action="zoom-in" aria-label="Ampliar foto">+</button><button type="button" data-action="zoom-reset">Tamanho padrão</button><button type="button" data-action="zoom-lock" aria-pressed="false" title="Travar tamanho e posição da foto">🔓 Travar</button><span id="postureZoomHelp">Zoom com dois dedos</span></div>'+
@@ -42,10 +42,12 @@ window.PostureEditor=(()=>{
       '<p class="posture-help">Arraste a logo ou a linha para mover; uma bolinha para girar. Use dois dedos para aproximar a edição.</p><div class="posture-footer"><button type="button" data-action="delete-photo">Apagar foto</button><span id="postureStatus" role="status"></span><button type="button" data-action="save">Salvar foto</button></div>'+
       '<input type="file" accept="image/*" id="postureGalleryInput" hidden><input type="file" accept="image/*" capture="environment" id="postureCameraInput" hidden><input type="file" accept="image/png" id="postureLogoInput" hidden>';
     document.body.append(dialog);
+    const preview=el('dialog',{class:'posture-photo-preview',id:'posturePhotoPreviewDialog','aria-label':'Foto ampliada'}),previewClose=el('button',{type:'button','aria-label':'Fechar foto ampliada'},'×'),previewImage=el('img',{alt:'Foto postural ampliada'});
+    preview.append(previewClose,previewImage);document.body.append(preview);previewClose.onclick=()=>preview.close();preview.addEventListener('close',()=>{if(!preview.open)previewImage.removeAttribute('src');});
     const q=s=>dialog.querySelector(s),workspace=q('.posture-workspace'),stage=q('.posture-stage'),photo=q('.posture-stage img'),svg=q('svg'),status=q('#postureStatus'),picker=q('#postureLine'),grid=q('#postureGrid'),spacing=q('#postureSpacing'),color=q('#postureColor'),save=q('[data-action="save"]');
     let state=defaults(),selected=null,image=null,source='',config=null,version=0,busy=false,history=[],historyIndex=0,drag=null,serial=0,logoAsset=null,selectedLogo=false,zoom=1,panX=0,panY=0,pinch=null;
     const pointers=new Map();
-    let alignment={x:false,y:false};
+    let alignment={x:false,y:false},lineClipboard=null;
     const names={vertical:'Vertical',horizontal:'Horizontal',ruler:'Régua',line:'Linha'};
     const active=()=>state.lines.find(line=>line.id===selected);
     function controls(){
@@ -58,10 +60,11 @@ window.PostureEditor=(()=>{
       q('[data-action="undo"]').disabled=historyIndex<=0;q('[data-action="redo"]').disabled=historyIndex>=history.length-1;
       for(const action of ['vertical','horizontal','ruler','clear'])q('[data-action="'+action+'"]').disabled=!image||busy;
       q('[data-action="remove"]').disabled=!active()||busy;
+      q('[data-action="copy-line"]').disabled=!active()||busy;q('[data-action="paste-line"]').disabled=!image||!lineClipboard||busy||state.lines.length>=20;
       for(const action of ['logo','zoom-in','zoom-out','zoom-reset'])q('[data-action="'+action+'"]').disabled=!image||busy;
       for(const action of ['zoom-in','zoom-out','zoom-reset'])q('[data-action="'+action+'"]').disabled=!image||busy||state.viewLocked;
       const lock=q('[data-action="zoom-lock"]');lock.disabled=!image||busy;lock.setAttribute('aria-pressed',String(state.viewLocked));lock.textContent=state.viewLocked?'🔒 Travado':'🔓 Travar';lock.setAttribute('aria-label',state.viewLocked?'Destravar tamanho e posição da foto':'Travar tamanho e posição da foto');
-      q('#postureZoomHelp').textContent=state.viewLocked?'Tamanho e posição travados':'Zoom com dois dedos';
+      q('#postureZoomHelp').textContent=state.viewLocked?'Foto travada; linhas e logo livres':'Zoom com dois dedos';
       q('#postureAlignment').hidden=!(alignment.x||alignment.y);q('#postureAlignment').textContent=alignment.x&&alignment.y?'Centralizado ↔ ↕':alignment.x?'Centro horizontal ↔':'Centro vertical ↕';
       q('.posture-logo-options').hidden=!state.logo;q('#postureLogoSize').value=String(Math.round((state.logo?.width||.4)*100));q('#postureLogoSize').disabled=busy;
       q('[data-action="logo-file"]').disabled=busy;q('[data-action="remove-logo"]').disabled=busy;
@@ -136,6 +139,13 @@ window.PostureEditor=(()=>{
     for(const [id,action] of [['postureGalleryInput','gallery'],['postureCameraInput','camera']]){q('#'+id).onchange=event=>{const file=event.target.files[0];event.target.value='';if(file)loadFile(file);};q('[data-action="'+action+'"]').onclick=()=>q('#'+id).click();}
     for(const kind of ['vertical','horizontal','ruler'])q('[data-action="'+kind+'"]').onclick=()=>add(kind);
     q('[data-action="close"]').onclick=()=>dialog.close();
+    q('[data-action="copy-line"]').onclick=()=>{const line=active();if(!line||!image||busy)return;lineClipboard={line:{...line},width:image.naturalWidth,height:image.naturalHeight};status.textContent=line.kind==='ruler'?'Régua copiada.':'Linha copiada.';controls();};
+    q('[data-action="paste-line"]').onclick=()=>{
+      if(!lineClipboard||!image||busy||state.lines.length>=20)return;
+      const copied=lineClipboard.line,dx=copied.x2-copied.x1,dy=(copied.y2-copied.y1)*lineClipboard.height/lineClipboard.width*image.naturalWidth/image.naturalHeight,fit=Math.min(1,1/(Math.abs(dx)||1),1/(Math.abs(dy)||1)),halfX=dx*fit/2,halfY=dy*fit/2;
+      const cx=Math.max(Math.abs(halfX),Math.min(1-Math.abs(halfX),(copied.x1+copied.x2)/2+.025)),cy=Math.max(Math.abs(halfY),Math.min(1-Math.abs(halfY),(copied.y1+copied.y2)/2+.025));
+      const line={...copied,id:'line-'+Date.now()+'-'+(++serial),x1:cx-halfX,y1:cy-halfY,x2:cx+halfX,y2:cy+halfY};state.lines.push(line);selected=line.id;selectedLogo=false;status.textContent=line.kind==='ruler'?'Régua colada. Arraste para posicionar.':'Linha colada. Arraste para posicionar.';record();draw();
+    };
     q('[data-action="remove"]').onclick=()=>{state.lines=state.lines.filter(line=>line.id!==selected);selected=state.lines.at(-1)?.id||null;record();draw();};
     q('[data-action="clear"]').onclick=()=>{state={...defaults(),logo:state.logo,viewLocked:state.viewLocked,lockedView:state.lockedView};selected=null;record();draw();};
     for(const [action,direction] of [['undo',-1],['redo',1]])q('[data-action="'+action+'"]').onclick=async()=>{const next=historyIndex+direction;if(busy||next<0||next>=history.length)return;const token=version,restored=normalize(JSON.parse(history[next]));busy=true;controls();try{const asset=restored.logo?await loadLogo(restored.logo.src):null;if(token!==version)return;historyIndex=next;state=restored;logoAsset=asset;selectedLogo=false;selected=state.lines.at(-1)?.id||null;restoreLockedView();stage.style.transform='translate('+panX+'px,'+panY+'px) scale('+zoom+')';}catch(error){status.textContent='Não foi possível restaurar a logo.';}finally{if(token===version){busy=false;draw();}}};
@@ -169,8 +179,8 @@ window.PostureEditor=(()=>{
       try{await remove();if(version===deleteVersion)dialog.close();}
       catch(error){if(version===deleteVersion){busy=false;status.textContent=error.message||'Não foi possível apagar a foto.';controls();}}
     };
-    dialog.addEventListener('close',()=>{version++;drag=pinch=null;pointers.clear();busy=false;image=logoAsset=null;source='';photo.removeAttribute('src');svg.replaceChildren();config=null;});
-    return {open(options){
+    dialog.addEventListener('close',()=>{if(dialog.open)return;version++;drag=pinch=null;pointers.clear();busy=false;image=logoAsset=null;source='';photo.removeAttribute('src');svg.replaceChildren();config=null;});
+    return {preview(src,label){if(!src)return;previewImage.src=src;previewImage.alt='Foto '+label;preview.showModal();},open(options){
       config=options;version++;image=logoAsset=null;source='';state=defaults();selected=null;selectedLogo=false;zoom=1;panX=panY=0;drag=pinch=null;alignment={x:false,y:false};pointers.clear();dialog.classList.remove('is-expanded');q('[data-action="expand"]').textContent='⛶ Ampliar';q('[data-action="expand"]').setAttribute('aria-pressed','false');history=[JSON.stringify(state)];historyIndex=0;stage.hidden=true;q('.posture-placeholder').hidden=false;status.textContent='';photo.removeAttribute('src');svg.replaceChildren();q('#postureEditorTitle').textContent='Postural · '+options.title;dialog.showModal();controls();
       if(options.file)loadFile(options.file);
       else if(options.source){const token=version;busy=true;controls();loadSource(options.source,options.settings,token).catch(()=>{if(token===version){busy=false;status.textContent='Não foi possível abrir a foto.';controls();}});}
