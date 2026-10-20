@@ -13,7 +13,7 @@
 <script src="composition-extras.js?v=11"></script>
 <link rel="stylesheet" href="composition-extras.css?v=9">
 <script src="obs-autosave-journal.js?v=1"></script>
-<script src="storage-adapter.js?v=20"></script>
+<script src="storage-adapter.js?v=21"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1486,9 +1486,9 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="diet.css?v=6">
 <script src="posture-editor.js?v=6"></script>
 <link rel="stylesheet" href="posture-editor.css?v=6">
-<script src="assessment-photos.js?v=2"></script>
+<script src="assessment-photos.js?v=3"></script>
 <link rel="stylesheet" href="assessment-photos.css?v=2">
-<script src="obs-avaliacao.js?v=39"></script>
+<script src="obs-avaliacao.js?v=40"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
 </head>
 <body>
@@ -9808,7 +9808,7 @@ window.AvaliacaoTreinoSync = (function () {
   function abrirBibliotecaAvaliacoes() {
     definirTamanhoAvaliacao(assessmentLibraryDialog, 'expandAssessmentLibraryBtn', false);
     var frame=document.getElementById('assessmentLibraryFrame');
-    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=39', location.href).href;
+    if(!frame.getAttribute('src'))frame.src = new URL('avaliacao.html?embed=treino36-library&v=40', location.href).href;
     assessmentLibraryDialog.showModal();
     frame.contentWindow.postMessage({type:'treino36-library-refresh'},location.origin);
   }

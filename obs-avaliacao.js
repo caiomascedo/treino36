@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=39',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=40',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -19,7 +19,7 @@ window.ObsAssessmentEditor = (() => {
   }
   function mount(host,config) {
     const postureEditor=PostureEditor.mount();
-    let studentId,recordId,avId,section='composicao',api,opening=0,pdfChoice='auto',cachedRecords=null,saveTimer,compacting=false,changedRecords=null;
+    let studentId,recordId,avId,section='composicao',api,opening=0,pdfChoice='auto',cachedRecords=null,saveTimer,compacting=false,changedRecords=null,photoBusy=false,lastSaveError=null;
     const el=(tag,attrs={},text)=>{const node=document.createElement(tag);Object.entries(attrs).forEach(([key,value])=>node.setAttribute(key,value));if(text!==undefined)node.textContent=text;return node;};
     const status=el('p',{class:'obs-assessment-status',role:'status'});
     function current(target) {const wantedRecord=target?target.recordId:recordId,wantedAv=target?target.avId:avId;const records=cachedRecords||(cachedRecords=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key));const person=records.find(a=>String(a.id)===String(wantedRecord));if(!person)throw Error('O cadastro deste aluno não está disponível.');const av=person.avaliacoes.find(a=>String(a.id)===String(wantedAv));return{records,person,av};}
@@ -47,6 +47,7 @@ window.ObsAssessmentEditor = (() => {
       clearTimeout(saveTimer);saveTimer=setTimeout(compact,1200);
     }
     function update(key,value,target,metadata={}) {
+      lastSaveError=null;
       try {
         const state=current(target);if(!state.av)return;
         Object.assign(state.av,{[key]:value,...metadata});
@@ -55,13 +56,13 @@ window.ObsAssessmentEditor = (() => {
         if(key==='peso'&&state.person.avaliacoes.at(-1)===state.av){state.person.pesoAtual=value;state.person.pesoAtualAvaliacaoId=state.av.id;}
         if(String(state.person.id)===String(recordId)&&String(state.av.id)===String(avId))updateResults(state);
         return true;
-      } catch(error){status.textContent='Não foi possível salvar: '+error.message;return false;}
+      } catch(error){lastSaveError=error;status.textContent='Não foi possível salvar: '+error.message;return false;}
     }
     function extraPhotos(target,transform){
       const latest=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).find(person=>String(person.id)===String(target.recordId))?.avaliacoes.find(av=>String(av.id)===String(target.avId));
       if(!latest)throw Error('Esta avaliação não está mais disponível.');
       const next=transform(AssessmentPhotos.photoList(latest)),destination=current(target).av,previous=destination.fotosExtras;
-      if(!update('fotosExtras',next,target)){destination.fotosExtras=previous;throw Error('Não foi possível guardar a foto. As fotos anteriores foram mantidas.');}
+      if(!update('fotosExtras',next,target)){destination.fotosExtras=previous;throw Error(lastSaveError?.name==='QuotaExceededError'?'O armazenamento do navegador está cheio. Exporte um backup antes de liberar espaço. As fotos anteriores foram mantidas.':'Não foi possível guardar a foto. As fotos anteriores foram mantidas.');}
       flush();return next;
     }
     host.addEventListener('focusout',()=>{clearTimeout(saveTimer);saveTimer=setTimeout(flush,50);});
@@ -129,8 +130,9 @@ window.ObsAssessmentEditor = (() => {
       }
       if(section==='dobras') {
         const select=el('select',{id:'obsAssessmentProtocol','aria-label':'Protocolo de dobras'});api.protocolOptions(state.av.protocolo).forEach(({id,label})=>{const option=el('option',{value:id},label);option.selected=id===(state.av.protocolo||'jp7');select.append(option);});select.onchange=()=>{update('protocolo',select.value);render();};content.append(select);content.append(el('p',{class:'skinfold-protocol-guide'},api.protocolGuide(state.av.protocolo||'jp7',state.person,state.av)));
+        if(api.protocol(state.av.protocolo).fonte)content.append(el('a',{href:api.protocol(state.av.protocolo).fonte,target:'_blank',rel:'noopener noreferrer',class:'skinfold-equation-source',style:'grid-column:1/-1;font-size:12px'},'Referência da fórmula · CBHG'));
         const definition=api.protocol(state.av.protocolo),fields=[...definition.campos(state.person.sexo),...(definition.adicionais||[])];
-        fields.forEach(key=>content.append(field(key,api.skinfoldLabel(key)+' (mm)'+((definition.adicionais||[]).includes(key)?' · adicional':''),false,state)));
+        fields.forEach(key=>content.append(field(key,api.skinfoldLabel(key,state.av.protocolo)+' (mm)'+((definition.adicionais||[]).includes(key)?' · adicional':''),false,state)));
         SkinfoldGuides.mount(content,{fields,protocol:state.av.protocolo,sex:state.person.sexo,input:key=>content.querySelector('#obs-av-'+key)});
         content.append(el('div',{class:'obs-skinfold-results'}));
       }
@@ -162,7 +164,7 @@ window.ObsAssessmentEditor = (() => {
           download.onclick=()=>{const state=current(),src=state.av[key];if(!src)return;const extension=src.startsWith('data:image/png')?'png':src.startsWith('data:image/webp')?'webp':'jpg',filename=[state.person.nome,label,state.av.data||''].join('_').replace(/[^\p{L}\p{N}_-]+/gu,'_');const link=el('a',{href:src,download:filename+'.'+extension});document.body.append(link);link.click();link.remove();status.textContent='Foto pronta para salvar no aparelho.';};
           const actions=el('div',{class:'posture-photo-actions'});actions.append(camera,edit,remove,download);box.append(el('label',{for:input.id},label),image,input,actions);content.append(box);
         });
-        AssessmentPhotos.mount(content,{target:{recordId,avId},getState:current,editor:postureEditor,compress:file=>api.compressImage(file,1200,1600,.85),mutate:extraPhotos,saveSettings:(target,settings)=>{const destination=current(target).av,previous=destination.comparativoFoto;if(!update('comparativoFoto',settings,target)){destination.comparativoFoto=previous;throw Error('Não foi possível guardar as opções do comparativo.');}flush();}});
+        AssessmentPhotos.mount(content,{target:{recordId,avId},getState:current,onBusy:value=>{photoBusy=value;},editor:postureEditor,compress:file=>api.compressImage(file,1200,1600,.85),mutate:extraPhotos,saveSettings:(target,settings)=>{const destination=current(target).av,previous=destination.comparativoFoto;if(!update('comparativoFoto',settings,target)){destination.comparativoFoto=previous;throw Error('Não foi possível guardar as opções do comparativo.');}flush();}});
         [['motivo','Objetivo'],['resumo','Análise postural']].forEach(([key,label])=>{const wrap=el('div',{class:'info-field obs-long-text'}),input=el('textarea',{'data-av-field':key,id:'obs-av-'+key});input.value=state.av[key]||'';input.oninput=()=>update(key,input.value);wrap.append(el('label',{for:input.id},label),input);content.append(wrap);});
       }
       const pdfMode=el('select',{id:'obsAssessmentPdfMode','aria-label':'Conteúdo do PDF'});
@@ -170,7 +172,7 @@ window.ObsAssessmentEditor = (() => {
       const pdfWrap=el('div',{class:'obs-assessment-pdf-options'});pdfWrap.append(el('label',{for:pdfMode.id},'Conteúdo do PDF'),pdfMode);host.append(pdfWrap);
       const actions=el('div',{class:'info-tools-bar obs-assessment-actions'});[['save','💾 Salvar'],['pdf','📄 PDF'],['postural','📸 Postural']].forEach(([kind,label])=>{const b=el('button',{type:'button',class:'info-tool-btn'+(kind==='save'?' primary':''),id:'obsAssessment-'+kind},label);b.onclick=async()=>{let viewer=null;try{if(!flush())return;if(kind!=='save')viewer=TreinoPDFViewer.reserve();const state=current();api.calculate(state.person,state.av.id);stage(state,{});await compact(true);if(kind!=='save'){b.disabled=true;status.textContent='Gerando PDF…';await api.pdf(AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key),state.person.id,kind,{mode:pdfMode.value,viewer});status.textContent='PDF gerado.';}else status.textContent='Avaliação salva.';}catch(e){TreinoPDFViewer.close(viewer);status.textContent='Não foi possível concluir: '+e.message;}finally{b.disabled=false;}};actions.append(b);});host.append(actions,status);updateResults(state);
     }
-    return {flush,async open(student,nextSection,preferredRecord,preferredAvId){if(!flush())return;cachedRecords=null;const token=++opening;const sameStudent=studentId===student.student_id;const previousAv=preferredAvId||(sameStudent?avId:null);studentId=student.student_id;section=nextSection||'composicao';host.hidden=false;host.replaceChildren(el('p',{},'Carregando campos…'));try{api=await engine();if(token!==opening)return;const record=preferredRecord||(sameStudent&&AvaliacaoTreinoSync.resolve(AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key),student))||config.ensure(student);recordId=record.id;avId=record.avaliacoes.some(a=>String(a.id)===String(previousAv))?previousAv:(record.avaliacoes.find(a=>String(a.id)===String(record.avaliacaoPreferidaId))?.id||record.avaliacoes.slice(-1)[0]?.id);if(!avId&&!record.avaliacaoSemRegistros)newAssessment();else render();document.querySelectorAll('#obsAssessmentSections button').forEach(b=>{const active=b.dataset.assessmentSection===section;b.setAttribute('aria-pressed',String(active));b.classList.toggle('primary',active);});}catch(e){host.replaceChildren(el('p',{role:'status'},e.message));}},reset(){flush();cachedRecords=null;opening++;studentId=null;avId=null;host.hidden=true;if(config.visibilityChanged)config.visibilityChanged(false);},minimize(){if(!flush())return;opening++;host.hidden=true;if(config.visibilityChanged)config.visibilityChanged(false);if(config.minimized)config.minimized();},refresh(){if(!host.hidden&&recordId&&!host.contains(document.activeElement)){try{if(!flush())return;cachedRecords=null;const records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key),student=AvaliacaoTreinoSync.read('treinoAlunos').find(s=>s.student_id===studentId),person=student&&AvaliacaoTreinoSync.resolve(records,student);if(person&&String(person.id)!==String(recordId)){recordId=person.id;avId=person.avaliacaoPreferidaId||person.avaliacoes.slice(-1)[0]?.id;}render();}catch(e){status.textContent=e.message;}}}};
+    return {flush,async open(student,nextSection,preferredRecord,preferredAvId){if(!flush())return;cachedRecords=null;const token=++opening;const sameStudent=studentId===student.student_id;const previousAv=preferredAvId||(sameStudent?avId:null);studentId=student.student_id;section=nextSection||'composicao';host.hidden=false;host.replaceChildren(el('p',{},'Carregando campos…'));try{api=await engine();if(token!==opening)return;const record=preferredRecord||(sameStudent&&AvaliacaoTreinoSync.resolve(AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key),student))||config.ensure(student);recordId=record.id;avId=record.avaliacoes.some(a=>String(a.id)===String(previousAv))?previousAv:(record.avaliacoes.find(a=>String(a.id)===String(record.avaliacaoPreferidaId))?.id||record.avaliacoes.slice(-1)[0]?.id);if(!avId&&!record.avaliacaoSemRegistros)newAssessment();else render();document.querySelectorAll('#obsAssessmentSections button').forEach(b=>{const active=b.dataset.assessmentSection===section;b.setAttribute('aria-pressed',String(active));b.classList.toggle('primary',active);});}catch(e){host.replaceChildren(el('p',{role:'status'},e.message));}},reset(){flush();cachedRecords=null;opening++;studentId=null;avId=null;host.hidden=true;if(config.visibilityChanged)config.visibilityChanged(false);},minimize(){if(!flush())return;opening++;host.hidden=true;if(config.visibilityChanged)config.visibilityChanged(false);if(config.minimized)config.minimized();},refresh(){if(photoBusy||document.querySelector('#postureEditorDialog[open],#assessmentComparisonDialog[open]')){cachedRecords=null;return;}if(!host.hidden&&recordId&&!host.contains(document.activeElement)){try{if(!flush())return;cachedRecords=null;const records=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key),student=AvaliacaoTreinoSync.read('treinoAlunos').find(s=>s.student_id===studentId),person=student&&AvaliacaoTreinoSync.resolve(records,student);if(person&&String(person.id)!==String(recordId)){recordId=person.id;avId=person.avaliacaoPreferidaId||person.avaliacoes.slice(-1)[0]?.id;}render();}catch(e){status.textContent=e.message;}}}};
   }
   return {mount};
 })();

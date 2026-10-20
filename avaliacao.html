@@ -11,10 +11,10 @@
 <script src="composition-extras.js?v=11"></script>
 <link rel="stylesheet" href="composition-extras.css?v=9">
 <script src="obs-autosave-journal.js?v=1"></script>
-<script src="storage-adapter.js?v=20"></script>
+<script src="storage-adapter.js?v=21"></script>
 <script src="pdf-viewer.js?v=4"></script>
 <script src="assessment-pdf-style.js?v=1"></script>
-<script src="skinfold-protocols.js?v=2"></script>
+<script src="skinfold-protocols.js?v=3"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Avaliação Física - Caio Macêdo</title>
 
@@ -986,7 +986,7 @@ function adicionarAvaliacao(alunoId){
   const aluno=alunos.find(a=>a.id===alunoId);
   if(!aluno) return;
   if(!aluno.avaliacoes) aluno.avaliacoes=[];
-  const lastProtocol=aluno.avaliacoes.at(-1)?.protocolo||'jp7';const protocoloAnterior=lastProtocol==='yuhasz6'?'carter6':lastProtocol;
+  const lastProtocol=aluno.avaliacoes.at(-1)?.protocolo||'jp7';const protocoloAnterior=lastProtocol;
   const novaAvaliacao = {
     id:Date.now(),
     data:new Date().toLocaleDateString('pt-BR'),
@@ -1072,7 +1072,7 @@ function calcularIMCeDobras(aluno,avId){
   const def = getProtocoloDef(protocolo);
   av._dobrasAviso=SkinfoldProtocols.validation(protocolo,aluno.sexo,idade);av._dobrasRegistro=null;
   const campos = def.campos(aluno.sexo);
-  const vals = campos.map(k=>pf(av[k]));
+  const vals = campos.map(k=>protocolo==='yuhasz6'?SkinfoldProtocols.number(av[k]):pf(av[k]));
   if(def.semCalculo){const filled=vals.filter(v=>Number.isFinite(v)&&v>0);av._dobras=null;av._dobrasRegistro=filled.length?{soma:filled.reduce((a,b)=>a+b,0),quantidade:filled.length}:null;return;}
   if(av._dobrasAviso){av._dobras=null;return;}
   if(vals.some(v=>!Number.isFinite(v)||v<=0)){ av._dobras=null; return; }
@@ -1091,7 +1091,10 @@ function calcularIMCeDobras(aluno,avId){
   } else if(protocolo==='dw4'){
     dens=SkinfoldProtocols.densityDW(soma,idade,aluno.sexo);pctG=dens?495/dens-450:NaN;
     if(!Number.isFinite(pctG)||pctG<=0||pctG>=100){av._dobras=null;av._dobrasAviso='Valores fora do domínio da equação; confira as dobras.';return;}
-  } else if(protocolo==='yuhasz6'||protocolo==='carter6'){
+  } else if(protocolo==='yuhasz6'){
+    pctG=SkinfoldProtocols.bodyFatYuhasz(soma,aluno.sexo);
+    if(pctG===null){av._dobras=null;av._dobrasAviso='Valores fora do domínio da equação; confira as seis dobras em mm.';return;}
+  } else if(protocolo==='carter6'){
     pctG = aluno.sexo==='F' ? (4.56+0.143*soma) : (3.64+0.097*soma);
     pctG=Math.max(3,Math.min(50,pctG));
   } else {
@@ -1101,7 +1104,7 @@ function calcularIMCeDobras(aluno,avId){
     pctG=Math.max(5,Math.min(50,((4.95/dens)-4.5)*100));
   }
   const pesoNum=pf(av.peso);
-  const mG=(pctG/100)*pesoNum, mM=pesoNum-mG;
+  const mG=Number.isFinite(pesoNum)&&pesoNum>0?(pctG/100)*pesoNum:NaN, mM=Number.isFinite(mG)?pesoNum-mG:NaN;
   const cintura=pf(av.cintura), quadril=pf(av.quadril);
   const rcq=(cintura&&quadril)?(cintura/quadril).toFixed(2):'—';
   av._dobras={soma,dens,pctG,mG,mM,rcq,protocolo};
@@ -1115,7 +1118,7 @@ function renderizarCamposDobras(aluno, av){
   const def = getProtocoloDef(av.protocolo);
   const campos = [...def.campos(aluno.sexo),...(def.adicionais||[])];
   return campos.map(k=>{
-    const label = (LABELS_DOBRAS_EXTRA[k] || LABELS_DOBRAS[k])+((def.adicionais||[]).includes(k)?' · adicional':'');
+    const label = (def.labels?.[k] || LABELS_DOBRAS_EXTRA[k] || LABELS_DOBRAS[k])+((def.adicionais||[]).includes(k)?' · adicional':'');
     return `<div class="field"><label for="skinfold-${aluno.id}-${av.id}-${k}">${label}</label><input type="text" inputmode="decimal" id="skinfold-${aluno.id}-${av.id}-${k}" data-skinfold-key="${k}" value="${escapeHtml(av[k]||'')}" onchange="syncAvaliacao(${aluno.id},${av.id},'${k}',this.value)"></div>`;
   }).join('');
 }
@@ -1464,8 +1467,8 @@ function renderizarPreviewDobras(av,aluno){
       <div class="preview-item"><span class="preview-label">📊 IMC</span><span class="preview-value">${av.imc||'—'}</span><span class="preview-ref">(18,50-25,00)</span></div>
       <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagordapct','${db.pctG.toFixed(2)}','${aluno.sexo}',${idadeArg},'% Massa Gorda',this)"><span class="preview-label">💧 % Massa Gorda</span><span class="preview-value">${db.pctG.toFixed(2)}%</span><span class="preview-ref">(13,0%-25,0%)</span></div>
       <div class="preview-item"><span class="preview-label">💪 % Massa Magra</span><span class="preview-value">${(100-db.pctG).toFixed(2)}%</span><span class="preview-ref">(75,0%-87,0%)</span></div>
-      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagorda','${db.mG.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Gorda (kg)',this)"><span class="preview-label">⚖️ Massa Gorda</span><span class="preview-value">${db.mG.toFixed(2)} kg</span><span class="preview-ref">(6,71-12,90 kg)</span></div>
-      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massamagra','${db.mM.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Magra (kg)',this)"><span class="preview-label">🏋️ Massa Magra</span><span class="preview-value">${db.mM.toFixed(2)} kg</span><span class="preview-ref">(38,70-44,89 kg)</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massagorda','${db.mG.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Gorda (kg)',this)"><span class="preview-label">⚖️ Massa Gorda</span><span class="preview-value">${Number.isFinite(db.mG)?db.mG.toFixed(2)+' kg':'Informe o peso'}</span><span class="preview-ref">(6,71-12,90 kg)</span></div>
+      <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','massamagra','${db.mM.toFixed(2)}','${aluno.sexo}',${idadeArg},'Massa Magra (kg)',this)"><span class="preview-label">🏋️ Massa Magra</span><span class="preview-value">${Number.isFinite(db.mM)?db.mM.toFixed(2)+' kg':'Informe o peso'}</span><span class="preview-ref">(38,70-44,89 kg)</span></div>
       ${db.dens!==null?`<div class="preview-item"><span class="preview-label">📐 Densidade</span><span class="preview-value">${db.dens.toFixed(5)}</span></div>`:''}
       <div class="preview-item"><span class="preview-label">📏 Soma Dobras</span><span class="preview-value">${db.soma.toFixed(2)} mm</span></div>
       <div class="preview-item" style="cursor:pointer" onclick="toggleMetricGauge('${panelId}','rcq','${db.rcq}','${aluno.sexo}',${idadeArg},'RCQ (Cintura/Quadril)',this)"><span class="preview-label">📐 RCQ</span><span class="preview-value">${db.rcq}</span><span class="preview-ref">(${rcqRef})</span></div>
@@ -1593,18 +1596,11 @@ async function gerarPDFAluno(alunoId, options={}){
   doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
   doc.text('DOBRAS CUTÂNEAS (mm)',16,yPos); yPos+=5;
   
+  const dobrasFields=[...new Set(avs.flatMap(av=>getProtocoloDef(av.protocolo).campos(aluno.sexo)))];
+  const skinfoldValue=(av,key)=>av&&getProtocoloDef(av.protocolo).campos(aluno.sexo).includes(key)?av[key]:undefined;
   const dobrasRows = [
     ['Protocolo', ...avs.map(av => getProtocoloDef(av.protocolo).nomeCurto)],
-    ...(avs.some(av=>av.protocolo==='carter6'&&av.torax)?[['¹ Peitoral adicional', ...avs.map(av=>av.protocolo==='carter6'?'Registro adicional; fora do cálculo':'—')]]:[]),
-    ['Bicipital', ...avs.map((av,idx)=>`${av.bicipital||'—'}${idx===0?'':formatDelta(av.bicipital,avs[idx-1].bicipital)}`)],
-    ['Tríceps', ...avs.map((av, idx) => `${av.triceps||'—'}${idx===0 ? '' : formatDelta(av.triceps, avs[idx-1].triceps)}`)],
-    ['Axilar Média', ...avs.map((av, idx) => `${av.axilar||'—'}${idx===0 ? '' : formatDelta(av.axilar, avs[idx-1].axilar)}`)],
-    [avs.some(av=>av.protocolo==='carter6'&&av.torax)?'Tórax / peitoral¹':'Tórax / peitoral', ...avs.map((av, idx) => `${av.torax||'—'}${idx===0 ? '' : formatDelta(av.torax, avs[idx-1].torax)}`)],
-    ['Abdominal', ...avs.map((av, idx) => `${av.abdominal||'—'}${idx===0 ? '' : formatDelta(av.abdominal, avs[idx-1].abdominal)}`)],
-    ['Suprailíaca', ...avs.map((av, idx) => `${av.suprailiaca||'—'}${idx===0 ? '' : formatDelta(av.suprailiaca, avs[idx-1].suprailiaca)}`)],
-    ['Subescapular', ...avs.map((av, idx) => `${av.subescapular||'—'}${idx===0 ? '' : formatDelta(av.subescapular, avs[idx-1].subescapular)}`)],
-    ['Coxa', ...avs.map((av, idx) => `${av.pregaCoxa||'—'}${idx===0 ? '' : formatDelta(av.pregaCoxa, avs[idx-1].pregaCoxa)}`)],
-    ['Panturrilha Medial', ...avs.map((av, idx) => `${av.panturrilha||'—'}${idx===0 ? '' : formatDelta(av.panturrilha, avs[idx-1].panturrilha)}`)],
+    ...dobrasFields.map(key=>[(avs.map(av=>getProtocoloDef(av.protocolo).labels?.[key]).find(Boolean)||LABELS_DOBRAS_EXTRA[key]||LABELS_DOBRAS[key]),...avs.map((av,idx)=>`${skinfoldValue(av,key)||'—'}${idx===0?'':formatDelta(skinfoldValue(av,key),skinfoldValue(avs[idx-1],key))}`)]),
     ['Soma das Dobras', ...avs.map((av, idx) => av._dobras ? `${av._dobras.soma.toFixed(2)} mm${idx===0 ? '' : formatDelta(av._dobras.soma, avs[idx-1]._dobras?.soma)}` : av._dobrasRegistro?`${av._dobrasRegistro.soma.toFixed(2)} mm (${av._dobrasRegistro.quantidade} locais)`:'—')],
     ['% Massa Gorda', ...avs.map((av, idx) => av._dobras ? `${av._dobras.pctG.toFixed(2)}%${idx===0 ? '' : formatDelta(av._dobras.pctG, avs[idx-1]._dobras?.pctG)}` : '—')],
     ['% Massa Magra', ...avs.map((av, idx) => av._dobras ? `${(100-av._dobras.pctG).toFixed(2)}%${idx===0 ? '' : formatDelta(100-av._dobras.pctG, avs[idx-1]._dobras ? 100-avs[idx-1]._dobras.pctG : undefined)}` : '—')],
@@ -1981,6 +1977,7 @@ function renderizarAlunos(alunosParaRenderizar){
                 </div>
               </div>
               <p class="skinfold-protocol-guide">${escapeHtml(SkinfoldProtocols.guidance(av.protocolo||'jp7',aluno.sexo,pf(av.ficha?.idade??aluno.idade)))}</p>
+              ${getProtocoloDef(av.protocolo).fonte?`<p><a href="${getProtocoloDef(av.protocolo).fonte}" target="_blank" rel="noopener noreferrer">Referência da fórmula · CBHG</a></p>`:''}
               <div class="sec-label">${getProtocoloDef(av.protocolo).nome} (mm)</div>
               <div class="grid3" data-skinfold-record="${aluno.id}" data-skinfold-av="${av.id}">${renderizarCamposDobras(aluno,av)}</div>
               <div id="dobras-preview-${aluno.id}-${av.id}">${renderizarPreviewDobras(av,aluno)}</div>
@@ -2094,7 +2091,7 @@ document.getElementById('ordemAluno').addEventListener('change', function(){
 
 window.TreinoAssessmentEngine = {
   compressImage:comprimirImagem, calculate:calcularIMCeDobras, classify:getClassificacaoTexto, gauge:renderizarGauge,
-  protocol:getProtocoloDef, protocolOptions:current=>SkinfoldProtocols.options(current), protocolGuide:(id,person,av)=>SkinfoldProtocols.guidance(id,person.sexo,pf(av.ficha?.idade??person.idade)), skinfoldLabel:key=>LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
+  protocol:getProtocoloDef, protocolOptions:current=>SkinfoldProtocols.options(current), protocolGuide:(id,person,av)=>SkinfoldProtocols.guidance(id,person.sexo,pf(av.ficha?.idade??person.idade)), skinfoldLabel:(key,protocol)=>getProtocoloDef(protocol).labels?.[key] || LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
   async pdf(records,id,type,options={}) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id,options); else await gerarPDFAluno(id,options); }
 };
 if(avaliacaoParams.get('embed')==='treino36-engine') window.parent.postMessage({type:'treino36-engine-ready'},location.origin);

@@ -32,6 +32,11 @@ with sync_playwright() as p:
  assert legacy['protocolo']=='yuhasz6' and legacy['_dobras']['soma']==80 and legacy['torax']=='12',legacy
  checks=engine.evaluate('''()=>{const person={id:1,sexo:'M',idade:'30',altura:'1.8',avaliacoes:[{id:2,peso:'80',protocolo:'carter6',triceps:'10',torax:'12',subescapular:'15',suprailiaca:'14',abdominal:'13',pregaCoxa:'16',panturrilha:'9'}]};TreinoAssessmentEngine.calculate(person,2);const initial={...person.avaliacoes[0]._dobras};person.avaliacoes[0].torax='90';TreinoAssessmentEngine.calculate(person,2);const changed={...person.avaliacoes[0]._dobras};person.avaliacoes[0].panturrilha='';TreinoAssessmentEngine.calculate(person,2);return {initial,changed,missing:person.avaliacoes[0]._dobras};}''')
  assert checks['initial']==checks['changed'] and checks['initial']['soma']==77 and checks['missing'] is None,checks
+ yuhasz=engine.evaluate('''()=>{const evaluate=sexo=>{const person={id:1,sexo,idade:'30',avaliacoes:[{id:2,peso:'70',protocolo:'yuhasz6',triceps:'10',torax:'10',subescapular:'10',suprailiaca:'10',abdominal:'10',pregaCoxa:'10',panturrilha:'999'}]};TreinoAssessmentEngine.calculate(person,2);const complete={...person.avaliacoes[0]._dobras};person.avaliacoes[0].torax='';TreinoAssessmentEngine.calculate(person,2);return {complete,missing:person.avaliacoes[0]._dobras};};return {M:evaluate('M'),F:evaluate('F')};}''')
+ for sex,expected in [('M',9.461),('F',13.14)]:
+  result=yuhasz[sex]['complete']
+  assert result['soma']==60 and abs(result['pctG']-expected)<1e-10 and abs(result['mG']-70*expected/100)<1e-10 and abs(result['mM']-(70-70*expected/100))<1e-10,result
+  assert yuhasz[sex]['missing'] is None
  library=context.new_page();library.goto('http://app.test/treino36/avaliacao.html?embed=treino36&treinoStudentId=a')
  expect(library.locator('select[onchange^="trocarProtocoloDobras"]')).to_have_value('registro');expect(library.locator('.skinfold-protocol-guide')).to_contain_text('adipômetro')
  assert not errors,errors
