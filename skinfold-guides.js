@@ -16,6 +16,7 @@ window.SkinfoldGuides=(()=>{
   function guide(key,protocol,sex){
     if(!guides[key])return null;const data={...guides[key]};
     if(key==='torax'&&sex==='F')data.image='torax-feminino';
+    if(key==='torax'&&protocol==='carter6')data.tip+=' Medida adicional: não integra as seis dobras nem o cálculo Carter-Yuhasz; não substitui a panturrilha.';
     if(key==='suprailiaca'&&protocol==='dw4')data.location='Logo acima da crista ilíaca, na linha axilar média, conforme Durnin–Womersley.';
     if(key==='suprailiaca'&&['carter6','yuhasz6','registro'].includes(protocol))data.location='Acima da crista ilíaca. Confirme a linha de marcação na referência da configuração usada; não troque por supraespinal.';
     if(key==='axilar'&&protocol==='registro')data.direction='Registre a direção usada e mantenha a mesma padronização nas próximas medidas.';

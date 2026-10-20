@@ -13,3 +13,6 @@ assert(p.catalog.carter6.campos().includes('panturrilha'));assert(!p.catalog.car
 assert(p.catalog.yuhasz6.campos().includes('torax'));assert(p.catalog.yuhasz6.legacy);
 assert(!p.options('jp7').some(o=>o.id==='yuhasz6'));assert(p.options('yuhasz6').some(o=>o.id==='yuhasz6'));
 console.log('PASS: age/sex validation, elderly limits, DW density benchmarks, adipometer guidance and old/new six-site separation');
+
+assert.deepEqual(Array.from(p.catalog.carter6.adicionais),['torax']);
+assert(p.guidance('carter6','M',30).includes('não entra na soma'));
