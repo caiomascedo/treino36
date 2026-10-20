@@ -34,7 +34,12 @@ with sync_playwright() as p:
  page.locator('[data-diet-goal="deficit"]').click();expect_macros(112,112,44.8,1299)
  # Weekly progression is explicit, independently configured per pupil and undoable.
  page.locator('[data-diet-goal="surplus"]').click();expect(page.locator('#dietCarbWeekLabel')).to_have_text('Semana 1 · Carbo × 4')
- page.locator('#dietCarbNextWeek').click();expect(page.locator('#dietStatus')).to_contain_text('Defina o aumento');expect_macros(112,224,44.8,1747)
+ expect(page.locator('#diet-carbWeeklyStep')).to_have_value('0,25');expect(page.locator('#dietCarbSuggestion')).to_contain_text('+14 g de carbo / +56 kcal')
+ for width in [320,390]:
+  page.set_viewport_size({'width':width,'height':844});assert page.locator('#dietCarbProgress').bounding_box()['height']<100;assert page.locator('#dietDialog').evaluate('el=>el.scrollWidth<=el.clientWidth+1')
+ page.locator('#dietCarbProgress').screenshot(path='/tmp/treino36-compact-carb-suggestion.png')
+ page.locator('#diet-carbWeeklyStep').fill('0,5');expect(page.locator('#dietCarbSuggestion')).to_contain_text('+28 g de carbo / +112 kcal');page.reload();opened();expect(page.locator('#diet-carbWeeklyStep')).to_have_value('0,5')
+ page.locator('#diet-carbWeeklyStep').fill('');page.locator('#dietCarbNextWeek').click();expect(page.locator('#dietStatus')).to_contain_text('Defina o aumento');expect_macros(112,224,44.8,1747)
  page.locator('#diet-carbWeeklyStep').fill('0,25');page.locator('#dietCarbNextWeek').click();expect_macros(112,238,44.8,1803);expect(page.locator('#dietCarbWeekLabel')).to_have_text('Semana 2 · Carbo × 4,25')
  page.locator('#dietCopyValues').click();expect(page.locator('#dietCarbWeekLabel')).to_contain_text('Semana 2')
  page.reload();opened();expect_macros(112,238,44.8,1803);expect(page.locator('#dietCarbWeekLabel')).to_contain_text('Semana 2')
@@ -44,7 +49,7 @@ with sync_playwright() as p:
  page.locator('[data-diet-goal="deficit"]').click();expect_macros(112,112,44.8,1299);expect(page.locator('#dietCarbProgress')).not_to_be_visible()
  page.locator('[data-diet-goal="surplus"]').click();expect_macros(112,252,44.8,1859)
  # Reset the test pupil's progression for the existing baseline checks.
- page.evaluate("()=>{const s=JSON.parse(localStorage.getItem('dieta36_calculos_v1:a'));s.carbSurplusRatio='4';s.carbWeek='1';localStorage.setItem('dieta36_calculos_v1:a',JSON.stringify(s));}");page.reload();opened();page.locator('[data-diet-goal="deficit"]').click()
+ page.evaluate("()=>{const s=JSON.parse(localStorage.getItem('dieta36_calculos_v1:a'));s.carbSurplusRatio='4';s.carbWeek='1';s.carbWeeklyStep='';localStorage.setItem('dieta36_calculos_v1:a',JSON.stringify(s));}");page.reload();opened();expect(page.locator('#diet-carbWeeklyStep')).to_have_value('0,25');page.locator('[data-diet-goal="deficit"]').click()
  # Live OBS updates recalculate and persist automatically, with no guessed weight.
  page.evaluate('''()=>{const records=AvaliacaoTreinoSync.read('treinoAlunos');records[0].infoRelevante.peso='58';for(const guide of records[0].infoGuias||[])guide.peso='58';localStorage.setItem('treinoAlunos',JSON.stringify(records));window.dispatchEvent(new StorageEvent('storage',{key:'treinoAlunos'}));}''');expect_macros(116,116,46.4,1346)
  assert page.evaluate("JSON.parse(localStorage.getItem('dieta36_calculos_v1:a')).protein")=='116'
@@ -97,7 +102,7 @@ with sync_playwright() as p:
  page.locator('#dietCalcClear').click();keys('1933,26+500');page.locator('#dietCalcEvaluate').click();page.locator('.diet-iphone-calculator').screenshot(path='/tmp/treino36-calculator-white.png')
  page.reload();opened();expect_macros(112,224,44.8,1747)
  page.screenshot(path='/tmp/diet-macro-tools-mobile.png')
- page.locator('#dietDialog [data-close]').click();page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bia"] .aluno-nome').click();opened();expect(page.locator('#diet-protein')).to_have_value('');expect(page.locator('#diet-carbWeeklyStep')).to_have_value('');expect(page.locator('#diet-carbWeek')).to_have_value('1');page.locator('[data-diet-goal="deficit"]').click();expect(page.locator('#dietMacroNotice')).to_contain_text('peso válido');expect(page.locator('#diet-protein')).to_have_value('')
+ page.locator('#dietDialog [data-close]').click();page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bia"] .aluno-nome').click();opened();expect(page.locator('#diet-protein')).to_have_value('');expect(page.locator('#diet-carbWeeklyStep')).to_have_value('0,25');expect(page.locator('#diet-carbWeek')).to_have_value('1');page.locator('[data-diet-goal="deficit"]').click();expect(page.locator('#dietMacroNotice')).to_contain_text('peso válido');expect(page.locator('#diet-protein')).to_have_value('')
  assert page.evaluate("AvaliacaoTreinoSync.read('treinoAlunos')")==original
  assert not errors,errors
  browser.close();print('PASS: one-click macros, maintenance remainder/errors, live OBS weight, clipboard/fallback, PDF, clear/undo, manual correction, keypad-only calculator/errors, persistence and pupil isolation; OBS/workouts unchanged')
