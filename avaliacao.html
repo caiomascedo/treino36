@@ -5,10 +5,14 @@
 <script src="storage-compression.js?v=15"></script>
 <script src="assessment-journal.js?v=18"></script>
 <script src="composition-context.js?v=1"></script>
+<script src="composition-reader.js?v=1"></script>
+<script src="composition-ocr.js?v=1"></script>
+<script src="composition-reader-ui.js?v=1"></script>
+<link rel="stylesheet" href="composition-reader.css?v=1">
 <script src="inbody-fields.js?v=1"></script>
 <script src="skinfold-guides.js?v=2"></script>
 <link rel="stylesheet" href="skinfold-guides.css?v=1">
-<script src="composition-extras.js?v=11"></script>
+<script src="composition-extras.js?v=12"></script>
 <link rel="stylesheet" href="composition-extras.css?v=9">
 <script src="obs-autosave-journal.js?v=1"></script>
 <script src="storage-adapter.js?v=21"></script>
@@ -1060,11 +1064,11 @@ function calcularIMCeDobras(aluno,avId){
   const av=aluno.avaliacoes.find(a=>a.id===avId);
   if(!av) return;
   const altura=pf(av.ficha?.altura ?? aluno.altura), peso=pf(av.peso);
-  av.imc = !isNaN(altura)&&!isNaN(peso)&&altura>0 ? (peso/(altura*altura)).toFixed(1) : '';
+  av.imc = CompositionReader.reportedValue(aluno,av,'imc',!isNaN(altura)&&!isNaN(peso)&&altura>0 ? (peso/(altura*altura)).toFixed(1) : '');
   const idade=pf(av.ficha?.idade ?? aluno.idade);
   av.tmb=calcularTMB(aluno.sexo,idade,peso,altura);
   // fallback: idade metabólica pelo % gordura manual (balança) — sobrescrita abaixo se as dobras forem calculadas
-  av.idadeMetabolica = av.gordura ? calcularIdadeMetabolica(aluno.sexo, idade, av.gordura) : '';
+  av.idadeMetabolica = CompositionReader.reportedValue(aluno,av,'idadeMetabolica',av.gordura ? calcularIdadeMetabolica(aluno.sexo, idade, av.gordura) : '');
 
   // protocolos antigos (ex.: Petroski 4 dobras, removido) caem automaticamente no padrão de 7 dobras
   if(!PROTOCOLOS_DOBRAS[av.protocolo]) av.protocolo='jp7';
@@ -1110,7 +1114,7 @@ function calcularIMCeDobras(aluno,avId){
   av._dobras={soma,dens,pctG,mG,mM,rcq,protocolo};
   // Device water measurements are not inferred from a skinfold estimate.
   const gorduraRef = av.gordura || pctG.toFixed(1);
-  av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, idade, gorduraRef);
+  av.idadeMetabolica = CompositionReader.reportedValue(aluno,av,'idadeMetabolica',calcularIdadeMetabolica(aluno.sexo, idade, gorduraRef));
 }
 
 const LABELS_DOBRAS_EXTRA = {pregaCoxa:'Coxa (prega)'};
@@ -1151,7 +1155,7 @@ function atualizarCamposCalculados(aluno, avId){
   const aguaEl=document.getElementById(`agua-${aId}-${avId}`);
   if(aguaEl && av.agua) { aguaEl.value=av.agua; }
   const gorduraRef = av.gordura || (av._dobras ? av._dobras.pctG.toFixed(1) : '');
-  av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef);
+  av.idadeMetabolica = CompositionReader.reportedValue(aluno,av,'idadeMetabolica',calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef));
   const idadeMetEl=document.getElementById(`idademet-${aId}-${avId}`);
   if(idadeMetEl){ idadeMetEl.value=av.idadeMetabolica||''; }
   const previewEl=document.getElementById(`dobras-preview-${aId}-${avId}`);
@@ -1526,7 +1530,7 @@ async function gerarPDFAluno(alunoId, options={}){
   
   avs.forEach(av=>{
     const gorduraRef = av.gordura || (av._dobras ? av._dobras.pctG.toFixed(1) : '');
-    if(gorduraRef) av.idadeMetabolica = calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef);
+    if(gorduraRef) av.idadeMetabolica = CompositionReader.reportedValue(aluno,av,'idadeMetabolica',calcularIdadeMetabolica(aluno.sexo, aluno.idade, gorduraRef));
   });
   const compRows = [
     ['Altura (m)', ...avs.map(() => altura)],
@@ -2008,7 +2012,7 @@ function renderizarAlunos(alunosParaRenderizar){
   container.querySelectorAll('[data-extra-record]').forEach(root=>{
     const person=alunos.find(a=>String(a.id)===root.dataset.extraRecord),av=person.avaliacoes.find(a=>String(a.id)===root.dataset.extraAv);
     const section=root.dataset.extraSection;
-    CompositionExtras.mount(root,root.nextElementSibling,{section,prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),input:(key,value,metadata={})=>{Object.assign(av,{[key]:value,...metadata});TreinoStorage.stageAssessment(person.id,av.id,{[key]:value,...metadata});consolidarExtras();},select:(keys,baseKeys,additionalSettings={})=>{const prefs=CompositionExtras.preferenceKeys(section),settings={[prefs.extra]:keys,[prefs.base]:baseKeys,...additionalSettings};Object.assign(person,settings);TreinoStorage.assessmentOperation(person.id,null,'person',{},settings);consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
+    CompositionExtras.mount(root,root.nextElementSibling,{section,prefix:'library-extra-'+person.id+'-'+av.id+'-',getState:()=>({person,av}),importValues:change=>{CompositionReader.commit({person,av},change,calcularIMCeDobras);consolidarExtras();filtrarAlunos();document.getElementById('av-item-'+av.id)?.classList.add('expanded');},input:(key,value,metadata={})=>{Object.assign(av,{[key]:value,...metadata});TreinoStorage.stageAssessment(person.id,av.id,{[key]:value,...metadata});consolidarExtras();},select:(keys,baseKeys,additionalSettings={})=>{const prefs=CompositionExtras.preferenceKeys(section),settings={[prefs.extra]:keys,[prefs.base]:baseKeys,...additionalSettings};Object.assign(person,settings);TreinoStorage.assessmentOperation(person.id,null,'person',{},settings);consolidarExtras();},error:error=>notifMsg('⚠️ '+error.message)});
   });
   container.querySelectorAll('[data-skinfold-record]').forEach(grid=>{
     const person=alunos.find(a=>String(a.id)===grid.dataset.skinfoldRecord),av=person.avaliacoes.find(a=>String(a.id)===grid.dataset.skinfoldAv);

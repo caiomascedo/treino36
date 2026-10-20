@@ -38,7 +38,7 @@ window.DietEditor = (() => {
   }
   let pdfLibrary;
   const C = () => window.DietCalculations;
-  const settingsKeys = ['goal','calories','protein','carbs','fat','carbSurplusRatio','carbWeeklyStep','carbWeek'];
+  const settingsKeys = ['goal','calories','protein','carbs','fat','carbSurplusRatio','carbWeeklyStep','carbWeek','carbWeekPlan'];
   const fmt = value => value === null ? '—' : Number(value.toFixed(2)).toLocaleString('pt-BR');
   function profile(student, config) {
     let current=student,person={},av={};
@@ -54,7 +54,7 @@ window.DietEditor = (() => {
       '<button type="button" id="dietExpandBtn" aria-pressed="false">⛶ Ampliar</button><p id="dietStudentName"></p>' +
       '<details id="dietCalculations"><summary>Meta e calorias</summary><div class="diet-calc-grid diet-context"><label>Sexo para cálculo<select id="dietSex"><option value="">Selecionar</option><option value="F">Feminino</option><option value="M">Masculino</option></select></label><label>Atividade física<select id="dietActivity"><option value="">Selecionar</option><option value="nenhuma">Nenhuma atividade física</option><option value="moderada">Moderada · 30 min, 4×/sem</option><option value="intensa">Intensa · corrida 1 h, 4×/sem ou mais</option></select></label></div><p>TMB da OBS: <strong id="dietTmb">—</strong> kcal/dia</p><p class="diet-hint" id="dietObsStatus"></p><div class="diet-quick-goals">' +
       '<button type="button" data-diet-goal="tmb">TMB</button><button type="button" data-diet-goal="daily">Manutenção</button><button type="button" data-diet-goal="deficit">Emagrecimento</button><button type="button" data-diet-goal="surplus">Hipertrofia</button></div>' +
-      '<section id="dietCarbProgress" hidden><input type="hidden" id="diet-carbSurplusRatio" value="4"><input type="hidden" id="diet-carbWeek" value="1"><div class="diet-carb-week-row"><strong id="dietCarbWeekLabel"></strong><label title="Sugestão inicial: +0,25 g/kg por semana. Ajuste conforme necessário."><input id="diet-carbWeeklyStep" inputmode="decimal" aria-label="Aumento semanal de carboidratos em g/kg" value="0,25"><span>g/kg/sem</span></label><button type="button" id="dietCarbNextWeek">Próxima semana</button></div><small id="dietCarbSuggestion"></small></section>' +
+      '<section id="dietCarbProgress" hidden><input type="hidden" id="diet-carbSurplusRatio" value="4"><input type="hidden" id="diet-carbWeek" value="1"><input type="hidden" id="diet-carbWeekPlan" value="{}"><div class="diet-carb-week-row"><strong id="dietCarbWeekLabel"></strong><select id="dietCarbWeekPicker" aria-label="Selecionar semana da hipertrofia"></select><button type="button" id="dietCarbPreviousWeek" aria-label="Voltar uma semana">‹</button><label title="Sugestão inicial: +0,25 g/kg por semana. Ajuste conforme necessário."><input id="diet-carbWeeklyStep" inputmode="decimal" aria-label="Aumento semanal de carboidratos em g/kg" value="0,25"><span>g/kg/sem</span></label><button type="button" id="dietCarbNextWeek" aria-label="Próxima semana">Próxima</button></div><small id="dietCarbSuggestion"></small></section>' +
       '<label for="diet-goal">Meta (kcal/dia)</label><div class="diet-goal-row"><button type="button" id="dietGoalMinus">−100</button><input id="diet-goal" inputmode="decimal" placeholder="Automática"><button type="button" id="dietGoalPlus">+100</button><button type="button" id="dietGoalAuto">Auto</button><button type="button" id="dietCopyGoal">Copiar meta</button></div>' +
       '<div class="diet-calc-grid"><label>Calorias do dia<input id="diet-calories" inputmode="decimal" placeholder="Automático"></label><label>Proteína (g)<input id="diet-protein" inputmode="decimal" placeholder="Do texto"></label><label>Carboidratos (g)<input id="diet-carbs" inputmode="decimal" placeholder="Do texto"></label><label>Gorduras (g)<input id="diet-fat" inputmode="decimal" placeholder="Do texto"></label></div>' + DietTools.markup() + '<p class="diet-hint">Os valores da OBS são atualizados automaticamente. Deixe a meta vazia para usar a opção selecionada acima; os totais podem vir do texto ou ser corrigidos aqui.</p></details>' +
       '<div id="dietTotals" aria-live="polite"></div><div class="diet-paste-header"><label for="dietText">🧠 Cola inteligente</label><div><button type="button" id="dietPasteClearBtn">Limpar texto</button><button type="button" id="dietPasteExpandBtn" aria-pressed="false">⛶ Ampliar</button></div></div>' +
@@ -103,20 +103,32 @@ window.DietEditor = (() => {
       clear:keys=>{macroAuto=false;macroNotice.textContent='';for(const key of keys)inputs[key].value='';change('clear-values',false);},
       message:value=>{status.textContent=value;}
     });
-    dialog.querySelector('#dietCarbNextWeek').onclick=()=>{
+    function weekPlan(){
+      let plan={};try{plan=JSON.parse(inputs.carbWeekPlan.value||'{}');}catch(error){}if(!plan||Array.isArray(plan)||typeof plan!=='object')plan={};
+      const result={1:4};for(const [week,ratio] of Object.entries(plan))if(/^\d+$/.test(week)&&Number(week)>0&&Number(week)<=520&&Number.isFinite(Number(ratio))&&Number(ratio)>=4)result[week]=Number(ratio);
+      const current=Math.min(520,Math.max(1,Number(inputs.carbWeek.value||'1')));result[current]=C().number(inputs.carbSurplusRatio.value||'4');
+      const saved=Object.keys(result).map(Number).sort((a,b)=>a-b);for(let i=1;i<saved.length;i++){const start=saved[i-1],end=saved[i];for(let week=start+1;week<end;week++)result[week]=Math.round((result[start]+(week-start)*(result[end]-result[start])/(end-start))*10000)/10000;}
+      return result;
+    }
+    function chooseWeek(destination){
       try{
-        const step=C().number(inputs.carbWeeklyStep.value),ratio=C().number(inputs.carbSurplusRatio.value||'4'),week=C().number(inputs.carbWeek.value||'1');
-        if(step===null||step<=0)throw Error('Defina o aumento semanal de carboidratos em g/kg.');
-        const nextRatio=Math.round((ratio+step+Number.EPSILON)*10000)/10000;
-        C().weightMacros(source.weight,nextRatio);
-        inputs.carbSurplusRatio.value=String(nextRatio);inputs.carbWeek.value=String(week+1);macroAuto=true;
-        change('carb-next-week',false);status.textContent='Semana '+(week+1)+' preparada. Confira os valores antes de enviar.';
-      }catch(error){status.textContent=error.message;}
-    };
+        const step=C().number(inputs.carbWeeklyStep.value),week=Number(destination),plan=weekPlan();
+        if(!Number.isInteger(week)||week<1||week>520)throw Error('Escolha uma semana válida.');
+        let ratio=plan[week];
+        if(ratio===undefined){if(step===null||step<=0)throw Error('Defina o aumento semanal de carboidratos em g/kg.');const base=Math.max(...Object.keys(plan).map(Number).filter(n=>n<week));ratio=Math.round((plan[base]+(week-base)*step+Number.EPSILON)*10000)/10000;}
+        C().weightMacros(source.weight,ratio);
+        plan[week]=ratio;inputs.carbWeekPlan.value=JSON.stringify(plan);inputs.carbSurplusRatio.value=String(ratio);inputs.carbWeek.value=String(week);macroAuto=true;
+        change('carb-week-'+week,false);status.textContent='Semana '+week+' selecionada. Confira os valores antes de enviar.';
+      }catch(error){totals();status.textContent=error.message;}
+    }
+    dialog.querySelector('#dietCarbNextWeek').onclick=()=>chooseWeek(Number(inputs.carbWeek.value||'1')+1);
+    dialog.querySelector('#dietCarbPreviousWeek').onclick=()=>chooseWeek(Number(inputs.carbWeek.value||'1')-1);
+    dialog.querySelector('#dietCarbWeekPicker').onchange=event=>chooseWeek(Number(event.target.value));
     function totals() {
       const value=C().nutrition(parse(text.value),calculationSettings());
       dialog.querySelector('#dietCarbProgress').hidden=goalMode!=='surplus';
       dialog.querySelector('#dietCarbWeekLabel').textContent='Semana '+(inputs.carbWeek.value||'1')+' · Carbo × '+fmt(C().number(inputs.carbSurplusRatio.value||'4'));
+      const currentWeek=Number(inputs.carbWeek.value||'1'),picker=dialog.querySelector('#dietCarbWeekPicker'),limit=Math.min(520,Math.max(12,currentWeek+4,...Object.keys(weekPlan()).map(Number)));picker.replaceChildren();for(let week=1;week<=limit;week++){const option=document.createElement('option');option.value=week;option.textContent='Semana '+week;option.selected=week===currentWeek;picker.append(option);}dialog.querySelector('#dietCarbPreviousWeek').disabled=currentWeek<=1;
       const weeklyStep=C().number(inputs.carbWeeklyStep.value),weeklyGrams=weeklyStep!==null&&weeklyStep>0&&source.weight>0?Math.round(source.weight*weeklyStep*10)/10:null;
       dialog.querySelector('#dietCarbSuggestion').textContent=weeklyGrams===null?'Defina o aumento em g/kg/sem.':'Ajustável · +'+fmt(weeklyGrams)+' g de carbo / +'+fmt(Math.round(weeklyGrams*4*10)/10)+' kcal por semana.';
       dialog.querySelector('#dietSex').value=source.sex||'';dialog.querySelector('#dietActivity').value=source.activity||'';

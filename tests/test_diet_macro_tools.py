@@ -46,6 +46,11 @@ with sync_playwright() as p:
  page.locator('#dietCarbNextWeek').click();expect_macros(112,252,44.8,1859);expect(page.locator('#dietCarbWeekLabel')).to_contain_text('Semana 3')
  page.locator('#dietUndoBtn').click();expect_macros(112,238,44.8,1803);expect(page.locator('#dietCarbWeekLabel')).to_contain_text('Semana 2')
  page.locator('#dietRedoBtn').click();expect_macros(112,252,44.8,1859)
+ page.locator('#dietCarbPreviousWeek').click();expect_macros(112,238,44.8,1803);expect(page.locator('#dietCarbWeekPicker')).to_have_value('2')
+ page.locator('#diet-carbWeeklyStep').fill('0,5');page.locator('#dietCarbWeekPicker').select_option('1');expect_macros(112,224,44.8,1747);expect(page.locator('#dietCarbPreviousWeek')).to_be_disabled()
+ page.locator('#dietCarbWeekPicker').select_option('3');expect_macros(112,252,44.8,1859)
+ page.locator('#dietCarbNextWeek').click();expect_macros(112,280,44.8,1971);expect(page.locator('#dietCarbWeekPicker')).to_have_value('4')
+ page.locator('#dietCarbWeekPicker').select_option('3');expect_macros(112,252,44.8,1859)
  page.locator('[data-diet-goal="deficit"]').click();expect_macros(112,112,44.8,1299);expect(page.locator('#dietCarbProgress')).not_to_be_visible()
  page.locator('[data-diet-goal="surplus"]').click();expect_macros(112,252,44.8,1859)
  # Reset the test pupil's progression for the existing baseline checks.

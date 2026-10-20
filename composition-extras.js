@@ -139,7 +139,7 @@ window.CompositionExtras=(()=>{
     const baseNodes=new Map();[...grid.children].filter(node=>!node.classList.contains('composition-extra-field')).slice(-base.length).forEach((node,index)=>baseNodes.set(base[index].key,node));
     const button=document.createElement('button');button.type='button';button.className='composition-extras-add';button.textContent='＋ Adicionar campos';button.setAttribute('aria-expanded','false');
     const choices=document.createElement('div');choices.className='composition-extras-choices';choices.hidden=true;
-    const id=config.prefix+section+'-extra-options';choices.id=id;button.setAttribute('aria-controls',id);root.append(button,choices);
+    const id=config.prefix+section+'-extra-options';choices.id=id;button.setAttribute('aria-controls',id);root.append(button,choices);if(section==='composicao'&&window.CompositionImportUI&&config.importValues)CompositionImportUI.mount(root,{...config,inbodyHost:grid});
     const hint=document.createElement('p');hint.textContent=section==='medidas'?'Marque os campos para este aluno. Os valores ficam salvos mesmo ao desmarcar.':'Padrão identifica seus campos originais. Marque as medidas que deseja juntas na tela e no PDF. Desmarcar não apaga os valores.';choices.append(hint);
     const checkboxes=new Map(),standard=document.createElement('fieldset'),additional=document.createElement('fieldset'),inbodyGroups=new Map();
     [[section==='medidas'?'Medidas padrão':'Composição · padrão e medidas relacionadas',standard],[section==='medidas'?'Medidas adicionais':'Adicionais',additional]].forEach(([text,group])=>{const legend=document.createElement('legend');legend.textContent=text;group.append(legend);choices.append(group);});

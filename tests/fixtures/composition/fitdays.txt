@@ -1,0 +1,20 @@
+Fitdays
+Exemplo
+22:12 12/08/2026
+Indicador Valor Padrão
+Peso 77.6 kg Alto
+IMC 27.8 médio
+Gordura corporal 27.9 % Obesidade
+Taxa muscular 67.6 % Médio
+Massa Livre
+de Gordura 55.9 kg
+Gordura subcutânea 18.6 % Sobrepeso
+Gordura visceral 10.8 Médio risco
+Água corporal 49.5 % Desidratado
+Massa Musc.
+Esquelética 49.5 % baixo
+Massa Muscular 52.5 kg Médio
+Massa Óssea 2.9 kg Baixo
+Proteína 18.8 % Excelente
+TMB 1597 kcal Baixo
+Idade Metabólica 32 Sobrepeso
