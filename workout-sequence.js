@@ -20,7 +20,7 @@ window.WorkoutSequence=(()=>{
   function mount(root,config){
     root.className='workout-sequence';root.hidden=true;root.setAttribute('data-html2canvas-ignore','true');
     const menu=el('details',{id:'sequenceMenu'}),body=el('div',{class:'sequence-content'}),heading=el('summary',{class:'sequence-heading'}),next=el('strong',{id:'sequenceNext'}),last=el('span',{id:'sequenceLast'}),division=el('small',{id:'sequenceDivision'}),actions=el('div',{class:'sequence-actions'}),complete=el('button',{type:'button',id:'sequenceComplete'}),undo=el('button',{type:'button',id:'sequenceUndo'},'Desfazer marcação'),adjust=el('details',{id:'sequenceAdjust'}),select=el('select',{id:'sequenceLastChoice','aria-label':'Treino que foi feito'}),save=el('button',{type:'button',id:'sequenceSet'},'Marcar como feito'),clear=el('button',{type:'button',id:'sequenceClear'},'Limpar marcação'),status=el('p',{id:'sequenceStatus',role:'status'});
-    heading.append(last,next,el('span',{class:'sequence-open-label'},'Marcar ▾'));actions.append(complete,undo);adjust.append(el('summary',{},'Marcar outro / corrigir'),el('label',{for:select.id},'Qual treino foi feito?'),select,save,clear);body.append(division,actions,adjust,status);menu.append(heading,body);root.append(menu);
+    heading.append(last,next,el('span',{class:'sequence-open-label','aria-label':'Marcar treino'},'▾'));actions.append(complete,undo);adjust.append(el('summary',{},'Marcar outro / corrigir'),el('label',{for:select.id},'Qual treino foi feito?'),select,save,clear);body.append(division,actions,adjust,status);menu.append(heading,body);root.append(menu);
     const option=el('label',{class:'sequence-enable',title:'Mostrar último e próximo treino deste aluno'}),toggle=el('input',{id:'sequenceEnabled',type:'checkbox'});option.append(toggle,document.createTextNode('Marcação de treino'));config.options.append(option);
     let shown=null,lockedUntil=0,timer;
     function current(){const selected=config.selected();return selected?config.read(selected.student_id)||selected:null;}
@@ -60,6 +60,9 @@ window.WorkoutSequence=(()=>{
     }
     toggle.onchange=()=>{const wanted=toggle.checked;try{config.beforeChange();const student=current();if(!enabled(student))throw Error('Selecione um aluno com divisão de até quatro treinos.');config.setEnabled(student,wanted);refresh();}catch(error){refresh();config.message(error.message||'Não foi possível salvar a opção.','#b22222',false);}};
     complete.onclick=()=>{if(!complete.disabled)change('mark',shown?.next);};save.onclick=()=>change('mark',select.value);undo.onclick=()=>change('undo');clear.onclick=()=>change('clear');
+    menu.addEventListener('toggle',()=>{if(menu.open)refresh();});
+    document.addEventListener('click',event=>{if(!root.contains(event.target))menu.open=false;});
+    root.addEventListener('keydown',event=>{if(event.key==='Escape'&&menu.open){menu.open=false;heading.focus();event.stopPropagation();}});
     window.addEventListener('storage',event=>{if(['treinoAlunos','treino36_obs_drafts'].includes(event.key)){status.textContent='';refresh();}});
     refresh();return {refresh};
   }
