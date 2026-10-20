@@ -20,7 +20,14 @@ with sync_playwright() as p:
   page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="fotos"]').click()
  def av():return page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')[0].avaliacoes[1]")
  def pixels(src,x=90):return page.evaluate("""async ({src,pixelX})=>{const image=new Image();image.src=src;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const x=c.getContext('2d');x.drawImage(image,0,0);return [...x.getImageData(pixelX,100,1,1).data];}""",{"src":src,"pixelX":x})
- open_photos();page.locator('[data-posture-edit="fotoF"]').click();dialog=page.locator('#postureEditorDialog');expect(dialog).to_be_visible();dialog.locator('.posture-stage img').evaluate('(e)=>e.decode()')
+ open_photos()
+ thumbnail=page.locator('#obs-av-fotoF').locator('..').locator('img');thumb_box=thumbnail.bounding_box();thumbnail.click()
+ preview=page.locator('#posturePhotoPreviewDialog');expect(preview).to_be_visible();expect(page.locator('#postureEditorDialog')).not_to_be_visible()
+ assert preview.locator('button').count()==1 and preview.locator('input,select,svg').count()==0
+ assert preview.locator('img').get_attribute('src')==photos['portrait'];assert preview.locator('img').bounding_box()['height']>thumb_box['height']
+ preview.get_by_role('button',name='Fechar foto ampliada').click();expect(preview).not_to_be_visible()
+ thumbnail.focus();page.keyboard.press('Enter');expect(preview).to_be_visible();page.keyboard.press('Escape');expect(preview).not_to_be_visible()
+ page.locator('[data-posture-edit="fotoF"]').click();dialog=page.locator('#postureEditorDialog');expect(dialog).to_be_visible();dialog.locator('.posture-stage img').evaluate('(e)=>e.decode()')
  expect(page.locator('#postureGrid')).not_to_be_checked()
  box=dialog.locator('.posture-stage').bounding_box();work=dialog.locator('.posture-workspace').bounding_box()
  assert box['width']<=work['width'] and box['height']<=work['height'] and abs(box['width']/box['height']-.6)<.01,(box,work)
@@ -49,6 +56,15 @@ with sync_playwright() as p:
  page.mouse.move(work['x']+8,cy);page.mouse.down();page.mouse.move(work['x']+25,cy+30,steps=5);page.mouse.up()
  assert dialog.locator('.posture-stage').get_attribute('style')==frozen
  expect(page.locator('#postureZoomValue')).to_have_text('120%')
+ # A single finger can still move either endpoint with the photo locked.
+ dialog.locator('[data-action="horizontal"]').click();frozen=dialog.locator('.posture-stage').get_attribute('style');stage=dialog.locator('.posture-stage').bounding_box()
+ for point,target in [(1,(.7,.6)),(0,(.25,.35))]:
+  dot=dialog.locator('svg circle').nth(point).bounding_box();touch('touchStart',[(dot['x']+dot['width']/2,dot['y']+dot['height']/2)])
+  touch('touchMove',[(stage['x']+stage['width']*target[0],stage['y']+stage['height']*target[1])]);touch('touchEnd',[])
+  assert abs(float(dialog.locator('svg circle').nth(point).get_attribute('cx'))-target[0]*600)<2
+  assert abs(float(dialog.locator('svg circle').nth(point).get_attribute('cy'))-target[1]*1000)<2
+  assert dialog.locator('.posture-stage').get_attribute('style')==frozen
+ dialog.locator('[data-action="undo"]').click();dialog.locator('[data-action="undo"]').click();dialog.locator('[data-action="undo"]').click()
  dialog.locator('[data-action="expand"]').click();expect(dialog).to_have_class('posture-editor is-expanded');expect(dialog.locator('[data-action="expand"]')).to_have_attribute('aria-pressed','true')
  page.evaluate('()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
  expanded=dialog.bounding_box();assert expanded['width']>=389 and expanded['height']>=843,expanded
@@ -57,6 +73,16 @@ with sync_playwright() as p:
  dialog.locator('[data-action="zoom-lock"]').click();dialog.locator('[data-action="zoom-reset"]').click()
  # Default size can be locked too.
  dialog.locator('[data-action="zoom-lock"]').click();expect(page.locator('#postureZoomValue')).to_have_text('100%');dialog.locator('[data-action="zoom-lock"]').click()
+ # Copy/paste an inclined ruler at its exact length, angle and color, with undo/redo.
+ expect(dialog.locator('[data-action="paste-line"]')).to_be_disabled();dialog.locator('[data-action="ruler"]').click()
+ dot=dialog.locator('svg circle').nth(1).bounding_box();stage=dialog.locator('.posture-stage').bounding_box()
+ page.mouse.move(dot['x']+dot['width']/2,dot['y']+dot['height']/2);page.mouse.down();page.mouse.move(stage['x']+stage['width']*.75,stage['y']+stage['height']*.62,steps=5);page.mouse.up()
+ def guide_geometry():return dialog.locator('svg [data-part="body"]').evaluate_all('(nodes)=>nodes.map(e=>Object.fromEntries(["x1","y1","x2","y2"].map(k=>[k,+e.getAttribute(k)])))')
+ original=guide_geometry()[0];dialog.locator('[data-action="copy-line"]').click();dialog.locator('[data-action="paste-line"]').click();copied=guide_geometry()[1]
+ assert abs((copied['x2']-copied['x1'])-(original['x2']-original['x1']))<.001 and abs((copied['y2']-copied['y1'])-(original['y2']-original['y1']))<.001
+ assert copied['x1']!=original['x1'] and copied['y1']!=original['y1'];expect(page.locator('#postureLine option')).to_have_count(2)
+ dialog.locator('[data-action="undo"]').click();expect(page.locator('#postureLine option')).to_have_count(1);dialog.locator('[data-action="redo"]').click();expect(page.locator('#postureLine option')).to_have_count(2)
+ dialog.locator('[data-action="clear"]').click()
  for kind in ['vertical','horizontal','ruler']:dialog.locator('[data-action="'+kind+'"]').click()
  expect(page.locator('#postureLine option')).to_have_count(3)
  svg=dialog.locator('svg')
@@ -151,6 +177,9 @@ with sync_playwright() as p:
  expect(logo).to_have_attribute('href',__import__('re').compile('data:image/png;base64,'))
  assert page.evaluate("localStorage.getItem('treinoPostureLogo')").startswith('data:image/png;base64,')
  dialog.locator('[data-action="close"]').click();assert av()['posturaEdicoes']['fotoF']['logo']==placement
+ thumbnail.click();expect(preview).to_be_visible();assert preview.locator('img').get_attribute('src')==without['fotoF'];expect(dialog).not_to_be_visible();page.keyboard.press('Escape')
+ # Copy a current ruler and paste into another photo during the same editing session.
+ page.locator('[data-posture-edit="fotoF"]').click();page.locator('#postureLine').select_option(index=2);clipboard_geometry=guide_geometry()[2];dialog.locator('[data-action="copy-line"]').click();dialog.locator('[data-action="close"]').click()
  # The native camera picker opens within the editor, and cancelling preserves the old photo.
  frontal=page.locator('#obs-av-fotoF').locator('..')
  with page.expect_file_chooser() as chooser:frontal.get_by_role('button',name='Câmera',exact=True).click()
@@ -161,7 +190,10 @@ with sync_playwright() as p:
  # Save a landscape lateral photo and verify both photos fit the actual exported PDF.
  lateral=page.locator('#obs-av-fotoL').locator('..')
  lateral.locator('input[type=file]').set_input_files({'name':'landscape.png','mimeType':'image/png','buffer':base64.b64decode(photos['landscape'].split(',')[1])})
- expect(dialog.locator('[data-action="save"]')).to_be_enabled();dialog.locator('[data-action="save"]').click();expect(dialog).not_to_be_visible()
+ expect(dialog.locator('[data-action="save"]')).to_be_enabled();dialog.locator('[data-action="paste-line"]').click();pasted=guide_geometry()[0]
+ import math
+ assert abs(math.atan2(pasted['y2']-pasted['y1'],pasted['x2']-pasted['x1'])-math.atan2(clipboard_geometry['y2']-clipboard_geometry['y1'],clipboard_geometry['x2']-clipboard_geometry['x1']))<.001
+ dialog.locator('[data-action="remove"]').click();dialog.locator('[data-action="save"]').click();expect(dialog).not_to_be_visible()
  with page.expect_download() as download:page.locator('#obsAssessment-postural').click()
  with fitz.open(download.value.path()) as pdf:
   assert pdf.page_count==2
@@ -195,5 +227,15 @@ with sync_playwright() as p:
  page.once('dialog',lambda d:d.accept());dialog.locator('[data-action="delete-photo"]').click();expect(dialog).not_to_be_visible();assert av()['fotoF'] is None and av()['fotoFOriginal'] is None and 'fotoF' not in av()['posturaEdicoes']
  records=page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')")
  assert records[0]['avaliacoes'][0]['fotoF']==photos['old'];assert records[0]['avaliacoes'][1]['fotoL'];assert 'fotoF' not in records[1]['avaliacoes'][0]
+ # Additional circumference measurements stay editable without the redundant details panel.
+ page.locator('#obsAssessmentSections [data-assessment-section="medidas"]').click();page.locator('.composition-extras-add').click()
+ for key in ['pescoco','panturrilhaMedida','antebraco']:page.locator('[data-extra-key="'+key+'"]').check()
+ page.locator('.composition-extras-choices > button').click()
+ measurements={'pescoco':'34','panturrilhaMedida':'37 / 36','antebraco':'26 / 25'}
+ for key,value in measurements.items():
+  field=page.locator('#obs-av-'+key);field.fill(value);assert field.locator('..').locator('details,.composition-extra-rating').count()==0
+ page.reload();open_photos();page.locator('#obsAssessmentSections [data-assessment-section="medidas"]').click()
+ for key,value in measurements.items():expect(page.locator('#obs-av-'+key)).to_have_value(value)
+ assert page.locator('.composition-extra-field details').count()==0
  assert not errors,errors
- browser.close();print('PASS: mobile fit, endpoint dragging/angles, free endpoint rotation of horizontal/vertical lines, no numeric rotation toolbar, hidden handles, independent persisted grid color/thickness/transparency, top save, undo/redo, baked optional grid verified by pixels, original retained/re-edit without double overlays, camera/gallery and cancel, actual PDF aspect ratios, dated before/after rows aligned by view with missing-photo placeholders and paginated long analysis, native pinch zoom/reset and guide dragging while zoomed, locked pinch/pan and persisted locked view, full-window expansion, line/logo center snap with transient guides, bundled PNG logo drag/resize/persistence and exported pixels, remembered custom PNG, direct image download and compact four-action row, immediate durable saves and isolation, quota rollback and confirmed deletion inside/outside editor')
+ browser.close();print('PASS: mobile fit, endpoint dragging/angles, free endpoint rotation of horizontal/vertical lines, no numeric rotation toolbar, hidden handles, independent persisted grid color/thickness/transparency, top save, undo/redo, baked optional grid verified by pixels, original retained/re-edit without double overlays, camera/gallery and cancel, actual PDF aspect ratios, dated before/after rows aligned by view with missing-photo placeholders and paginated long analysis, clean photo-only click/keyboard preview of current composite, exact copy/paste with undo/redo and cross-aspect ruler angle, native pinch zoom/reset and guide dragging while zoomed, free touch dragging of both endpoints while locked, locked pinch/pan and persisted locked view, full-window expansion, line/logo center snap with transient guides, bundled PNG logo drag/resize/persistence and exported pixels, remembered custom PNG, direct image download and compact four-action row, immediate durable saves and isolation, quota rollback and confirmed deletion inside/outside editor')

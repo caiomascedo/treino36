@@ -67,6 +67,7 @@ window.CompositionExtras=(()=>{
     return {text,zones,percent,tone:text==='Saudável'||(!fat&&percent>=low)?'good':text==='Elevado'?'moderate':'attention',note:'Referência OMRON HBF-511 por idade e sexo. Percentual utilizado: '+percent.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%. '+(fat?'Faixa de referência: ':'Faixa normal de músculo esquelético: ')+low.toLocaleString('pt-BR')+'% a menos de '+high.toLocaleString('pt-BR')+'%.'};
   }
   function addDetails(wrap,input,field,config){
+    if(config.section==='medidas')return;
     const detail=document.createElement('details');detail.className='composition-extra-detail';
     const summary=document.createElement('summary');summary.textContent='Ver detalhes';detail.id=input.id+'-details';
     const current=document.createElement('p');current.className='composition-extra-value';
