@@ -1485,11 +1485,11 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=4"></script>
-<script src="diet-calculations.js?v=5"></script>
+<script src="diet-calculations.js?v=6"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
-<script src="diet-tools.js?v=2"></script>
-<script src="diet.js?v=11"></script>
-<link rel="stylesheet" href="diet.css?v=8">
+<script src="diet-tools.js?v=3"></script>
+<script src="diet.js?v=12"></script>
+<link rel="stylesheet" href="diet.css?v=9">
 <script src="posture-editor.js?v=6"></script>
 <link rel="stylesheet" href="posture-editor.css?v=6">
 <script src="assessment-photos.js?v=3"></script>
@@ -9438,6 +9438,17 @@ window.AvaliacaoTreinoSync = (function () {
     return DietCalculations.calorieEstimate(pesoStr, altStr, idadeStr, sexo, atividade);
   }
 
+  function atualizarContextoCaloricoDieta(student, patch) {
+    if(!student?.student_id)throw Error('Selecione um aluno salvo para guardar sexo e atividade.');
+    var current=AvaliacaoTreinoSync.read('treinoAlunos').find(function(s){return s.student_id===student.student_id;})||student;
+    var guides=cloneData(current.infoGuias||[]);
+    var ficha=guides.find(function(g){return g.id===current.avaliacaoFichaId;})||guides.at(-1);
+    if(!ficha){ficha=Object.assign({id:'1',titulo:'Ficha 1'},current.infoRelevante||{});guides.push(ficha);}
+    Object.assign(ficha,patch);
+    TreinoStorage.stageObs(student.student_id,{infoOrder:guides.map(function(g){return g.id;}),info:[{id:ficha.id,fields:cloneData(ficha)}],studentFields:{infoRelevante:cloneData(ficha)}});
+    student.infoGuias=guides;student.infoRelevante=cloneData(ficha);
+  }
+
   function contextoCaloricoAtual() {
     return {sex:document.getElementById('infoSexoCalorico').value,activity:document.getElementById('infoAtividadeCalorica').value};
   }
@@ -9465,7 +9476,7 @@ window.AvaliacaoTreinoSync = (function () {
       badge.textContent = calc.gastoTotal===null?'Selecione a atividade física':formatarKcal(calc.gastoTotal)+' kcal/dia ('+calc.nivel.toUpperCase()+')';
       badge.style.display = 'inline-block';
       details.innerHTML = 'Basal (TMB): <strong>~'+formatarKcal(calc.tmb)+' kcal</strong><br>'+
-        (calc.gastoTotal===null?'Selecione a atividade física para estimar manutenção e metas.':'Manutenção: <strong>~'+formatarKcal(calc.gastoTotal)+' kcal/dia</strong> · Fator: '+calc.fator+'<br>Emagrecimento (-400 kcal): <strong>~'+formatarKcal(calc.deficit)+' kcal</strong> · Hipertrofia (+300 kcal): <strong>~'+formatarKcal(calc.superavit)+' kcal</strong>');
+        (calc.gastoTotal===null?'Selecione a atividade física para estimar manutenção e metas.':'Manutenção: <strong>~'+formatarKcal(calc.gastoTotal)+' kcal/dia</strong> · Fator: '+calc.fator+'<br>Emagrecimento (-500 kcal): <strong>~'+formatarKcal(calc.deficit)+' kcal</strong> · Hipertrofia (+500 kcal): <strong>~'+formatarKcal(calc.superavit)+' kcal</strong>');
       if (copyBtn) copyBtn.hidden = false;
     } else {
       badge.textContent = 'Aguardando sexo, idade, peso e altura';
@@ -9852,7 +9863,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   var assessmentsButton = document.createElement('button'); assessmentsButton.type = 'button'; assessmentsButton.id = 'assessmentsLibraryBtn'; assessmentsButton.textContent = '📋 Avaliações'; assessmentsButton.onclick = abrirBibliotecaAvaliacoes;
   document.querySelector('.workout-tools').appendChild(assessmentsButton);
-  document.querySelector('.workout-tools').appendChild(DietEditor.mount({createDialog:criarDialogo,student:alunoNaTela,name:function(){return document.getElementById('searchName').value;},footer:function(){return document.querySelector('.footer').innerText.trim();},loadScript:loadScriptOnce,obsCalories:calcularKcal}));
+  document.querySelector('.workout-tools').appendChild(DietEditor.mount({createDialog:criarDialogo,student:alunoNaTela,name:function(){return document.getElementById('searchName').value;},footer:function(){return document.querySelector('.footer').innerText.trim();},loadScript:loadScriptOnce,obsCalories:calcularKcal,updateCalorieContext:atualizarContextoCaloricoDieta}));
   var assessmentsMenuButton = document.createElement('button'); assessmentsMenuButton.type = 'button'; assessmentsMenuButton.textContent = '📋 Avaliações / importar JSON'; assessmentsMenuButton.onclick = function () { moreOptions.open = false; abrirBibliotecaAvaliacoes(); };
   document.querySelector('.more-options-menu').prepend(assessmentsMenuButton);
   window.addEventListener('avaliacoes-importadas', atualizarFichaDaAvaliacao);

@@ -28,7 +28,7 @@ window.DietCalculations = (() => {
     if(raw<=0)return null;
     const factor=(sex==='F'?{nenhuma:1.2,moderada:1.3,intensa:1.4}:{nenhuma:1.25,moderada:1.35,intensa:1.45})[activity];
     const daily=factor?round(raw*factor):null;
-    return {tmb:round(raw),gastoTotal:daily,deficit:daily===null?null:round(daily-400),superavit:daily===null?null:round(daily+300),nivel:activity,fator:factor??null,sexo:sex};
+    return {tmb:round(raw),gastoTotal:daily,deficit:daily===null?null:round(daily-500),superavit:daily===null?null:round(daily+500),nivel:activity,fator:factor??null,sexo:sex};
   }
   const macroPatterns = {
     protein: /\b(?:proteinas?|prot|p)\s*[:=]?\s*(\d+(?:[.,]\d+)*)\s*g\b/gi,

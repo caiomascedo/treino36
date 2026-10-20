@@ -15,8 +15,15 @@ with sync_playwright() as p:
  expect(page.locator('#dietTmb')).to_have_text('1.382,6')
  expect(page.locator('#diet-calories')).to_have_value('');expect(page.locator('#dietMacroNotice')).to_contain_text('dados na OBS')
  expect(page.locator('[data-diet-goal="daily"]')).to_contain_text('—')
+ # Selecting in the diet immediately previews all objectives, before clicking them.
+ page.locator('#dietActivity').select_option('intensa')
+ expect(page.locator('[data-diet-goal="daily"]')).to_contain_text('1.935,64')
+ expect(page.locator('[data-diet-goal="deficit"]')).to_contain_text('1.435,64')
+ expect(page.locator('[data-diet-goal="surplus"]')).to_contain_text('2.435,64')
+ page.locator('#dietSex').select_option('M');expect(page.locator('[data-diet-goal="surplus"]')).to_contain_text('2.669,78')
+ page.locator('#dietSex').select_option('F');page.locator('#dietActivity').select_option('moderada')
  page.locator('#dietDialog [data-close]').click();page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click()
- expect(page.locator('#infoSexoCalorico')).to_have_value('F');expect(page.locator('#infoAtividadeCalorica')).to_have_value('')
+ expect(page.locator('#infoSexoCalorico')).to_have_value('F');expect(page.locator('#infoAtividadeCalorica')).to_have_value('moderada')
  page.locator('#infoAtividadeCalorica').select_option('moderada');expect(page.locator('#kcalBadge')).to_contain_text('1.797,38');expect(page.locator('#kcalDetails')).to_contain_text('1.382,6')
  # The unrelated training intensity must not change calorie estimates.
  page.locator('#treinoLevelSelector [data-level="leve"]').click();expect(page.locator('#kcalBadge')).to_contain_text('1.797,38')

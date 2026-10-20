@@ -23,7 +23,7 @@ with sync_playwright() as p:
  page.locator('#dietBtn').click();expect(page.locator('#dietText')).to_have_value('Almoço\nArroz e feijão');page.locator('#dietCalculations > summary').click()
  expect(page.locator('#dietTmb')).to_have_text('1.370,5');expect(page.locator('#dietTotals')).to_contain_text('1.781,65')
  for key in ['sex','age','height','weight','activity']:assert page.locator('#diet-'+key).count()==0
- for mode,value in [('tmb','1.370,5'),('deficit','1.381,65'),('surplus','2.081,65'),('daily','1.781,65')]:
+ for mode,value in [('tmb','1.370,5'),('deficit','1.281,65'),('surplus','2.281,65'),('daily','1.781,65')]:
   page.locator('[data-diet-goal="'+mode+'"]').click();expect(page.locator('#dietTotals')).to_contain_text('Meta: '+value)
 
  # Explicitly return to text-derived totals after checking the automatic goal presets.
