@@ -79,6 +79,19 @@ window.DietCalculations = (() => {
     const calories=Math.round(energy(macros));if(!Number.isFinite(calories))throw Error('Valores muito grandes para calcular.');
     return {...macros,calories,weight:kg,carbRatio:ratio};
   }
+  function objectiveMacros(weight,mode,goal) {
+    if(!['daily','deficit','surplus'].includes(mode))throw Error('Escolha Manutenção, Emagrecimento ou Hipertrofia para calcular os macros.');
+    const result=weightMacros(weight,mode==='surplus'?4:2);
+    if(mode==='daily'){
+      const target=number(goal);
+      if(target===null||target<=0)throw Error('Preencha os dados na OBS ou informe uma meta de calorias para calcular a manutenção.');
+      const remaining=target-result.protein*4-result.fat*9;
+      if(remaining<0)throw Error('A meta de calorias é menor que a energia da proteína e da gordura. Ajuste a meta para calcular a manutenção.');
+      result.carbs=Math.round((remaining/4+Number.EPSILON)*10)/10;
+      result.calories=Math.round(energy(result));result.carbRatio=null;
+    }
+    return result;
+  }
   function evaluate(expression) {
     const source=String(expression).replace(/\s/g,'').replace(/[×x]/g,'*').replace(/÷/g,'/').replace(/[−–]/g,'-');
     if(!source||source.length>160)throw Error('Digite uma conta de até 160 caracteres.');
@@ -96,5 +109,5 @@ window.DietCalculations = (() => {
     const result=add();if(at!==tokens.length||!Number.isFinite(result))throw Error('Confira a conta digitada.');
     return Number(result.toPrecision(12));
   }
-  return {number,basal,nutrition,weightMacros,evaluate};
+  return {number,basal,nutrition,weightMacros,objectiveMacros,evaluate};
 })();

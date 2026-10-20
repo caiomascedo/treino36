@@ -38,7 +38,7 @@ window.DietEditor = (() => {
   }
   let pdfLibrary;
   const C = () => window.DietCalculations;
-  const settingsKeys = ['goal','calories','protein','carbs','fat','macroWeight','carbDaily','carbDeficit','carbSurplus'];
+  const settingsKeys = ['goal','calories','protein','carbs','fat'];
   const fmt = value => value === null ? '—' : Number(value.toFixed(1)).toLocaleString('pt-BR');
   function profile(student, config) {
     let current=student,person={},av={};
@@ -86,40 +86,26 @@ window.DietEditor = (() => {
       if(canGroup)history[historyIndex]=snapshot;else{history.push(snapshot);if(history.length>80)history.shift();historyIndex=history.length-1;}
       lastGroup=group;lastTime=now;buttons();
     }
-    const macroAutoInput=dialog.querySelector('#dietMacroAuto'),macroNotice=dialog.querySelector('#dietMacroNotice');
-    const ratioKey=()=>({daily:'carbDaily',deficit:'carbDeficit',surplus:'carbSurplus'}[goalMode]);
+    const macroNotice=dialog.querySelector('#dietMacroNotice');
     function deriveMacros(strict=false){
       try{
-        const key=ratioKey();if(!key)throw Error('Escolha Manutenção, Emagrecimento ou Hipertrofia para calcular os macros.');
-        const weight=inputs.macroWeight.value.trim()?C().number(inputs.macroWeight.value):source.weight;
-        const ratio=inputs[key].value.trim()||(key==='carbDeficit'?'2':'');
-        const result=C().weightMacros(weight,ratio);
+        const result=C().objectiveMacros(source.weight,goalMode,inputs.goal.value.trim()?inputs.goal.value:source.daily);
         for(const field of ['calories','protein','carbs','fat'])inputs[field].value=String(result[field]);
-        macroNotice.textContent=fmt(result.weight)+' kg · Proteína × 2 · Carbo × '+fmt(result.carbRatio)+' · Gordura × 0,8 = '+fmt(result.calories)+' kcal.';
+        macroNotice.textContent=fmt(result.weight)+' kg · Proteína × 2 · '+(goalMode==='daily'?'Carbo completa a meta de calorias':'Carbo × '+fmt(result.carbRatio))+' · Gordura × 0,8 = '+fmt(result.calories)+' kcal.';
         return result;
       }catch(error){macroNotice.textContent=error.message+' Os campos anteriores foram mantidos.';if(strict)throw error;return null;}
     }
     const tools=DietTools.mount(dialog,{
       values:()=>{const value=totals();return {calories:value.calories,protein:value.macrosFound?value.protein:null,carbs:value.macrosFound?value.carbs:null,fat:value.macrosFound?value.fat:null};},
       clear:keys=>{macroAuto=false;macroNotice.textContent='';for(const key of keys)inputs[key].value='';change('clear-values',false);},
-      apply:(key,value)=>{macroAuto=false;macroNotice.textContent='';inputs[key].value=value;change('calculator',false);},
       message:value=>{status.textContent=value;}
     });
-    function applyWeightMacros(){
-      try{deriveMacros(true);macroAuto=true;change('weight-macros',false);}
-      catch(error){dialog.querySelector('#dietMacroTools').open=true;status.textContent=error.message;}
-    }
-    dialog.querySelector('#dietCalculateMacros').onclick=applyWeightMacros;
-    macroAutoInput.onchange=()=>{if(macroAutoInput.checked){applyWeightMacros();macroAutoInput.checked=macroAuto;}else{macroAuto=false;change('macro-auto',false);}};
     function totals() {
       const value=C().nutrition(parse(text.value),calculationSettings());
-      macroAutoInput.checked=macroAuto;
-      dialog.querySelector('#dietMacroSource').textContent='Peso da OBS: '+fmt(source.weight??null)+' kg. Deixe o peso vazio para acompanhar a OBS, ou informe outro peso apenas para este cálculo.';
-      inputs.macroWeight.placeholder=source.weight?String(source.weight):'Peso da OBS';
       dialog.querySelector('#dietTmb').textContent=fmt(value.tmb);
       dialog.querySelector('#dietObsStatus').textContent=value.tmb===null?'Preencha a ficha nas OBS para obter a TMB.':'Atualizada automaticamente pela ficha/OBS.';
       const labels={tmb:'TMB',daily:'Manutenção',deficit:'Emagrecimento',surplus:'Hipertrofia'};
-      dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{const mode=button.dataset.dietGoal;button.disabled=source[mode]===null&&(mode==='tmb'||!(C().number(inputs.macroWeight.value)||source.weight));button.textContent=labels[mode]+' · '+fmt(source[mode])+' kcal';button.setAttribute('aria-pressed',String(goalMode===mode&&!inputs.goal.value.trim()));});
+      dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{const mode=button.dataset.dietGoal;button.disabled=mode==='tmb'&&source[mode]===null;button.textContent=labels[mode]+' · '+fmt(source[mode])+' kcal';button.setAttribute('aria-pressed',String(goalMode===mode&&!inputs.goal.value.trim()));});
       inputs.goal.placeholder=value.goal===null?'Preencha os dados acima':fmt(value.goal);
       inputs.calories.placeholder=value.calories===null?'Não informado':String(value.calories);
       for(const key of ['protein','carbs','fat'])inputs[key].placeholder=value.macrosFound?fmt(value[key]):'Não informado';
@@ -160,7 +146,7 @@ window.DietEditor = (() => {
     dialog.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&['z','y'].includes(event.key.toLowerCase())){event.preventDefault();event.stopPropagation();move(event.key.toLowerCase()==='y'||event.shiftKey?1:-1);}});
     dialog.querySelector('#dietExpandBtn').onclick=()=>{const expanded=dialog.classList.toggle('diet-expanded');dialog.querySelector('#dietExpandBtn').setAttribute('aria-pressed',String(expanded));dialog.querySelector('#dietExpandBtn').textContent=expanded?'↙ Minimizar':'⛶ Ampliar';};
     function adjustGoal(delta){const current=C().nutrition(parse(text.value),calculationSettings()).goal;if(current===null){status.textContent='Preencha os dados da TMB ou digite uma meta.';return;}inputs.goal.value=String(Math.max(0,current+delta));change('goal-step',false);}
-    dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{button.onclick=()=>{goalMode=button.dataset.dietGoal;inputs.goal.value='';change('goal-preset',false);};});
+    dialog.querySelectorAll('[data-diet-goal]').forEach(button=>{button.onclick=()=>{goalMode=button.dataset.dietGoal;inputs.goal.value='';macroAuto=goalMode!=='tmb';macroNotice.textContent='';change('goal-preset',false);};});
     dialog.querySelector('#dietGoalMinus').onclick=()=>adjustGoal(-100);dialog.querySelector('#dietGoalPlus').onclick=()=>adjustGoal(100);dialog.querySelector('#dietGoalAuto').onclick=()=>{inputs.goal.value='';change('goal-auto',false);};
     const pasteExpand=dialog.querySelector('#dietPasteExpandBtn'),mealsExpand=dialog.querySelector('#dietMealsExpandBtn');let pasteScroll=0,mealsScroll=0;
     function expandMeals(expanded){
