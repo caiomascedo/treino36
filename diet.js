@@ -38,7 +38,7 @@ window.DietEditor = (() => {
   }
   let pdfLibrary;
   const C = () => window.DietCalculations;
-  const settingsKeys = ['goal','calories','protein','carbs','fat'];
+  const settingsKeys = ['goal','calories','protein','carbs','fat','carbSurplusRatio','carbWeeklyStep','carbWeek'];
   const fmt = value => value === null ? '—' : Number(value.toFixed(2)).toLocaleString('pt-BR');
   function profile(student, config) {
     let current=student,person={},av={};
@@ -54,6 +54,7 @@ window.DietEditor = (() => {
       '<button type="button" id="dietExpandBtn" aria-pressed="false">⛶ Ampliar</button><p id="dietStudentName"></p>' +
       '<details id="dietCalculations"><summary>Meta e calorias</summary><div class="diet-calc-grid diet-context"><label>Sexo para cálculo<select id="dietSex"><option value="">Selecionar</option><option value="F">Feminino</option><option value="M">Masculino</option></select></label><label>Atividade física<select id="dietActivity"><option value="">Selecionar</option><option value="nenhuma">Nenhuma atividade física</option><option value="moderada">Moderada · 30 min, 4×/sem</option><option value="intensa">Intensa · corrida 1 h, 4×/sem ou mais</option></select></label></div><p>TMB da OBS: <strong id="dietTmb">—</strong> kcal/dia</p><p class="diet-hint" id="dietObsStatus"></p><div class="diet-quick-goals">' +
       '<button type="button" data-diet-goal="tmb">TMB</button><button type="button" data-diet-goal="daily">Manutenção</button><button type="button" data-diet-goal="deficit">Emagrecimento</button><button type="button" data-diet-goal="surplus">Hipertrofia</button></div>' +
+      '<section id="dietCarbProgress" hidden><input type="hidden" id="diet-carbSurplusRatio" value="4"><input type="hidden" id="diet-carbWeek" value="1"><strong id="dietCarbWeekLabel"></strong><div class="diet-carb-week-row"><label>Aumento por semana (g/kg)<input id="diet-carbWeeklyStep" inputmode="decimal" placeholder="Definir aumento"></label><button type="button" id="dietCarbNextWeek">Preparar próxima semana</button></div><p class="diet-hint">Começa em 4 g/kg. Prepare a próxima semana antes de enviar a dieta. Exportar ou copiar mantém a semana atual.</p></section>' +
       '<label for="diet-goal">Meta (kcal/dia)</label><div class="diet-goal-row"><button type="button" id="dietGoalMinus">−100</button><input id="diet-goal" inputmode="decimal" placeholder="Automática"><button type="button" id="dietGoalPlus">+100</button><button type="button" id="dietGoalAuto">Auto</button><button type="button" id="dietCopyGoal">Copiar meta</button></div>' +
       '<div class="diet-calc-grid"><label>Calorias do dia<input id="diet-calories" inputmode="decimal" placeholder="Automático"></label><label>Proteína (g)<input id="diet-protein" inputmode="decimal" placeholder="Do texto"></label><label>Carboidratos (g)<input id="diet-carbs" inputmode="decimal" placeholder="Do texto"></label><label>Gorduras (g)<input id="diet-fat" inputmode="decimal" placeholder="Do texto"></label></div>' + DietTools.markup() + '<p class="diet-hint">Os valores da OBS são atualizados automaticamente. Deixe a meta vazia para usar a opção selecionada acima; os totais podem vir do texto ou ser corrigidos aqui.</p></details>' +
       '<div id="dietTotals" aria-live="polite"></div><div class="diet-paste-header"><label for="dietText">🧠 Cola inteligente</label><div><button type="button" id="dietPasteClearBtn">Limpar texto</button><button type="button" id="dietPasteExpandBtn" aria-pressed="false">⛶ Ampliar</button></div></div>' +
@@ -90,7 +91,7 @@ window.DietEditor = (() => {
     const macroNotice=dialog.querySelector('#dietMacroNotice');
     function deriveMacros(strict=false){
       try{
-        const result=C().objectiveMacros(source.weight,goalMode,inputs.goal.value.trim()?inputs.goal.value:source.daily);
+        const result=C().objectiveMacros(source.weight,goalMode,inputs.goal.value.trim()?inputs.goal.value:source.daily,inputs.carbSurplusRatio.value||'4');
         for(const field of ['calories','protein','carbs','fat'])inputs[field].value=String(result[field]);
         macroNotice.textContent=fmt(result.weight)+' kg · Proteína × 2 · '+(goalMode==='daily'?'Carbo completa a meta de calorias':'Carbo × '+fmt(result.carbRatio))+' · Gordura × 0,8 = '+fmt(result.calories)+' kcal.';
         return result;
@@ -102,8 +103,20 @@ window.DietEditor = (() => {
       clear:keys=>{macroAuto=false;macroNotice.textContent='';for(const key of keys)inputs[key].value='';change('clear-values',false);},
       message:value=>{status.textContent=value;}
     });
+    dialog.querySelector('#dietCarbNextWeek').onclick=()=>{
+      try{
+        const step=C().number(inputs.carbWeeklyStep.value),ratio=C().number(inputs.carbSurplusRatio.value||'4'),week=C().number(inputs.carbWeek.value||'1');
+        if(step===null||step<=0)throw Error('Defina o aumento semanal de carboidratos em g/kg.');
+        const nextRatio=Math.round((ratio+step+Number.EPSILON)*10000)/10000;
+        C().weightMacros(source.weight,nextRatio);
+        inputs.carbSurplusRatio.value=String(nextRatio);inputs.carbWeek.value=String(week+1);macroAuto=true;
+        change('carb-next-week',false);status.textContent='Semana '+(week+1)+' preparada. Confira os valores antes de enviar.';
+      }catch(error){status.textContent=error.message;}
+    };
     function totals() {
       const value=C().nutrition(parse(text.value),calculationSettings());
+      dialog.querySelector('#dietCarbProgress').hidden=goalMode!=='surplus';
+      dialog.querySelector('#dietCarbWeekLabel').textContent='Semana '+(inputs.carbWeek.value||'1')+' · Carbo × '+fmt(C().number(inputs.carbSurplusRatio.value||'4'));
       dialog.querySelector('#dietSex').value=source.sex||'';dialog.querySelector('#dietActivity').value=source.activity||'';
       dialog.querySelector('#dietTmb').textContent=fmt(value.tmb);
       dialog.querySelector('#dietObsStatus').textContent=value.tmb===null?'Selecione o sexo acima e preencha idade, peso e altura na OBS.':source.daily===null?'Selecione a atividade física acima para ver as kcal dos objetivos.':'Referência Unimed (clássica) · Manutenção = gasto da atividade selecionada · Emagrecimento −500 kcal · Hipertrofia +500 kcal.';
@@ -233,7 +246,7 @@ window.DietEditor = (() => {
       const student=config.student();studentForDiet=student;name=config.name().trim();const id=encodeURIComponent(student?.student_id||name||'sem_aluno');draftKey='dieta36_rascunho_v1:'+id;settingsKey='dieta36_calculos_v1:'+id;status.textContent='';
       let saved=inMemory.get(draftKey)||{text:'',settings:{}};
       try{saved={...saved,text:localStorage.getItem(draftKey)??saved.text};saved.settings=JSON.parse(localStorage.getItem(settingsKey)||JSON.stringify(saved.settings));}catch(error){status.textContent='Não foi possível ler todos os ajustes do rascunho neste navegador.';}
-      text.value=saved.text;source=profile(student,config);macroAuto=saved.settings?.macroAuto===true;macroNotice.textContent='';tools.reset();goalMode=['tmb','daily','deficit','surplus'].includes(saved.settings?.goalMode)?saved.settings.goalMode:'daily';const initial={...saved.settings};for(const key of settingsKeys)inputs[key].value=initial[key]??'';includeCalculations.checked=saved.settings?.includeCalculations===true;if(macroAuto){if(saved.settings?.calorieReference!=='unimed-classic-goals500-v2')for(const key of ['calories','protein','carbs','fat'])inputs[key].value='';deriveMacros();save();}
+      text.value=saved.text;source=profile(student,config);macroAuto=saved.settings?.macroAuto===true;macroNotice.textContent='';tools.reset();goalMode=['tmb','daily','deficit','surplus'].includes(saved.settings?.goalMode)?saved.settings.goalMode:'daily';const initial={...saved.settings};for(const key of settingsKeys)inputs[key].value=initial[key]??({carbSurplusRatio:'4',carbWeek:'1'}[key]||'');includeCalculations.checked=saved.settings?.includeCalculations===true;if(macroAuto){if(saved.settings?.calorieReference!=='unimed-classic-goals500-v2')for(const key of ['calories','protein','carbs','fat'])inputs[key].value='';deriveMacros();save();}
       dialog.querySelector('#dietStudentName').textContent=name;preview.open=false;body.replaceChildren();history=[JSON.stringify(state())];historyIndex=0;lastGroup='';refresh(false);dialog.showModal();dialog.querySelector('#dietExpandBtn').focus({preventScroll:true});
     };
     for(const [id,key] of [['dietSex','sexoCalorico'],['dietActivity','atividadeCalorica']])dialog.querySelector('#'+id).onchange=()=>{

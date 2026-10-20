@@ -9,3 +9,6 @@ console.log('PASS: weight multipliers and kcal 4/4/9, comma fractions, invalid/m
 for(const [mode,carbs,calories] of [['deficit',112,1299],['surplus',224,1747],['daily',287.2,2000]]){const result=c.objectiveMacros(56,mode,2000);assert.equal(result.protein,112);assert.equal(result.fat,44.8);assert.equal(result.carbs,carbs);assert.equal(result.calories,calories);}
 for(const args of [[null,'deficit'],[56,'tmb'],[56,'daily',null],[56,'daily',800]])assert.throws(()=>c.objectiveMacros(...args));
 console.log('PASS: direct objective formulas, maintenance calorie remainder, missing weight/target and insufficient calories rejected');
+
+for(const [ratio,carbs,calories] of [[4.25,238,1803],[4.5,252,1859]]){const result=c.objectiveMacros(56,'surplus',2000,ratio);assert.equal(result.carbs,carbs);assert.equal(result.calories,calories);assert.equal(result.protein,112);assert.equal(result.fat,44.8);}
+assert.equal(c.objectiveMacros(56,'deficit',2000,4.5).carbs,112);console.log('PASS: progressive hypertrophy ratios preserve protein/fat and do not alter other objectives');
