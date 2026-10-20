@@ -36,12 +36,19 @@ with sync_playwright() as p:
  page.goto('http://app.test/treino36/')
  page.evaluate('''()=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'ocr',nome:'Exemplo',avaliacaoId:10,treino:{A:['Agachamento 3x10']},infoRelevante:{idade:'24',altura:'1.63',peso:'72'}}]));localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Exemplo',sexo:'F',idade:'24',altura:'1.63',treinoStudentIds:['ocr'],avaliacoes:[{id:11,data:'20/10/2026',peso:'72',agua:'50',protocolo:'jp7',resumo:'Preservar observação'}]},{id:20,nome:'Outro',sexo:'M',avaliacoes:[{id:21,peso:'80'}]}]));}''');page.reload();page.locator('#searchName').fill('Exemplo');page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click();page.locator('[data-assessment-section="composicao"]').click();expect(page.locator('#obs-av-peso')).to_have_value('72')
  original_other=page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[1]")
+ def open_choices():
+  choices=page.locator('#obsNativeAssessment .composition-extras-choices')
+  if not choices.is_visible():page.locator('#obsNativeAssessment .composition-extras-add').click()
+ expect(page.locator('#obsNativeAssessment .composition-reader-open').first).to_be_hidden()
+ expect(page.locator('#obsNativeAssessment .composition-reader-fitdays')).to_be_hidden()
+ expect(page.locator('#obsNativeAssessment .composition-reader-inbody')).to_be_hidden()
  def upload(path):
+  open_choices()
   if path.stem in ['inbody','fitdays']:
    panel=page.locator('#obsNativeAssessment .composition-reader-'+path.stem)
    if not panel.evaluate('el=>el.open'):panel.locator('summary').click()
    panel.locator('input[type=file]').set_input_files(path)
-  else:page.locator('#obsNativeAssessment .composition-extras-tools input[type=file]').set_input_files(path)
+  else:page.locator('#obsNativeAssessment .composition-extras-tools input[data-reader-mode=standard]').set_input_files(path)
   expect(page.locator('.composition-reader-dialog')).to_be_visible(timeout=120000)
   expect(page.get_by_role('textbox',name='Valor lido de Peso (kg)',exact=True)).to_have_value('77.6' if path.suffix=='.png' else '58.7' if path.stem=='planilha' else '56.9')
  def apply():
@@ -54,7 +61,7 @@ with sync_playwright() as p:
  upload(pdf_fixture('planilha'));apply();expect(page.locator('#obs-av-peso')).to_have_value('58.7');expect(page.locator('#obs-av-imc')).to_have_value('25.4');expect(page.locator('#obs-av-musculoEsqueleticoKg')).to_have_value('20');expect(page.locator('#obs-av-massaMuscularPct')).to_have_value('59.8');expect(page.locator('#obs-av-metabolismoInformado')).to_have_value('1197.8');expect(page.locator('#obs-av-agua')).to_have_value('50')
  assert page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))[0].avaliacoes[0].data")=='20/10/2026'
  print('PASS: native PDF text extraction, review/cancel, separate muscle units, preserved missing fields and reported IMC',flush=True)
- page.locator('#obsNativeAssessment .composition-extras-tools input[type=file]').set_input_files(pdf_fixture('fitdays'));expect(page.locator('#obsNativeAssessment .composition-extras-tools .composition-reader-status')).to_contain_text('leitor exclusivo Fitdays');expect(page.locator('.composition-reader-dialog')).to_have_count(0);expect(page.locator('#obs-av-peso')).to_have_value('58.7')
+ page.locator('#obsNativeAssessment .composition-extras-tools input[data-reader-mode=standard]').set_input_files(pdf_fixture('fitdays'));expect(page.locator('#obsNativeAssessment .composition-readers-options > .composition-reader-status')).to_contain_text('leitor exclusivo Fitdays');expect(page.locator('.composition-reader-dialog')).to_have_count(0);expect(page.locator('#obs-av-peso')).to_have_value('58.7')
  upload(image_fixture());expect(page.get_by_role('textbox',name='Valor lido de Massa muscular total (kg)',exact=True)).to_have_value('52.5');expect(page.get_by_role('textbox',name='Valor lido de Massa muscular esquelética',exact=False).first).to_have_value('49.5')
  # Real OCR can flag low-confidence candidates; explicitly review all valid values in the fixture.
  for checkbox in page.locator('.composition-reader-row input[type=checkbox]').all():checkbox.check()
@@ -62,6 +69,7 @@ with sync_playwright() as p:
  page.reload();page.locator('#searchName').fill('Exemplo');page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click();page.locator('[data-assessment-section="composicao"]').click();expect(page.locator('#obs-av-idadeMetabolica')).to_have_value('32');expect(page.locator('#obs-av-imc')).to_have_value('27.8')
  print('PASS: real image OCR (Tesseract por+eng), numeric field matching, review/application and persistence of reported values',flush=True)
  scanned=CACHE/'fitdays-scanned.pdf';doc=fitz.open();pdoc=doc.new_page(width=600,height=850);pdoc.insert_image(pdoc.rect,filename=str(image_fixture()));doc.save(scanned);doc.close()
+ open_choices()
  panel=page.locator('#obsNativeAssessment .composition-reader-fitdays')
  if not panel.evaluate('el=>el.open'):panel.locator('summary').click()
  panel.locator('input[type=file]').set_input_files(scanned);expect(page.locator('.composition-reader-dialog')).to_be_visible(timeout=120000);expect(page.get_by_role('textbox',name='Valor lido de Peso (kg)',exact=True)).to_have_value('77.6');page.locator('.composition-reader-dialog').get_by_role('button',name='Cancelar',exact=True).click()
@@ -71,11 +79,11 @@ with sync_playwright() as p:
  records=page.evaluate("JSON.parse(localStorage.getItem('avaliacao_fisica_alunos'))");assert records[1]==original_other;assert records[0]['avaliacoes'][0]['resumo']=='Preservar observação'
  print('PASS: InBody units, reference ranges, controls, segments and impedance; unrelated pupil and observations unchanged',flush=True)
  # The existing TMB selectors remain independent: calculated or reported or both.
- page.locator('.composition-extras-add').first.click()
+ open_choices()
  page.locator('input[data-extra-key="tmb"]').uncheck();expect(page.locator('#obs-av-tmb')).to_be_hidden();expect(page.locator('#obs-av-metabolismoInformado')).to_be_visible();page.locator('input[data-extra-key="tmb"]').check();expect(page.locator('#obs-av-tmb')).to_be_visible()
  page.locator('#workoutObsDialog [data-close]').click()
  library=context.new_page();library.on('pageerror',lambda e:errors.append(str(e)));library.goto('http://app.test/treino36/avaliacao.html?treinoStudentId=ocr&embed=treino36&secao=composicao')
- scope=library.locator('[data-extra-record="10"][data-extra-av="11"][data-extra-section="composicao"]');scope.locator('input[type=file]').set_input_files(pdf_fixture('planilha'));expect(library.locator('.composition-reader-dialog')).to_be_visible();library.locator('.composition-reader-apply').click();expect(library.locator('.composition-reader-dialog')).to_have_count(0);expect(library.locator('#imc-10-11')).to_have_value('25.4')
+ scope=library.locator('[data-extra-record="10"][data-extra-av="11"][data-extra-section="composicao"]');scope.locator('.composition-extras-add').click();scope.locator('input[data-reader-mode=standard]').set_input_files(pdf_fixture('planilha'));expect(library.locator('.composition-reader-dialog')).to_be_visible();library.locator('.composition-reader-apply').click();expect(library.locator('.composition-reader-dialog')).to_have_count(0);expect(library.locator('#imc-10-11')).to_have_value('25.4')
  print('PASS: independent general/Fitdays/InBody readers and full assessment library import',flush=True)
  # Workout reader stays inside Mais opções and native PDFs are reviewed before applying.
  assert page.locator('#moreOptions #ocrImageBtn').count()==1

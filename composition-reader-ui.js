@@ -21,7 +21,7 @@ window.CompositionImportUI=(()=>{
     }
     flow(root,'standard');
     const fitdays=node('details',{class:'composition-reader-fitdays'});fitdays.append(node('summary',{},'Fitdays · OCR exclusivo do relatório'));flow(fitdays,'fitdays');
-    const inbody=node('details',{class:'composition-reader-inbody'});inbody.append(node('summary',{},'InBody · OCR exclusivo do laudo'));flow(inbody,'inbody');(config.inbodyHost||root).after(fitdays,inbody);
+    const inbody=node('details',{class:'composition-reader-inbody'});inbody.append(node('summary',{},'InBody · OCR exclusivo do laudo'));flow(inbody,'inbody');root.append(fitdays,inbody);
     return {review:(result)=>{const state=config.getState();review(result,JSON.parse(JSON.stringify(state)),{personId:state.person.id,avId:state.av.id},config);}};
   }
   function review(result,snapshot,target,config,persisted=stored(target,snapshot),mode='standard'){
