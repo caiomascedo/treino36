@@ -15,7 +15,8 @@
 <script src="composition-extras.js?v=13"></script>
 <link rel="stylesheet" href="composition-extras.css?v=9">
 <script src="obs-autosave-journal.js?v=1"></script>
-<script src="storage-adapter.js?v=23"></script>
+<script src="photo-vault.js?v=1"></script>
+<script src="storage-adapter.js?v=24"></script>
 <script src="pdf-viewer.js?v=4"></script>
 <script src="assessment-pdf-style.js?v=1"></script>
 <script src="skinfold-protocols.js?v=3"></script>
@@ -270,7 +271,7 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js?v=20"></script>
+<script src="avaliacao-import.js?v=21"></script>
 <link rel="stylesheet" href="avaliacao-compacta.css?v=17">
 <script src="avaliacao-compacta.js?v=17"></script>
 </head>
@@ -585,7 +586,8 @@ function comprimirImagem(file, maxWidth = 800, maxHeight = 800, qualidade = 0.7)
         canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', qualidade));
+        const output=canvas.toDataURL('image/jpeg', qualidade);
+        (window.PhotoVault?PhotoVault.prepare(output):Promise.resolve()).then(()=>resolve(output),reject);
       };
       img.onerror = () => reject(new Error('Erro ao carregar imagem'));
       img.src = e.target.result;
@@ -2098,12 +2100,14 @@ window.TreinoAssessmentEngine = {
   protocol:getProtocoloDef, protocolOptions:current=>SkinfoldProtocols.options(current), protocolGuide:(id,person,av)=>SkinfoldProtocols.guidance(id,person.sexo,pf(av.ficha?.idade??person.idade)), skinfoldLabel:(key,protocol)=>getProtocoloDef(protocol).labels?.[key] || LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
   async pdf(records,id,type,options={}) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id,options); else await gerarPDFAluno(id,options); }
 };
+TreinoStorage.ready.then(()=>{
 if(avaliacaoParams.get('embed')==='treino36-engine') window.parent.postMessage({type:'treino36-engine-ready'},location.origin);
 if(avaliacaoParams.get('embed')!=='treino36-engine') {
   carregarDados();
   abrirAlunoDoTreino();
   if(avaliacaoParams.get('embed')==='treino36') abrirSecaoAvaliacaoPelasObs(avaliacaoParams.get('secao'));
 }
+}).catch(error=>{document.getElementById('alunosList').textContent=error.message;});
 </script>
 </body>
 </html>

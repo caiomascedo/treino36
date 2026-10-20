@@ -64,6 +64,7 @@ window.ObsNotes = (() => {
       const bitmap=await createImageBitmap(selected,{imageOrientation:'from-image'}),scale=Math.min(1,1400/Math.max(bitmap.width,bitmap.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.72));if(!blob)throw Error('Imagem inválida.');
       const src=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
+      if(window.PhotoVault)await PhotoVault.prepare(src);
       return {id:crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random(),src,name:selected.name};
     }
     file.onchange=async()=>{

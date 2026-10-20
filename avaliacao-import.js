@@ -125,8 +125,9 @@
     }
     dialog.querySelector('select').onchange = () => { try { update(); } catch (e) { dialog.querySelector('.import-status').textContent = e.message; } };
     dialog.querySelector('.import-cancel').onclick = () => dialog.close();
-    dialog.querySelector('.import-confirm').onclick = () => {
+    dialog.querySelector('.import-confirm').onclick = async () => {
       try {
+        if(window.PhotoVault)await PhotoVault.prepare(raw);
         if (localStorage.getItem(KEY) !== snapshot) { update(); dialog.querySelector('.import-status').textContent = 'O cadastro mudou em outra tela. Confira a prévia atualizada e confirme novamente.'; return; }
         const plan = prepare(raw, read(), dialog.querySelector('select').value === 'incoming');
         localStorage.setItem('avaliacao_backup_antes_importacao', JSON.stringify(read()));
