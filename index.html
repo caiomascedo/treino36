@@ -18,8 +18,9 @@
 <script src="composition-extras.js?v=13"></script>
 <link rel="stylesheet" href="composition-extras.css?v=9">
 <script src="obs-autosave-journal.js?v=1"></script>
-<script src="storage-adapter.js?v=22"></script>
-<script src="storage-space.js?v=1" defer></script>
+<script src="storage-adapter.js?v=23"></script>
+<script src="storage-photo-manager.js?v=1" defer></script>
+<script src="storage-space.js?v=2" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11162,6 +11163,12 @@ window.AvaliacaoTreinoSync = (function () {
     var blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download='treinos_'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }
+  window.TreinoBackup={share:async function(){
+    concluirAutoSave();
+    var file=new File([JSON.stringify(montarBackupCompleto(),null,2)],'treinos_'+new Date().toISOString().slice(0,10)+'.json',{type:'application/json'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Backup Treino36'});return 'Compartilhamento concluído.';}
+    exportarJSON();return 'Backup baixado. Abra o Google Drive, toque em + e em Fazer upload para enviar o JSON.';
+  }};
   function montarBackupCompleto() {
     var studentIds = new Set(alunos.map(function (a) { return a.student_id; }));
     var records = AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).map(function (record) {

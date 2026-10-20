@@ -77,6 +77,15 @@
   }
   let compacting,compactingObs;
   window.TreinoStorage = {
+    replacePhotoRecords(key,transform){
+      if(!['avaliacao_fisica_alunos','treinoAlunos'].includes(key))throw Error('Cadastro inválido.');
+      const journals=key==='treinoAlunos'?[obsKey,photoKey]:[journalKey],before=originalGet.call(localStorage,key),drafts=journals.map(k=>originalGet.call(localStorage,k));
+      const records=JSON.parse(localStorage.getItem(key)||'[]');transform(records);const next=pack(JSON.stringify(records));
+      if(originalGet.call(localStorage,key)!==before||journals.some((k,i)=>originalGet.call(localStorage,k)!==drafts[i]))throw Error('Os dados mudaram. Atualize a lista antes de apagar.');
+      originalSet.call(localStorage,key,next);
+      // The new base already includes every pending edit, not only photo changes.
+      for(const journal of journals)originalSet.call(localStorage,journal,'[]');cacheFor(localStorage).delete(key);
+    },
     usage(){let bytes=0;for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);bytes+=(key.length+(originalGet.call(localStorage,key)||'').length)*2;}return bytes;},
     async optimizePhotos(progress=()=>{}){
       const converted=new Map(),keys=[];let photos=0,failed=0,conflicts=0;
