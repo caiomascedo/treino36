@@ -93,9 +93,9 @@ window.DietCalculations = (() => {
     const calories=Math.round(energy(macros));if(!Number.isFinite(calories))throw Error('Valores muito grandes para calcular.');
     return {...macros,calories,weight:kg,carbRatio:ratio};
   }
-  function objectiveMacros(weight,mode,goal) {
+  function objectiveMacros(weight,mode,goal,surplusRatio=4) {
     if(!['daily','deficit','surplus'].includes(mode))throw Error('Escolha Manutenção, Emagrecimento ou Hipertrofia para calcular os macros.');
-    const result=weightMacros(weight,mode==='surplus'?4:2);
+    const result=weightMacros(weight,mode==='surplus'?surplusRatio:2);
     if(mode==='daily'){
       const target=number(goal);
       if(target===null||target<=0)throw Error('Preencha os dados na OBS ou informe uma meta de calorias para calcular a manutenção.');
