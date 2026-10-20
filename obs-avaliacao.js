@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=37',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=38',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -56,6 +56,13 @@ window.ObsAssessmentEditor = (() => {
         if(String(state.person.id)===String(recordId)&&String(state.av.id)===String(avId))updateResults(state);
         return true;
       } catch(error){status.textContent='Não foi possível salvar: '+error.message;return false;}
+    }
+    function extraPhotos(target,transform){
+      const latest=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).find(person=>String(person.id)===String(target.recordId))?.avaliacoes.find(av=>String(av.id)===String(target.avId));
+      if(!latest)throw Error('Esta avaliação não está mais disponível.');
+      const next=transform(AssessmentPhotos.photoList(latest)),destination=current(target).av,previous=destination.fotosExtras;
+      if(!update('fotosExtras',next,target)){destination.fotosExtras=previous;throw Error('Não foi possível guardar a foto. As fotos anteriores foram mantidas.');}
+      flush();return next;
     }
     host.addEventListener('focusout',()=>{clearTimeout(saveTimer);saveTimer=setTimeout(flush,50);});
     window.addEventListener('pagehide',flush);
@@ -154,6 +161,7 @@ window.ObsAssessmentEditor = (() => {
           download.onclick=()=>{const state=current(),src=state.av[key];if(!src)return;const extension=src.startsWith('data:image/png')?'png':src.startsWith('data:image/webp')?'webp':'jpg',filename=[state.person.nome,label,state.av.data||''].join('_').replace(/[^\p{L}\p{N}_-]+/gu,'_');const link=el('a',{href:src,download:filename+'.'+extension});document.body.append(link);link.click();link.remove();status.textContent='Foto pronta para salvar no aparelho.';};
           const actions=el('div',{class:'posture-photo-actions'});actions.append(camera,edit,remove,download);box.append(el('label',{for:input.id},label),image,input,actions);content.append(box);
         });
+        AssessmentPhotos.mount(content,{target:{recordId,avId},getState:current,editor:postureEditor,compress:file=>api.compressImage(file,1200,1600,.85),mutate:extraPhotos,saveSettings:(target,settings)=>{const destination=current(target).av,previous=destination.comparativoFoto;if(!update('comparativoFoto',settings,target)){destination.comparativoFoto=previous;throw Error('Não foi possível guardar as opções do comparativo.');}flush();}});
         [['motivo','Objetivo'],['resumo','Análise postural']].forEach(([key,label])=>{const wrap=el('div',{class:'info-field obs-long-text'}),input=el('textarea',{'data-av-field':key,id:'obs-av-'+key});input.value=state.av[key]||'';input.oninput=()=>update(key,input.value);wrap.append(el('label',{for:input.id},label),input);content.append(wrap);});
       }
       const pdfMode=el('select',{id:'obsAssessmentPdfMode','aria-label':'Conteúdo do PDF'});
