@@ -4,7 +4,7 @@ window.ObsAssessmentEditor = (() => {
   let enginePromise;
   function engine() {
     if(!enginePromise) enginePromise=new Promise((resolve,reject)=>{
-      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=42',location.href).href;
+      const frame=document.createElement('iframe');frame.hidden=true;frame.title='Cálculos e geração de PDF';frame.src=new URL('avaliacao.html?embed=treino36-engine&v=43',location.href).href;
       let settled=false;
       function cleanup(){clearTimeout(timer);window.removeEventListener('message',ready);}
       function finish(){if(settled)return;const api=frame.contentWindow.TreinoAssessmentEngine;if(!api)return;settled=true;cleanup();resolve(api);}
@@ -150,7 +150,7 @@ window.ObsAssessmentEditor = (() => {
           }
           function openEditor(options={}){
             const target={recordId,avId},initial=current(target),expected=initial.av[key]||null;
-            postureEditor.open({title:label+' · '+initial.person.nome,source:initial.av[key+'Original']||initial.av[key]||null,settings:initial.av.posturaEdicoes?.[key],compress:file=>api.compressImage(file,1200,1600,.85),remove:expected?()=>deletePhoto(target,expected):null,...options,save:result=>{
+            postureEditor.open({title:label+' · '+initial.person.nome,source:initial.av[key+'Original']||initial.av[key]||null,settings:initial.av.posturaEdicoes?.[key],compress:file=>api.compressImage(file,900,1200,.78),remove:expected?()=>deletePhoto(target,expected):null,...options,save:result=>{
               const fresh=AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key).find(person=>String(person.id)===String(target.recordId))?.avaliacoes.find(av=>String(av.id)===String(target.avId));
               if(!fresh)throw Error('Esta avaliação não está mais disponível.');
               if((fresh[key]||null)!==expected)throw Error('A foto mudou em outra janela. Feche e abra o editor novamente.');
@@ -164,7 +164,7 @@ window.ObsAssessmentEditor = (() => {
           download.onclick=()=>{const state=current(),src=state.av[key];if(!src)return;const extension=src.startsWith('data:image/png')?'png':src.startsWith('data:image/webp')?'webp':'jpg',filename=[state.person.nome,label,state.av.data||''].join('_').replace(/[^\p{L}\p{N}_-]+/gu,'_');const link=el('a',{href:src,download:filename+'.'+extension});document.body.append(link);link.click();link.remove();status.textContent='Foto pronta para salvar no aparelho.';};
           const actions=el('div',{class:'posture-photo-actions'});actions.append(camera,edit,remove,download);box.append(el('label',{for:input.id},label),image,input,actions);content.append(box);
         });
-        AssessmentPhotos.mount(content,{target:{recordId,avId},getState:current,onBusy:value=>{photoBusy=value;},editor:postureEditor,compress:file=>api.compressImage(file,1200,1600,.85),mutate:extraPhotos,saveSettings:(target,settings)=>{const destination=current(target).av,previous=destination.comparativoFoto;if(!update('comparativoFoto',settings,target)){destination.comparativoFoto=previous;throw Error('Não foi possível guardar as opções do comparativo.');}flush();}});
+        AssessmentPhotos.mount(content,{target:{recordId,avId},getState:current,onBusy:value=>{photoBusy=value;},editor:postureEditor,compress:file=>api.compressImage(file,900,1200,.78),mutate:extraPhotos,saveSettings:(target,settings)=>{const destination=current(target).av,previous=destination.comparativoFoto;if(!update('comparativoFoto',settings,target)){destination.comparativoFoto=previous;throw Error('Não foi possível guardar as opções do comparativo.');}flush();}});
         [['motivo','Objetivo'],['resumo','Análise postural']].forEach(([key,label])=>{const wrap=el('div',{class:'info-field obs-long-text'}),input=el('textarea',{'data-av-field':key,id:'obs-av-'+key});input.value=state.av[key]||'';input.oninput=()=>update(key,input.value);wrap.append(el('label',{for:input.id},label),input);content.append(wrap);});
       }
       const pdfMode=el('select',{id:'obsAssessmentPdfMode','aria-label':'Conteúdo do PDF'});
