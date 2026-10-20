@@ -10,9 +10,17 @@ assert(Math.abs(p.densityDW(40,65,'F')-(1.1339-.0645*Math.log10(40)))<1e-12);
 assert(Math.abs(p.densityDW(40,30,'M')-(1.1422-.0544*Math.log10(40)))<1e-12);
 assert.equal(p.densityDW(40,80,'F'),null);
 assert(p.catalog.carter6.campos().includes('panturrilha'));assert(!p.catalog.carter6.campos().includes('torax'));
-assert(p.catalog.yuhasz6.campos().includes('torax'));assert(p.catalog.yuhasz6.legacy);
-assert(!p.options('jp7').some(o=>o.id==='yuhasz6'));assert(p.options('yuhasz6').some(o=>o.id==='yuhasz6'));
+assert(p.catalog.yuhasz6.campos().includes('torax'));assert(!p.catalog.yuhasz6.campos().includes('panturrilha'));
+assert.deepEqual(Array.from(p.catalog.yuhasz6.campos()),['triceps','subescapular','suprailiaca','torax','abdominal','pregaCoxa']);
+assert(p.options('jp7').some(o=>o.id==='yuhasz6'));assert(p.options('yuhasz6').some(o=>o.id==='yuhasz6'));
 console.log('PASS: age/sex validation, elderly limits, DW density benchmarks, adipometer guidance and old/new six-site separation');
 
-assert.deepEqual(Array.from(p.catalog.carter6.adicionais),['torax']);
-assert(p.guidance('carter6','M',30).includes('não entra na soma'));
+assert.equal(p.catalog.carter6.campos().length,6);
+assert.equal(p.catalog.carter6.adicionais,undefined);
+assert(p.guidance('carter6','M',30).includes('peitoral não faz parte'));
+
+assert(Math.abs(p.bodyFatYuhasz(60,'M')-9.461)<1e-12);
+assert(Math.abs(p.bodyFatYuhasz(60,'F')-13.14)<1e-12);
+assert.equal(p.bodyFatYuhasz(1000,'F'),null);assert.equal(p.bodyFatYuhasz(60,'?'),null);
+
+assert(Math.abs(p.bodyFatYuhasz(400,'F')-61.76)<1e-12); // No silent 50% clamp.

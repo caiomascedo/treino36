@@ -111,15 +111,20 @@
       if (!draft) { draft = {recordId,avId,fields:{}}; drafts.push(draft); }
       Object.assign(draft.fields,fields);
       draft.personFields = {...draft.personFields,...personFields};
-      // This contains only edited text/numbers, never the whole photo/history collection.
-      originalSet.call(localStorage,journalKey,JSON.stringify(drafts));
+      // Photo edits can contain a collection: keep the durable copy losslessly packed.
+      // Small keyboard edits stay on the fast path until the worker compacts them.
+      const serialized=JSON.stringify(drafts);
+      const hasPhotoEdit=Object.keys(fields).some(key=>key==='fotosExtras'||/^foto[FLD](Original)?$/.test(key));
+      const previous=originalGet.call(localStorage,journalKey);
+      originalSet.call(localStorage,journalKey,hasPhotoEdit||previous?.startsWith(prefix)?pack(serialized):serialized);
     },
     assessmentOperation(recordId,avId,operation,fields={},personFields={}) {
       const drafts = JSON.parse(unpack(originalGet.call(localStorage,journalKey)) || '[]');
       const kept = drafts.filter(item => String(item.recordId) !== String(recordId) || String(item.avId) !== String(avId));
       const previous = operation==='person' ? drafts.find(item=>String(item.recordId)===String(recordId)&&String(item.avId)===String(avId)&&item.operation==='person') : null;
       const draft = {recordId,avId,operation,fields,personFields:{...previous?.personFields,...personFields}}; kept.push(draft);
-      originalSet.call(localStorage,journalKey,JSON.stringify(kept));
+      const serialized=JSON.stringify(kept),previousRaw=originalGet.call(localStorage,journalKey);
+      originalSet.call(localStorage,journalKey,previousRaw?.startsWith(prefix)?pack(serialized):serialized);
       return draft;
     },
     clearAssessmentDrafts() { originalSet.call(localStorage,journalKey,'[]'); },

@@ -14,15 +14,18 @@ with sync_playwright() as p:
  page.goto('http://app.test/treino36/');page.evaluate("""()=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'a',nome:'Ana',treino:{A:['Agachamento']},avaliacaoId:10}]));localStorage.setItem('avaliacao_fisica_alunos',JSON.stringify([{id:10,nome:'Ana',sexo:'M',idade:'30',altura:'1.70',treinoStudentIds:['a'],avaliacoes:[{id:11,data:'19/10/2026',protocolo:'yuhasz6',peso:'70',triceps:'10',torax:'11',subescapular:'12',suprailiaca:'13',abdominal:'14',pregaCoxa:'15'}]}]));}""");page.reload()
  page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="dobras"]').click()
  assert not requests,requests
- for protocol,count in [('yuhasz6',6),('jp7',7),('pollock3',3),('dw4',4),('carter6',7),('registro',9)]:
+ for protocol,count in [('yuhasz6',6),('jp7',7),('pollock3',3),('dw4',4),('carter6',6),('registro',9),('yuhasz6',6)]:
   page.locator('#obsAssessmentProtocol').select_option(protocol)
   grid=page.locator('.obs-assessment-fields');expect(grid.locator('.skinfold-help-toggle')).to_have_count(count)
   expect(grid.locator('.skinfold-help-panel:visible')).to_have_count(0)
   boxes=grid.locator('.skinfold-field-heading').evaluate_all('(nodes)=>nodes.map(n=>({x:n.getBoundingClientRect().x,y:n.getBoundingClientRect().y}))')
   assert boxes[0]['y']==boxes[1]['y'] and boxes[0]['x']<boxes[1]['x'],(protocol,boxes)
+  if protocol=='yuhasz6':
+   expect(page.locator('#obs-av-panturrilha')).to_have_count(0)
+   expect(page.locator('#obs-av-torax').locator('..')).to_contain_text('Peitoral')
   if protocol=='carter6':
-   expect(page.locator('#obs-av-torax').locator('..')).to_contain_text('adicional')
-   page.locator('#obs-av-torax').fill('22')
+   expect(page.locator('#obs-av-torax')).to_have_count(0)
+   expect(page.locator('#obs-av-panturrilha')).to_be_visible()
   for i in range(count):
    button=grid.locator('.skinfold-help-toggle').nth(i);button.click()
    panel=grid.locator('.skinfold-help-panel:visible');expect(panel).to_have_count(1)
@@ -37,6 +40,7 @@ with sync_playwright() as p:
  assert page.evaluate("SkinfoldGuides.guide('torax','carter6','F').tip.includes('não integra')")
  assert page.evaluate("SkinfoldGuides.guide('suprailiaca','dw4','F').location.includes('média')")
  assert page.evaluate("SkinfoldGuides.guide('suprailiaca','jp7','F').location.includes('anterior')")
+ page.locator('#obsAssessmentProtocol').select_option('registro')
  page.locator('#obs-av-bicipital').fill('8,5')
  page.locator('#obsAssessmentSections [data-assessment-section="composicao"]').click();page.locator('#obsAssessmentSex').select_option('F');page.locator('#obsAssessmentSections [data-assessment-section="dobras"]').click()
  page.get_by_role('button',name='Ver orientação: Tórax · peitoral',exact=True).click()
@@ -44,12 +48,12 @@ with sync_playwright() as p:
  page.locator('.skinfold-help-panel:visible img').evaluate('(img)=>img.decode()')
  records=page.evaluate("AvaliacaoTreinoSync.read('avaliacao_fisica_alunos')")
  assert len(records)==1 and len(records[0]['avaliacoes'])==1
- assert records[0]['avaliacoes'][0]['torax']=='22'
+ assert records[0]['avaliacoes'][0]['torax']=='11'
  assert records[0]['avaliacoes'][0]['triceps']=='10' and records[0]['avaliacoes'][0]['bicipital']=='8,5'
  assert len(set(requests))==10,set(requests)
  page.reload();page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click();page.locator('#obsAssessmentSections [data-assessment-section="dobras"]').click();expect(page.locator('#obs-av-bicipital')).to_have_value('8,5');expect(page.locator('.skinfold-help-panel:visible')).to_have_count(0)
  library=context.new_page();library.on('pageerror',lambda e:errors.append(str(e)));library.goto('http://app.test/treino36/avaliacao.html?embed=treino36&treinoStudentId=a&secao=dobras')
- for protocol,count in [('jp7',7),('pollock3',3),('dw4',4),('carter6',7),('registro',9)]:
+ for protocol,count in [('jp7',7),('pollock3',3),('dw4',4),('carter6',6),('registro',9),('yuhasz6',6)]:
   library.locator('select[onchange^="trocarProtocoloDobras"]').select_option(protocol)
   grid=library.locator('[data-skinfold-av="11"]');expect(grid.locator('.skinfold-help-toggle')).to_have_count(count)
   grid.locator('.skinfold-help-toggle').last.click();panel=grid.locator('.skinfold-help-panel:visible');expect(panel).to_have_count(1);panel.locator('img').evaluate('(img)=>img.decode()')
