@@ -22,11 +22,13 @@ with sync_playwright() as p:
  page.evaluate('''()=>localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'one',nome:'Exemplo',whatsapp:'+55 (55) 99999-8888',treino:{A:['Agachamento Livre — 3×12','Leg Press 45° — 3×15'],B:['Remada — 3×12']},titulos:{A:'A. Quadríceps',B:'B. Costas'}}]))''')
  page.reload();page.locator('#pdfBtn').click();expect(page.locator('#pdfBody .yt-link')).to_have_count(3)
  assert page.locator('#pdfBody .yt-link').all_text_contents()==['(Vídeo)']*3
+ assert page.locator('#pdfBody .pdf-ex-name').evaluate_all("rows=>rows.every(row=>row.lastElementChild.classList.contains('yt-link'))")
  assert not page.locator('#pdfReviewTools > details').evaluate('el=>el.open')
  first=page.locator('#pdfBody .pdf-ex-row').first
  initial_href=first.locator('a').get_attribute('href');assert 'youtube.com/results' in parse_qs(urlparse(initial_href).query)['url'][0]
  before=page.evaluate("localStorage.getItem('treinoAlunos')")
  page.get_by_role('button',name='Editar texto',exact=True).click();first.locator('.pdf-ex-title').fill('Agachamento no Smith');first.locator('.pdf-ex-details').fill('— 4×15')
+ assert first.inner_text().strip().endswith('4×15(Vídeo)') or first.inner_text().strip().endswith('4×15 (Vídeo)')
  assert 'Agachamento no Smith' in parse_qs(urlparse(first.locator('a').get_attribute('href')).query)['ex'][0]
  page.locator('#pdfReviewTools > details > summary').click();page.locator('.pdf-video-section > summary').first.click();choice=page.locator('.pdf-video-choice').first
  choice.locator('input').fill('javascript:alert(1)');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==0
@@ -53,7 +55,7 @@ with sync_playwright() as p:
  page.reload();page.locator('#pdfBtn').click();expect(page.locator('.pdf-video-section')).to_have_count(6)
  assert [text[0] for text in page.locator('.pdf-video-section > summary').all_text_contents()]==list('ABCDEF')
  for section in page.locator('.pdf-video-section').all():assert section.locator('.pdf-video-choice label span').first.text_content().startswith('1. '),section.locator('.pdf-video-choice label span').all_text_contents()
- page.locator('#pdfReviewTools > details > summary').click();page.locator('.pdf-video-section > summary').last.click();expect(page.locator('.pdf-video-section').last.locator('input').first).to_be_visible()
+ page.locator('#pdfReviewTools > details > summary').click();page.get_by_role('button',name='Expandir todos',exact=True).click();expect(page.locator('.pdf-video-section[open]')).to_have_count(6);page.get_by_role('button',name='Recolher todos',exact=True).click();expect(page.locator('.pdf-video-section[open]')).to_have_count(0);page.locator('.pdf-video-section > summary').last.click();expect(page.locator('.pdf-video-section').last.locator('input').first).to_be_visible()
  specific=page.locator('.pdf-video-section').last.locator('input').first;specific.fill(custom)
  def export_and_check(model):
   page.get_by_role('combobox',name='Modelo do PDF').select_option(model)
@@ -88,5 +90,14 @@ with sync_playwright() as p:
  export_and_check('inline');export_and_check('old')
  page.screenshot(path='/tmp/pdf-model-selector-mobile.png')
  page.locator('#closePdfViewer').click();page.locator('#pdfBtn').click();expect(page.get_by_role('combobox',name='Modelo do PDF')).to_have_value('old')
+ # Choose a single section for this PDF without changing the student's workout.
+ page.get_by_role('button',name='Desmarcar todas',exact=True).click();count=page.evaluate('pdfWindows.length');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==count
+ expect(page.locator('#pdfReviewTools [role=status]')).to_contain_text('pelo menos uma seção')
+ page.get_by_role('checkbox',name='Incluir seção F no PDF',exact=True).check();expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
+ page.locator('#downloadPdfBtn').click();page.wait_for_function(f'pdfWindows.length==={count+1}&&pdfWindows.at(-1).url')
+ encoded=page.evaluate("async()=>{const bytes=new Uint8Array(await pdfBlobs.get(pdfWindows.at(-1).url).arrayBuffer());let text='';for(const byte of bytes)text+=String.fromCharCode(byte);return btoa(text);}")
+ with fitz.open(stream=base64.b64decode(encoded),filetype='pdf') as doc:
+  links=[link['uri'] for page in doc for link in page.get_links() if '/r/yt?' in link.get('uri','')]
+  assert len(links)==9 and all(parse_qs(urlparse(href).query)['treino'][0].startswith('F.') for href in links),links
  assert not errors,errors
  browser.close();print('PASS: automatic inline video labels, optional plain-text PDF draft edits, URL validation/reset, actual clickable PDF annotations, unchanged saved workout and Brazil-only WhatsApp copy')
