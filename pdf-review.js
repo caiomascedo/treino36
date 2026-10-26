@@ -21,18 +21,21 @@ window.WorkoutPDFReview=(()=>{
 
     const modelLabel=node('label',{class:'pdf-model-choice'},'Modelo do PDF '),model=node('select',{'aria-label':'Modelo do PDF'});model.append(node('option',{value:'inline'},'(Vídeo) no final da linha'),node('option',{value:'old'},'Antigo · botão YouTube'));modelLabel.append(model);tools.prepend(modelLabel);
     const linkOptions=node('div',{class:'pdf-link-options'}),trackingLabel=node('label',{},'Vídeos '),tracking=node('select',{'aria-label':'Monitoramento dos vídeos'}),startLabel=node('label',{class:'pdf-start-choice'}),includeStart=node('input',{type:'checkbox','aria-label':'Incluir Iniciar treino no PDF'}),linkHint=node('small');
-    tracking.append(node('option',{value:'tracked'},'Com monitoramento'),node('option',{value:'direct'},'Direto · sem monitoramento'));trackingLabel.append(tracking);startLabel.append(includeStart,document.createTextNode('Iniciar treino · registra presença'));linkOptions.append(trackingLabel,startLabel,linkHint);modelLabel.after(linkOptions);
+    tracking.append(node('option',{value:'tracked'},'Com monitoramento'),node('option',{value:'direct'},'Direto · sem monitoramento'));trackingLabel.append(tracking);startLabel.append(includeStart,document.createTextNode('Iniciar treino · registra presença'));const videosLabel=node('label',{class:'pdf-videos-choice'}),includeVideos=node('input',{type:'checkbox','aria-label':'Incluir vídeos no PDF'}),startOnly=node('button',{type:'button',id:'pdfStartOnly'},'Só Iniciar treino');videosLabel.append(includeVideos,document.createTextNode('Vídeos no PDF'));linkOptions.append(trackingLabel,videosLabel,startLabel,startOnly,linkHint);modelLabel.after(linkOptions);
     let preferences={};try{preferences=JSON.parse(localStorage.getItem('treinoPdfLinkOptions')||'{}')||{};}catch(error){}
+    includeVideos.checked=preferences.videos!==false;
     tracking.value=preferences.tracking==='direct'?'direct':'tracked';includeStart.checked=typeof preferences.start==='boolean'?preferences.start:tracking.value!=='direct';
     const startLink=body.querySelector('.pdf-start-btn'),startSlot=body.querySelector('.pdf-start-slot');
-    function saveLinkOptions(){try{localStorage.setItem('treinoPdfLinkOptions',JSON.stringify({tracking:tracking.value,start:includeStart.checked}));}catch(error){}}
+    function saveLinkOptions(){try{localStorage.setItem('treinoPdfLinkOptions',JSON.stringify({tracking:tracking.value,start:includeStart.checked,videos:includeVideos.checked}));}catch(error){}}
+    function applyVideoVisibility(){startOnly.setAttribute('aria-pressed',String(!includeVideos.checked&&includeStart.checked));for(const entry of entries){if(!includeVideos.checked)entry.link.remove();}videos.hidden=!includeVideos.checked;if(!includeVideos.checked)status.textContent='';tracking.disabled=!includeVideos.checked;}
     function applyLinkOptions(){
-      for(const entry of entries)entry.update();
+      for(const entry of entries)entry.update();applyVideoVisibility();
       if(startSlot){startSlot.replaceChildren();if(includeStart.checked&&startLink)startSlot.append(document.createTextNode(' · '),startLink);}
-      linkHint.textContent=tracking.value==='direct'?(includeStart.checked?'Vídeos diretos; apenas Iniciar treino registra presença.':'Sem registro de cliques ou presença neste PDF.'):'Os cliques nos vídeos passam pelo seu acompanhamento.';
+      linkHint.textContent=!includeVideos.checked?(includeStart.checked?'Sem vídeos no PDF; Iniciar treino registra presença.':'PDF sem vídeos e sem registro de presença.'):tracking.value==='direct'?(includeStart.checked?'Vídeos diretos; apenas Iniciar treino registra presença.':'Sem registro de cliques ou presença neste PDF.'):'Os cliques nos vídeos passam pelo seu acompanhamento.';
     }
+    startOnly.onclick=()=>{includeVideos.checked=false;includeStart.checked=true;tracking.value='direct';applyLinkOptions();saveLinkOptions();};includeVideos.onchange=()=>{applyModel();applyLinkOptions();saveLinkOptions();};
     tracking.onchange=()=>{if(tracking.value==='direct')includeStart.checked=false;applyLinkOptions();saveLinkOptions();};includeStart.onchange=()=>{applyLinkOptions();saveLinkOptions();};
-    function applyModel(){const old=model.value==='old';body.classList.toggle('pdf-style-old',old);for(const entry of entries){if(old){entry.row.append(entry.link);entry.link.innerHTML=(icon||'<span aria-hidden="true">▶</span>')+' YouTube';}else{entry.row.querySelector('.pdf-ex-name').append(entry.link);entry.link.textContent='(Vídeo)';}}try{localStorage.setItem('treinoPdfVideoStyle',model.value);}catch(error){}}
+    function applyModel(){const old=model.value==='old';body.classList.toggle('pdf-style-old',old);for(const entry of entries){if(old){entry.row.append(entry.link);entry.link.innerHTML=(icon||'<span aria-hidden="true">▶</span>')+' YouTube';}else{entry.row.querySelector('.pdf-ex-name').append(entry.link);entry.link.textContent='(Vídeo)';}}applyVideoVisibility();try{localStorage.setItem('treinoPdfVideoStyle',model.value);}catch(error){}}
     try{model.value=localStorage.getItem('treinoPdfVideoStyle')==='old'?'old':'inline';}catch(error){}model.onchange=applyModel;
     function finish(){editing=false;edit.textContent='Editar texto';edit.setAttribute('aria-pressed','false');for(const field of fields)field.setAttribute('contenteditable','false');body.classList.remove('pdf-is-editing');}
     edit.onclick=()=>{editing=!editing;edit.textContent=editing?'Concluir edição':'Editar texto';edit.setAttribute('aria-pressed',String(editing));body.classList.toggle('pdf-is-editing',editing);for(const field of fields)field.setAttribute('contenteditable',String(editing));};
@@ -48,7 +51,7 @@ window.WorkoutPDFReview=(()=>{
       entry.update=update;input.oninput=remember;reset.onclick=()=>{input.value='';remember();};title.addEventListener('input',update);update();
     }
     applyModel();applyLinkOptions();
-    current={finish,validate(){if(!sectionInputs.some(input=>input.checked)){status.textContent='Selecione pelo menos uma seção para gerar o PDF.';sectionBox.scrollIntoView({block:'nearest'});return false;}const invalid=entries.find(entry=>!entry.valid&&!entry.row.closest('.pdf-sec').hidden);if(invalid){videos.open=true;invalid.input.closest('.pdf-video-section').open=true;invalid.input.reportValidity();invalid.input.focus();return false;}finish();return true;}};
+    current={finish,validate(){if(!sectionInputs.some(input=>input.checked)){status.textContent='Selecione pelo menos uma seção para gerar o PDF.';sectionBox.scrollIntoView({block:'nearest'});return false;}const invalid=includeVideos.checked&&entries.find(entry=>!entry.valid&&!entry.row.closest('.pdf-sec').hidden);if(invalid){videos.open=true;invalid.input.closest('.pdf-video-section').open=true;invalid.input.reportValidity();invalid.input.focus();return false;}finish();return true;}};
   }
   return {mount,videoURL,directVideoURL,beforeExport:()=>!current||current.validate()};
 })();

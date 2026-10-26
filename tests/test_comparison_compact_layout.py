@@ -16,8 +16,8 @@ with sync_playwright() as p:
  page.evaluate("""()=>localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'ana',nome:'Ana Luísa',treino_id:'now',treinoNome:'Treino de Ana Luísa',treino:{A:Array.from({length:8},(_,i)=>'Agachamento '+i+' — 3×12')},historicoTreinos:[{workout_id:'old-one',student_id:'ana',name:'Treino de Ana Luísa',status:'archived',archived_at:'2026-10-26T19:24:00Z',treino:{A:Array.from({length:8},(_,i)=>'Supino '+i+' — 4×10')}},{workout_id:'old-two',student_id:'ana',name:'Treino de Ana Luísa',status:'archived',archived_at:'2026-10-26T19:25:00Z',treino:{A:Array.from({length:8},(_,i)=>'Remada '+i+' — 3×15')}}]}]))""")
  page.reload();baseline=page.evaluate("localStorage.getItem('treinoAlunos')");page.locator('#compareWorkoutBtn').click()
  dialog=page.locator('#compareWorkoutsDialog');body=page.locator('#compareBody');header=page.locator('.compare-header');minimize=page.locator('#compareMinimizeOptions');full=page.locator('#compareFullscreen')
- before=body.bounding_box()['height'];selected=page.locator('#comparePreviousPicker').input_value()
- minimize.tap();expect(header).not_to_be_visible();expect(page.locator('#compareLabels')).not_to_be_visible();expect(minimize).to_have_text('Mostrar opções')
+ expect(dialog.locator('.compare-selection-controls')).to_be_visible();expect(minimize).to_have_text('Minimizar seleção');before=body.bounding_box()['height'];selected=page.locator('#comparePreviousPicker').input_value()
+ minimize.tap();expect(header).not_to_be_visible();expect(page.locator('#compareLabels')).not_to_be_visible();expect(minimize).to_have_text('Selecionar treinos')
  assert body.bounding_box()['height']>before+140
  expect(page.locator('.compare-compact-headings')).to_be_visible();expect(page.locator('#comparePreviousPicker')).to_have_value(selected)
  # Editing/undo remain intact as controls and layout change.
@@ -28,9 +28,9 @@ with sync_playwright() as p:
  page.locator('#chooseComparePrevious').tap();page.locator('#comparePreviousChoice .compare-version-option').filter(has_text='Anterior 1 (arquivado)').tap();expect(page.locator('.comparison-previous-line').first).to_have_text('Supino 0 — 4×10')
  minimize.tap();footer=dialog.locator('.dialog-actions [data-close]').bounding_box();assert footer['y']>=0 and footer['y']+footer['height']<=600
  page.screenshot(path='/tmp/compare-fullscreen-minimized-mobile.png')
- full.tap();assert dialog.bounding_box()['height']<600;expect(minimize).to_have_text('Mostrar opções')
+ full.tap();assert dialog.bounding_box()['height']<600;expect(minimize).to_have_text('Selecionar treinos')
  dialog.locator('.dialog-actions [data-close]').tap();page.locator('#compareWorkoutBtn').tap();expect(header).not_to_be_visible();expect(full).to_have_text('⛶ Tela inteira');dialog.locator('.dialog-actions [data-close]').tap()
- page.reload();page.locator('#compareWorkoutBtn').tap();expect(header).not_to_be_visible();expect(minimize).to_have_text('Mostrar opções')
+ page.reload();page.locator('#compareWorkoutBtn').tap();expect(header).not_to_be_visible();expect(minimize).to_have_text('Selecionar treinos')
  assert page.evaluate("localStorage.getItem('treinoAlunos')")==baseline
  assert not errors,errors
  browser.close();print('PASS: collapse frees exercise space; fullscreen fills mobile viewport; footer visible; selection/edit/undo survive layout toggles; previous selection works after expanding options; collapse preference persists; saved workouts unchanged')
