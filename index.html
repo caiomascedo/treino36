@@ -1487,7 +1487,7 @@ window.AvaliacaoTreinoSync = (function () {
 </script>
 <script src="avaliacao-import.js?v=21"></script>
 <script src="workout-validity.js?v=2"></script>
-<script src="workout-history-tools.js?v=1"></script>
+<script src="workout-history-tools.js?v=2"></script>
 <script src="section-display.js?v=1"></script>
 <script src="workout-sequence.js?v=3"></script>
 <link rel="stylesheet" href="workout-sequence.css?v=3">
@@ -1507,7 +1507,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=5">
+<link rel="stylesheet" href="pdf-review.css?v=6">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -8494,7 +8494,7 @@ window.AvaliacaoTreinoSync = (function () {
     return a;
   }
   function snapshotAluno(a) {
-    return {workout_id:a.treino_id,student_id:a.student_id,name:a.treinoNome||a.nome||('Treino de '+a.nome),student_name:a.nome,original_student_name:a.nome,created_at:a.treinoCriadoEm||a.criadoEm||null,activated_at:a.treinoAtivadoEm||a.atualizadoEm||null,archived_at:null,status:'active',validadeTreino:cloneData(WorkoutValidity.get(a)),sequenciaTreino:cloneData(WorkoutSequence.get(a)),treino:cloneData(a.treino),titulos:cloneData(a.titulos||{}),secaoFAtiva:!!a.secaoFAtiva};
+    return {workout_id:a.treino_id,student_id:a.student_id,name:a.treinoNome||a.nome||('Treino de '+a.nome),student_name:a.nome,original_student_name:a.nome,created_at:a.treinoCriadoEm||a.criadoEm||null,activated_at:a.treinoAtivadoEm||a.atualizadoEm||null,updated_at:a.atualizadoEm||null,archived_at:null,status:'active',validadeTreino:cloneData(WorkoutValidity.get(a)),sequenciaTreino:cloneData(WorkoutSequence.get(a)),treino:cloneData(a.treino),titulos:cloneData(a.titulos||{}),secaoFAtiva:!!a.secaoFAtiva};
   }
   function arquivarTreino(a) {
     garantirHistorico(a);
@@ -8741,10 +8741,7 @@ window.AvaliacaoTreinoSync = (function () {
   function textoTreino(dados,scope) {
     return (scope?[scope]:['A','B','C','D','E'].concat(dados.secaoFAtiva?['F']:[])).map(function(s){return ((dados.titulos||{})[s]||s+'. TREINO')+'\n'+((dados.treino||{})[s]||[]).map(function(x,i){return(i+1)+'. '+x;}).join('\n');}).join('\n\n');
   }
-  function rotuloVersao(v,index){
-    var versaoNome = (v.name && !v.name.toLowerCase().startsWith('treino de ')) ? v.name : (v.treinoNome || v.original_student_name || v.student_name || 'Treino');
-    return 'Anterior ' + (index+1) + ' · ' + versaoNome + ' · ' + (v.archived_at ? new Date(v.archived_at).toLocaleDateString('pt-BR') : 'Sem data');
-  }
+  function rotuloVersao(v,index){return WorkoutHistoryTools.versionLabel(v,index);}
   var historyScope=null,historyStudent=null;
   var historyDialog=criarDialogo('workoutHistoryDialog','Histórico de treinos',
     '<div class="history-student-picker">'+
@@ -8767,7 +8764,7 @@ window.AvaliacaoTreinoSync = (function () {
         '<button type="button" id="historyWorkoutSearchClearBtn" class="compare-search-clear" hidden title="Limpar pesquisa">✕</button>'+
       '</div>'+
     '</div>'+
-    '<label for="historyVersion">Treino / Versão</label><select id="historyVersion" style="width:100%;font-size:0.82rem;font-weight:600;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;"></select><p id="historyDuplicateStatus"></p><pre id="historyVersionText" class="version-content"></pre>'+
+    '<label for="historyVersion">Treino / Versão</label><select id="historyVersion" style="width:100%;font-size:0.82rem;font-weight:600;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;"></select><div id="historyVersionInfo" class="history-version-info" aria-live="polite"></div><p id="historyDuplicateStatus"></p><pre id="historyVersionText" class="version-content"></pre>'+
     '<p id="historyPromotionStatus" role="status" style="font-size:12px"></p><div class="dialog-actions"><button id="promoteHistoryVersion" title="Usar o treino completo como capa; a capa atual fica nos anteriores">Usar como capa</button><button id="compareSelectedVersion">Comparar com atual</button><button id="deleteHistoryVersion">Apagar selecionado</button><button data-close>Fechar</button></div>');
 
 
@@ -8795,7 +8792,7 @@ window.AvaliacaoTreinoSync = (function () {
           var oCapa = document.createElement('option');
           oCapa.value = 'student-' + historyStudent.student_id;
           var capaNome = (historyStudent.treinoNome && !historyStudent.treinoNome.toLowerCase().startsWith('treino de ')) ? historyStudent.treinoNome : 'Capa';
-          oCapa.textContent = '⚡ Capa: ' + capaNome + (stNovo ? ' · 🆕 Novo aluno' : ' · Atual');
+          oCapa.textContent = WorkoutHistoryTools.coverLabel(historyStudent);
           grpAluno.appendChild(oCapa);
 
           if (Array.isArray(historyStudent.historicoTreinos)) {
@@ -8822,7 +8819,7 @@ window.AvaliacaoTreinoSync = (function () {
             var oCapa = document.createElement('option');
             oCapa.value = 'student-' + a.student_id;
             var capaNome = (a.treinoNome && !a.treinoNome.toLowerCase().startsWith('treino de ')) ? a.treinoNome : 'Capa';
-            oCapa.textContent = a.nome + ' · ⚡ Capa (' + capaNome + ')' + (aNovo ? ' · 🆕 Novo' : ' · Atual');
+            oCapa.textContent = a.nome + ' · ' + WorkoutHistoryTools.coverLabel(a);
             grpOutros.appendChild(oCapa);
 
             if (Array.isArray(a.historicoTreinos)) {
@@ -8842,7 +8839,7 @@ window.AvaliacaoTreinoSync = (function () {
     preencherSelect(select);
 
     if (historyStudent && Array.isArray(historyStudent.historicoTreinos) && historyStudent.historicoTreinos.length && !q) {
-      select.value = historyStudent.historicoTreinos[historyStudent.historicoTreinos.length - 1].workout_id;
+      select.value = 'student-' + historyStudent.student_id;
     } else if (!select.value && select.options.length) {
       select.selectedIndex = 0;
     }
@@ -8952,6 +8949,7 @@ window.AvaliacaoTreinoSync = (function () {
   function renderVersao(){
     var select = document.getElementById('historyVersion');
     if (!select || !select.value) {
+      document.getElementById('historyVersionInfo').replaceChildren();
       document.getElementById('historyVersionText').textContent = 'Nenhum treino disponível para exibição.';
       document.getElementById('promoteHistoryVersion').disabled=true;document.getElementById('deleteHistoryVersion').disabled=true;document.getElementById('historyDuplicateStatus').textContent='';
       return;
@@ -8960,7 +8958,15 @@ window.AvaliacaoTreinoSync = (function () {
     if (res && res.workout) {
       document.getElementById('historyVersionText').textContent = textoTreino(res.workout, historyScope);
       var stNome = res.student ? res.student.nome : (historyStudent ? historyStudent.nome : '');
-      var rotulo = res.isCapa ? ('Capa: ' + (res.workout.name || 'Treino atual')) : (res.workout.name || 'Treino anterior');
+      var versionIndex=(res.student.historicoTreinos||[]).findIndex(function(v){return v.workout_id===res.workout.workout_id;});
+      var rotulo=res.isCapa?'CAPA ATUAL':('Anterior '+(versionIndex+1)+' · arquivado');
+      var info=document.getElementById('historyVersionInfo');info.replaceChildren();
+      var cover=document.createElement('div');cover.className='history-cover-info';cover.textContent='⭐ Capa atual: '+(res.student.treinoNome||'Treino de '+stNome);info.append(cover);
+      var matches=(res.student.historicoTreinos||[]).map(function(v,i){return WorkoutHistoryTools.signature(v)===WorkoutHistoryTools.signature(res.student)?'Anterior '+(i+1):'';}).filter(Boolean);
+      if(matches.length){var same=document.createElement('small');same.textContent='Mesmo conteúdo da capa: '+matches.join(', ')+'.';info.append(same);}
+      var selected=document.createElement('strong');selected.textContent=res.isCapa?'Visualizando a CAPA ATUAL':'Visualizando '+rotulo+' · não é a capa';info.append(selected);
+      var updated=document.createElement('div');updated.textContent=WorkoutHistoryTools.stamp(res.workout);info.append(updated);
+      if(!res.isCapa&&(res.workout.edited_at||res.workout.updated_at)){var archiveDate=WorkoutHistoryTools.dateTime(res.workout.archived_at);if(archiveDate){var archived=document.createElement('small');archived.textContent='Arquivado em '+archiveDate;info.append(archived);}}
       document.getElementById('historyStudentName').textContent = stNome + ' · ' + rotulo + (historyScope ? ' · Seção ' + historyScope : '');
       var btnCompare = document.getElementById('compareSelectedVersion'); if (btnCompare) btnCompare.disabled = false;
       document.getElementById('promoteHistoryVersion').disabled=!!res.isCapa;document.getElementById('deleteHistoryVersion').disabled=false;var duplicates=repetidosDoTreino(res);document.getElementById('historyDuplicateStatus').textContent=duplicates.length?'Conteúdo repetido neste aluno: '+duplicates.map(function(item){return item.label;}).join(' · '):'Nenhum outro treino com conteúdo igual neste aluno. A comparação ignora apenas formatação, maiúsculas, acentos e espaços.';
@@ -10675,10 +10681,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('compareLabels').after(compareTools);compareTools.after(compareHeader);
   var compareApply=document.createElement('button');compareApply.id='applyCompareEdit';compareApply.className='primary';compareApply.textContent='Aplicar alterações';compareDialog.querySelector('.dialog-actions').prepend(compareApply);
   function estadoComparacao(){return JSON.stringify({current:compareContext.current,previous:compareContext.previous});}
-  function rotuloVersao(v,index){
-    var versaoNome=(v.name&&!v.name.toLowerCase().startsWith('treino de '))?v.name:(v.treinoNome||v.original_student_name||v.student_name||'Treino');
-    return '◷ Ant. '+(index+1)+' · '+versaoNome+' · '+(v.archived_at?new Date(v.archived_at).toLocaleDateString('pt-BR'):'Sem data');
-  }
+  function rotuloVersao(v,index){return WorkoutHistoryTools.versionLabel(v,index);}
 
   function resolverTreinoComparacao(val){
     if(!val)return null;
@@ -10726,7 +10729,7 @@ window.AvaliacaoTreinoSync = (function () {
           var oCapa=document.createElement('option');
           oCapa.value='student-'+student.student_id;
           var capaNome=(student.treinoNome&&!student.treinoNome.toLowerCase().startsWith('treino de '))?student.treinoNome:'Capa / Atual';
-          oCapa.textContent='⚡ Capa: '+capaNome+(stNovo?' · 🆕 Novo aluno':' · Atual');
+          oCapa.textContent=WorkoutHistoryTools.coverLabel(student);
           grpAluno.appendChild(oCapa);
           if(Array.isArray(student.historicoTreinos)){
             student.historicoTreinos.slice().reverse().forEach(function(v,i){
@@ -10750,7 +10753,7 @@ window.AvaliacaoTreinoSync = (function () {
             var oCapa=document.createElement('option');
             oCapa.value='student-'+a.student_id;
             var capaNome=(a.treinoNome&&!a.treinoNome.toLowerCase().startsWith('treino de '))?a.treinoNome:'Capa';
-            oCapa.textContent=a.nome+' · ⚡ Capa ('+capaNome+')'+(aNovo?' · 🆕 Novo aluno':' · Atual');
+            oCapa.textContent=a.nome+' · '+WorkoutHistoryTools.coverLabel(a);
             grpOutros.appendChild(oCapa);
             if(Array.isArray(a.historicoTreinos)){
               a.historicoTreinos.slice().reverse().forEach(function(v,idx){
