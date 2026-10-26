@@ -26,14 +26,16 @@ window.CompareVersionPicker={mount(select){
 
 window.CompareLayout={mount(dialog){
   const bar=document.createElement('div');bar.className='compare-layout-controls';const title=dialog.querySelector('h3');title.before(bar);bar.append(title);
-  const minimize=document.createElement('button');minimize.type='button';minimize.id='compareMinimizeOptions';minimize.setAttribute('aria-controls','compareLabels');
+  const minimize=document.createElement('button');minimize.type='button';minimize.id='compareMinimizeOptions';minimize.setAttribute('aria-controls','compareLabels compareVersionHeader');
   const fullscreen=document.createElement('button');fullscreen.type='button';fullscreen.id='compareFullscreen';fullscreen.setAttribute('aria-pressed','false');fullscreen.textContent='⛶ Tela inteira';
-  bar.append(minimize,fullscreen);
+  bar.append(fullscreen);
+  const selectionBar=document.createElement('div');selectionBar.className='compare-selection-controls';const selectionLabel=document.createElement('span');selectionLabel.textContent='Treinos da comparação';selectionBar.append(selectionLabel,minimize);
+  const header=dialog.querySelector('.compare-header');header.id='compareVersionHeader';header.before(selectionBar);
   const columns=document.createElement('div');columns.className='comparison-columns compare-compact-headings';columns.setAttribute('aria-label','Colunas da comparação');
   for(const label of ['Anterior','Atual']){const heading=document.createElement('strong');heading.textContent=label;columns.append(heading);}
   dialog.querySelector('.compare-header').before(columns);
   let collapsed=false;try{collapsed=localStorage.getItem('treinoCompareOptionsCollapsed')==='1';}catch(error){}
-  function sync(){dialog.classList.toggle('compare-options-collapsed',collapsed);minimize.textContent=collapsed?'Mostrar opções':'Minimizar opções';minimize.setAttribute('aria-expanded',String(!collapsed));}
+  function sync(){dialog.classList.toggle('compare-options-collapsed',collapsed);minimize.textContent=collapsed?'Selecionar treinos':'Minimizar seleção';minimize.setAttribute('aria-expanded',String(!collapsed));}
   minimize.onclick=()=>{collapsed=!collapsed;sync();try{localStorage.setItem('treinoCompareOptionsCollapsed',collapsed?'1':'0');}catch(error){}};
   fullscreen.onclick=()=>{const full=dialog.classList.toggle('compare-full-screen');fullscreen.textContent=full?'⛶ Reduzir tela':'⛶ Tela inteira';fullscreen.setAttribute('aria-pressed',String(full));};
   dialog.addEventListener('close',()=>{dialog.classList.remove('compare-full-screen');fullscreen.textContent='⛶ Tela inteira';fullscreen.setAttribute('aria-pressed','false');});sync();
