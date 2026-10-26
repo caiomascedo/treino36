@@ -1488,7 +1488,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="avaliacao-import.js?v=21"></script>
 <script src="workout-validity.js?v=2"></script>
 <script src="workout-history-tools.js?v=2"></script>
-<script src="compare-version-picker.js?v=1"></script>
+<script src="compare-version-picker.js?v=2"></script>
 <script src="section-display.js?v=1"></script>
 <script src="workout-sequence.js?v=3"></script>
 <link rel="stylesheet" href="workout-sequence.css?v=3">
@@ -1508,7 +1508,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=7">
+<link rel="stylesheet" href="pdf-review.css?v=8">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -9139,26 +9139,26 @@ window.AvaliacaoTreinoSync = (function () {
     }
     var host=document.getElementById('compareBody');host.replaceChildren();
     (scope?[scope]:todasSecoes).forEach(function(s){
-      var now=(current.treino||{})[s]||[],old=(previous.treino||{})[s]||[],used=new Set();if(!now.length&&!old.length)return;
+      var now=(current.treino||{})[s]||[],old=(previous.treino||{})[s]||[];if(!now.length&&!old.length)return;
       var h=document.createElement('h4');h.textContent='Seção '+s;host.appendChild(h);
       var titles=document.createElement('div');titles.className='comparison-columns comparison-section-titles';
       [previous,current].forEach(function(data){var title=document.createElement('strong');title.textContent=(data.titulos||{})[s]||s; titles.appendChild(title);});host.appendChild(titles);
       function row(status,title,index,oldIndex){
-        var el=document.createElement('div');el.className='comparison-row '+status;
-        var t=document.createElement('h4');t.textContent=title;
+        var el=document.createElement('div');el.className='comparison-row '+status;el.dataset.position=Number.isInteger(index)?index:oldIndex;
+        var t=document.createElement('h4');t.textContent='Exercício '+(Number(el.dataset.position)+1)+' · '+title;
         var cols=document.createElement('div');cols.className='comparison-columns';
         var a=document.createElement('div'),b=document.createElement('div');
         a.textContent=Number.isInteger(index)?now[index]:'—';b.textContent=Number.isInteger(oldIndex)?old[oldIndex]:'—';
         cols.append(b,a);el.append(t,cols);
         prepararEdicaoLinhaComparacao(el,a,s,index,'current');prepararEdicaoLinhaComparacao(el,b,s,oldIndex,'previous');host.appendChild(el);
       }
-      // Reservar as correspondências antes de alinhar substituições evita repetir o anterior no fim.
-      var matches=now.map(function(line){var idx=old.findIndex(function(v,j){return !used.has(j)&&normalizarNome(v)===normalizarNome(line);});if(idx<0)idx=old.findIndex(function(v,j){return !used.has(j)&&nomeExercicio(v)===nomeExercicio(line);});if(idx>=0)used.add(idx);return idx;});
-      matches.forEach(function(idx,i){
-        if(idx<0){idx=old.findIndex(function(v,j){return !used.has(j);});if(idx>=0){used.add(idx);row('changed','Exercícios diferentes',i,idx);}else row('added','Adicionado',i,null);}
-        else{var same=normalizarNome(old[idx])===normalizarNome(now[i]);row(same?(idx===i?'same':'changed'):'changed',same?(idx===i?'Mantido':'Ordem: '+(idx+1)+' → '+(i+1)):'Séries, repetições ou técnica alteradas',i,idx);}
-      });
-      old.forEach(function(line,i){if(!used.has(i))row('removed','Removido',null,i);});
+      // Preserve both prescribed sequences: compare the same position on each side.
+      for(var i=0;i<Math.max(now.length,old.length);i++){
+        if(i>=now.length){row('removed','Só no anterior',null,i);continue;}
+        if(i>=old.length){row('added','Só no atual',i,null);continue;}
+        var same=normalizarNome(old[i])===normalizarNome(now[i]);
+        row(same?'same':'changed',same?'Mantido':(nomeExercicio(old[i])===nomeExercicio(now[i])?'Séries, repetições ou técnica alteradas':'Exercícios diferentes'),i,i);
+      }
     });
     if(!compareDialog.open)compareDialog.showModal();
   }
@@ -10681,6 +10681,7 @@ window.AvaliacaoTreinoSync = (function () {
   '</div><select id="compareVersion" hidden></select>';
   document.getElementById('compareLabels').after(compareTools);compareTools.after(compareHeader);
   var previousPickerUI=CompareVersionPicker.mount(document.getElementById('comparePreviousPicker'));
+  CompareLayout.mount(compareDialog);
   var compareApply=document.createElement('button');compareApply.id='applyCompareEdit';compareApply.className='primary';compareApply.textContent='Aplicar alterações';compareDialog.querySelector('.dialog-actions').prepend(compareApply);
   function estadoComparacao(){return JSON.stringify({current:compareContext.current,previous:compareContext.previous});}
   function rotuloVersao(v,index){return WorkoutHistoryTools.versionLabel(v,index);}
@@ -11004,7 +11005,7 @@ window.AvaliacaoTreinoSync = (function () {
     line.textContent=compareContext[side].treino[sec][index];cell.replaceChildren(line);
     var enabled=compareEditing&&(compareSide==='both'||compareSide===side);line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);line.spellcheck=false;
     line.setAttribute('aria-label',(side==='previous'?'Anterior':'Atual')+' · Exercício '+(index+1)+' da seção '+sec);
-    line.oninput=function(){var value=line.innerText.replace(/\r?\n/g,' ').trim();if(value){compareContext[side].treino[sec][index]=value;registrarComparacao();row.querySelector('h4').textContent='Editado ('+(side==='previous'?'Anterior':'Atual')+')';}};
+    line.oninput=function(){var value=line.innerText.replace(/\r?\n/g,' ').trim();if(value){compareContext[side].treino[sec][index]=value;registrarComparacao();row.querySelector('h4').textContent='Exercício '+(Number(row.dataset.position)+1)+' · Editado ('+(side==='previous'?'Anterior':'Atual')+')';}};
     line.addEventListener('paste',function(e){if(!e.clipboardData)return;e.preventDefault();insertPlainText(e.clipboardData.getData('text/plain').replace(/\r?\n/g,' '));line.dispatchEvent(new Event('input',{bubbles:true}));});
     line.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();line.blur();}});
   }

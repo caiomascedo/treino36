@@ -23,3 +23,18 @@ window.CompareVersionPicker={mount(select){
   function sync(){select.hidden=true;selected.textContent=select.selectedOptions[0]?.textContent||'Selecione um treino';button.hidden=!!select.dataset.suggestion;button.disabled=select.options.length===0;}
   dialog.addEventListener('close',()=>{button.setAttribute('aria-expanded','false');button.focus({preventScroll:true});});button.onclick=()=>{search.value='';render();dialog.showModal();button.setAttribute('aria-expanded','true');title.focus({preventScroll:true});};search.oninput=render;sync();return {sync};
 }};
+
+window.CompareLayout={mount(dialog){
+  const bar=document.createElement('div');bar.className='compare-layout-controls';const title=dialog.querySelector('h3');title.before(bar);bar.append(title);
+  const minimize=document.createElement('button');minimize.type='button';minimize.id='compareMinimizeOptions';minimize.setAttribute('aria-controls','compareLabels');
+  const fullscreen=document.createElement('button');fullscreen.type='button';fullscreen.id='compareFullscreen';fullscreen.setAttribute('aria-pressed','false');fullscreen.textContent='⛶ Tela inteira';
+  bar.append(minimize,fullscreen);
+  const columns=document.createElement('div');columns.className='comparison-columns compare-compact-headings';columns.setAttribute('aria-label','Colunas da comparação');
+  for(const label of ['Anterior','Atual']){const heading=document.createElement('strong');heading.textContent=label;columns.append(heading);}
+  dialog.querySelector('.compare-header').before(columns);
+  let collapsed=false;try{collapsed=localStorage.getItem('treinoCompareOptionsCollapsed')==='1';}catch(error){}
+  function sync(){dialog.classList.toggle('compare-options-collapsed',collapsed);minimize.textContent=collapsed?'Mostrar opções':'Minimizar opções';minimize.setAttribute('aria-expanded',String(!collapsed));}
+  minimize.onclick=()=>{collapsed=!collapsed;sync();try{localStorage.setItem('treinoCompareOptionsCollapsed',collapsed?'1':'0');}catch(error){}};
+  fullscreen.onclick=()=>{const full=dialog.classList.toggle('compare-full-screen');fullscreen.textContent=full?'⛶ Reduzir tela':'⛶ Tela inteira';fullscreen.setAttribute('aria-pressed',String(full));};
+  dialog.addEventListener('close',()=>{dialog.classList.remove('compare-full-screen');fullscreen.textContent='⛶ Tela inteira';fullscreen.setAttribute('aria-pressed','false');});sync();
+}};
