@@ -23,14 +23,14 @@ with sync_playwright() as p:
  page.reload();page.locator('#pdfBtn').click();expect(page.locator('#pdfBody .yt-link')).to_have_count(3)
  assert page.locator('#pdfBody .yt-link').all_text_contents()==['(Vídeo)']*3
  assert page.locator('#pdfBody .pdf-ex-name').evaluate_all("rows=>rows.every(row=>row.lastElementChild.classList.contains('yt-link'))")
- assert not page.locator('#pdfReviewTools > details').evaluate('el=>el.open')
+ assert not page.locator('#pdfReviewTools > details:not(.pdf-section-choice)').evaluate('el=>el.open')
  first=page.locator('#pdfBody .pdf-ex-row').first
  initial_href=first.locator('a').get_attribute('href');assert 'youtube.com/results' in parse_qs(urlparse(initial_href).query)['url'][0]
  before=page.evaluate("localStorage.getItem('treinoAlunos')")
  page.get_by_role('button',name='Editar texto',exact=True).click();first.locator('.pdf-ex-title').fill('Agachamento no Smith');first.locator('.pdf-ex-details').fill('— 4×15')
  assert first.inner_text().strip().endswith('4×15(Vídeo)') or first.inner_text().strip().endswith('4×15 (Vídeo)')
  assert 'Agachamento no Smith' in parse_qs(urlparse(first.locator('a').get_attribute('href')).query)['ex'][0]
- page.locator('#pdfReviewTools > details > summary').click();page.locator('.pdf-video-section > summary').first.click();choice=page.locator('.pdf-video-choice').first
+ page.locator('#pdfReviewTools > details:not(.pdf-section-choice) > summary').click();page.locator('.pdf-video-section > summary').first.click();choice=page.locator('.pdf-video-choice').first
  choice.locator('input').fill('javascript:alert(1)');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==0
  expect(page.locator('#pdfReviewTools [role=status]')).to_contain_text('http ou https')
  choice.get_by_role('button',name='Automático',exact=True).click();expect(choice.locator('input')).to_have_value('')
@@ -44,7 +44,9 @@ with sync_playwright() as p:
   links=[link.get('uri','') for pdfpage in doc for link in pdfpage.get_links()]
   assert any(parse_qs(urlparse(link).query).get('url')==[custom] for link in links),links
   assert sum('r/yt?' in link for link in links)>=3
- assert page.evaluate("localStorage.getItem('treinoAlunos')")==before
+ saved=page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))");assert custom in saved[0]['treino']['A'][0]
+ assert 'Agachamento Livre' in saved[0]['treino']['A'][0] and '4×15' not in saved[0]['treino']['A'][0]
+ assert saved[0]['treino']['B']==['Remada — 3×12']
  page.locator('#closePdfViewer').click();page.locator('#obsIconBtn').click();page.locator('#toggleInfoRelevanteBtn').click()
  phone=page.locator('#infoWhats');phone.fill('+55 (55) 99999-8888');page.get_by_role('button',name='Copiar WhatsApp sem 55',exact=True).click();page.wait_for_function("copied.at(-1)==='55999998888'");expect(phone).to_have_value('+55 (55) 99999-8888')
  for number,expected in [('+55 (11) 98888-7777','11988887777'),('005511988887777','11988887777'),('(55) 99999-8888','55999998888'),('5533334444','5533334444'),('', '')]:
@@ -55,7 +57,7 @@ with sync_playwright() as p:
  page.reload();page.locator('#pdfBtn').click();expect(page.locator('.pdf-video-section')).to_have_count(6)
  assert [text[0] for text in page.locator('.pdf-video-section > summary').all_text_contents()]==list('ABCDEF')
  for section in page.locator('.pdf-video-section').all():assert section.locator('.pdf-video-choice label span').first.text_content().startswith('1. '),section.locator('.pdf-video-choice label span').all_text_contents()
- page.locator('#pdfReviewTools > details > summary').click();page.get_by_role('button',name='Expandir todos',exact=True).click();expect(page.locator('.pdf-video-section[open]')).to_have_count(6);page.get_by_role('button',name='Recolher todos',exact=True).click();expect(page.locator('.pdf-video-section[open]')).to_have_count(0);page.locator('.pdf-video-section > summary').last.click();expect(page.locator('.pdf-video-section').last.locator('input').first).to_be_visible()
+ page.locator('#pdfReviewTools > details:not(.pdf-section-choice) > summary').click();page.get_by_role('button',name='Expandir todos',exact=True).click();expect(page.locator('.pdf-video-section[open]')).to_have_count(6);page.get_by_role('button',name='Recolher todos',exact=True).click();expect(page.locator('.pdf-video-section[open]')).to_have_count(0);page.locator('.pdf-video-section > summary').last.click();expect(page.locator('.pdf-video-section').last.locator('input').first).to_be_visible()
  specific=page.locator('.pdf-video-section').last.locator('input').first;specific.fill(custom)
  def export_and_check(model):
   page.get_by_role('combobox',name='Modelo do PDF').select_option(model)
@@ -91,7 +93,7 @@ with sync_playwright() as p:
  page.screenshot(path='/tmp/pdf-model-selector-mobile.png')
  page.locator('#closePdfViewer').click();page.locator('#pdfBtn').click();expect(page.get_by_role('combobox',name='Modelo do PDF')).to_have_value('old')
  # Choose a single section for this PDF without changing the student's workout.
- page.get_by_role('button',name='Desmarcar todas',exact=True).click();count=page.evaluate('pdfWindows.length');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==count
+ page.locator('.pdf-section-choice > summary').click();page.get_by_role('button',name='Desmarcar todas',exact=True).click();count=page.evaluate('pdfWindows.length');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==count
  expect(page.locator('#pdfReviewTools [role=status]')).to_contain_text('pelo menos uma seção')
  page.get_by_role('checkbox',name='Incluir seção F no PDF',exact=True).check();expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
  page.locator('#downloadPdfBtn').click();page.wait_for_function(f'pdfWindows.length==={count+1}&&pdfWindows.at(-1).url')
