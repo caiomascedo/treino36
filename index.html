@@ -1493,6 +1493,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=4"></script>
+<script src="pdf-review.js?v=1"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -1504,6 +1505,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
+<link rel="stylesheet" href="pdf-review.css?v=1">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -1554,7 +1556,7 @@ window.AvaliacaoTreinoSync = (function () {
     <button type="button" id="expandTreinoBtn">⛶ Ampliar</button>
     <button id="copyBtn" class="copy">📑 Copiar</button>
     <button id="deleteBtn" class="delete">🗑️ Apagar</button>
-    <button id="pdfBtn" class="pdf">📄 PDF com YouTube</button>
+    <button id="pdfBtn" class="pdf">📄 PDF</button>
     <button id="screenshotBtn" class="screenshot">📸 Print</button>
     <details id="moreOptions">
       <summary>📂 Mais opções</summary>
@@ -1685,6 +1687,7 @@ window.AvaliacaoTreinoSync = (function () {
   <div id="pdfViewerContent">
     <button class="pdf-close" id="closePdfViewer">✕ Fechar</button>
     <button class="pdf-download" id="downloadPdfBtn">⬇ Baixar PDF</button>
+    <div id="pdfReviewTools"></div>
     <div id="pdfBody"></div>
   </div>
 </div>
@@ -4980,9 +4983,9 @@ window.AvaliacaoTreinoSync = (function () {
   }
 
   /* ===== YOUTUBE ===== */
-  function ytSearchUrl(exerciseName, alunoNome, secTitulo) {
+  function ytSearchUrl(exerciseName, alunoNome, secTitulo, selectedVideo) {
     const clean = exerciseName.replace(/[\/\+\(\)]/g, ' ').trim();
-    const ytUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(clean + ' academia como fazer');
+    const ytUrl = selectedVideo || 'https://www.youtube.com/results?search_query=' + encodeURIComponent(clean + ' academia como fazer');
     const aluno = alunoNome ? buscarAluno(alunoNome) : null;
     const wpp = aluno && aluno.whatsapp ? aluno.whatsapp : '';
     const params = new URLSearchParams({
@@ -5110,7 +5113,7 @@ window.AvaliacaoTreinoSync = (function () {
     const hoje = new Date().toLocaleDateString('pt-BR');
     const startUrl = iniciarTreinoUrl(nomeAluno);
 
-    let html = '<div class="pdf-title">Treino — ' + escHtml(nomeAluno) + '</div>';
+    let html = '<div class="pdf-title" data-pdf-editable>Treino — ' + escHtml(nomeAluno) + '</div>';
     html += '<div class="pdf-subtitle">Gerado em ' + escHtml(hoje) + ' | ' + escHtml(footer) + ' &nbsp;·&nbsp; <a href="' + escAttr(startUrl) + '" target="_blank" rel="noopener" class="pdf-start-btn">▶ Iniciar Treino</a></div>';
 
     for (let sec of SECOES) {
@@ -5121,19 +5124,20 @@ window.AvaliacaoTreinoSync = (function () {
         titulo = sec + '. ' + titulo.trim();
       }
       html += '<div class="pdf-sec ' + SEC_COLORS[sec] + '">';
-      html += '<div class="pdf-sec-title ' + SEC_COLORS[sec] + '">' + escHtml(titulo) + '</div>';
+      html += '<div class="pdf-sec-title ' + SEC_COLORS[sec] + '" data-pdf-editable>' + escHtml(titulo) + '</div>';
       for (let ex of exs) {
         const url = ytSearchUrl(ex.nome, nomeAluno, titulo);
-        html += '<div class="pdf-ex-row">'
-          + '<div class="pdf-ex-name"><span>' + escHtml(ex.nome) + '</span> ' + escHtml(ex.detalhes) + '</div>'
-          + '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" class="yt-link">' + ytIcon() + ' YouTube</a>'
-          + '</div>';
+        html += '<div class="pdf-ex-row" data-section-title="'+escAttr(titulo)+'">'
+          + '<div class="pdf-ex-name"><span class="pdf-ex-title" data-pdf-editable>' + escHtml(ex.nome) + '</span> '
+          + '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" class="yt-link" contenteditable="false">(Vídeo)</a> '
+          + '<span class="pdf-ex-details" data-pdf-editable>' + escHtml(ex.detalhes) + '</span></div></div>';
       }
       html += '</div>';
     }
     html += '<div class="pdf-footer">' + escHtml(footer) + ' — ' + escHtml(hoje) + '</div>';
 
     document.getElementById('pdfBody').innerHTML = html;
+    WorkoutPDFReview.mount(document.getElementById('pdfBody'),document.getElementById('pdfReviewTools'),function(exercise,video,section){return ytSearchUrl(exercise,nomeAluno,section,video);});
     document.getElementById('pdfViewerModal').classList.add('open');
   }
 
@@ -5143,6 +5147,7 @@ window.AvaliacaoTreinoSync = (function () {
   };
 
   document.getElementById('downloadPdfBtn').onclick = async function() {
+    if(!WorkoutPDFReview.beforeExport())return;
     guardarContextoPDF();
     const viewer = TreinoPDFViewer.reserve();
     const el = document.getElementById('pdfBody');
@@ -5168,7 +5173,7 @@ window.AvaliacaoTreinoSync = (function () {
       }
       const doc = await html2pdf().set(opt).from(el).toPdf().get('pdf');
       TreinoPDFViewer.deliver(doc,opt.filename,viewer);
-      exibirMensagem('✅ PDF salvo! Links do YouTube funcionam no PDF.', '#1e6f3f', false);
+      exibirMensagem('✅ PDF salvo! Os links (Vídeo) funcionam no PDF.', '#1e6f3f', false);
     } catch(e) {
       TreinoPDFViewer.close(viewer);
       console.error(e);
@@ -5225,7 +5230,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
     win.document.open();
     win.document.write('<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Treino PDF</title><style>' +
-      'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px}.yt-link{background:#e00;color:white;text-decoration:none;border-radius:3px;padding:2px 5px;font-size:10px;font-weight:bold;white-space:nowrap}.yt-link svg{display:none}.pdf-start-btn{background:#16a34a;color:white;text-decoration:none;border-radius:3px;padding:2px 6px;font-size:10px;font-weight:bold;display:inline-block;margin-left:6px;vertical-align:middle}@media print{a[href]:after{content:""}}' +
+      'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px}.yt-link{color:#b22222;text-decoration:underline;font:inherit;white-space:nowrap;margin:0 3px}.pdf-ex-title{font-weight:bold}.yt-link svg{display:none}.pdf-start-btn{background:#16a34a;color:white;text-decoration:none;border-radius:3px;padding:2px 6px;font-size:10px;font-weight:bold;display:inline-block;margin-left:6px;vertical-align:middle}@media print{a[href]:after{content:""}}' +
       '</style></head><body>' + pdfBody.innerHTML + '<script>setTimeout(function(){window.print();},300);<\/script></body></html>');
     win.document.close();
   }
@@ -9282,6 +9287,7 @@ window.AvaliacaoTreinoSync = (function () {
               '<input type="tel" id="infoWhats" placeholder="DDD + WhatsApp">'+
               '<button type="button" class="field-action-btn clear-field-btn" data-target="infoWhats" title="Limpar WhatsApp">✕</button>'+
               '<button type="button" class="field-action-btn copy-field-btn" data-target="infoWhats" data-label="WhatsApp" title="Copiar WhatsApp">📋</button>'+
+              '<button type="button" class="field-action-btn copy-whatsapp-local" aria-label="Copiar WhatsApp sem 55" title="Copiar WhatsApp sem o código 55 do Brasil" style="width:auto;min-width:48px;font-size:10px">📋 sem 55</button>'+
             '</div>'+
           '</div>'+
         '</div>'+
@@ -10374,6 +10380,8 @@ window.AvaliacaoTreinoSync = (function () {
       }
       return;
     }
+
+    if(e.target.closest('.copy-whatsapp-local')){var phone=document.getElementById('infoWhats');WhatsAppCopy.copy(phone.value,phone.closest('dialog')||document.body).then(function(){exibirMensagem('WhatsApp copiado sem o código do Brasil.','#1e6f3f',false);}).catch(function(error){exibirMensagem(error.message,'#b22222',false);});return;}
 
     // Botão de cópia individual
     var copyBtn = e.target.closest('.copy-field-btn');
