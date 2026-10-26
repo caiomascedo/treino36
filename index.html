@@ -1494,8 +1494,8 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="obs-notes.js?v=7"></script>
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
-<script src="pdf-viewer.js?v=4"></script>
-<script src="pdf-review.js?v=3"></script>
+<script src="pdf-viewer.js?v=5"></script>
+<script src="pdf-review.js?v=4"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -1507,7 +1507,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=3">
+<link rel="stylesheet" href="pdf-review.css?v=4">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -5043,12 +5043,12 @@ window.AvaliacaoTreinoSync = (function () {
     if (!ol) return [];
     const result = [];
     ol.querySelectorAll('li').forEach(li => {
-      const txt = li.innerText.trim();
+      const txt = textoDoExercicio(li,false);
       if (txt && !txt.includes('Seção vazia') && !txt.includes('Nenhum exercício') && !txt.includes('Sem exercício') && !txt.includes('Sem treino')) {
         const bold = li.querySelector('.bold');
-        const nome = bold ? bold.innerText.trim() : txt.split(' ').slice(0,3).join(' ');
+        const nome = bold ? bold.textContent.trim() : txt.split(' ').slice(0,3).join(' ');
         const detalhes = txt.replace(nome, '').trim();
-        result.push({ nome, detalhes });
+        result.push({ nome, detalhes, video:videoDoExercicio(li), source:li });
       }
     });
     return result;
@@ -5068,7 +5068,7 @@ window.AvaliacaoTreinoSync = (function () {
   
   function getTituloSecao(secId) {
     const h2 = document.querySelector('.sec-' + secId.toLowerCase() + ' h2');
-    return h2 ? h2.innerText.trim() : 'Seção ' + secId;
+    return h2 ? h2.textContent.trim() : 'Seção ' + secId;
   }
   
   function setTituloSecao(secId, titulo) {
@@ -5116,6 +5116,7 @@ window.AvaliacaoTreinoSync = (function () {
     const footer = document.querySelector('.footer') ? document.querySelector('.footer').innerText.trim() : 'Personal Caio Macêdo';
     const hoje = new Date().toLocaleDateString('pt-BR');
     const startUrl = iniciarTreinoUrl(nomeAluno);
+    const sourceRows=[];
 
     let html = '<div class="pdf-title" data-pdf-editable>Treino — ' + escHtml(nomeAluno) + '</div>';
     html += '<div class="pdf-subtitle">Gerado em ' + escHtml(hoje) + ' | ' + escHtml(footer) + ' &nbsp;·&nbsp; <a href="' + escAttr(startUrl) + '" target="_blank" rel="noopener" class="pdf-start-btn">▶ Iniciar Treino</a></div>';
@@ -5130,8 +5131,8 @@ window.AvaliacaoTreinoSync = (function () {
       html += '<div class="pdf-sec ' + SEC_COLORS[sec] + '" data-pdf-section="'+sec+'">';
       html += '<div class="pdf-sec-title ' + SEC_COLORS[sec] + '" data-pdf-editable>' + escHtml(titulo) + '</div>';
       for (let ex of exs) {
-        const url = ytSearchUrl(ex.nome, nomeAluno, titulo);
-        html += '<div class="pdf-ex-row" data-section-title="'+escAttr(titulo)+'">'
+        const url = ytSearchUrl(ex.nome, nomeAluno, titulo,ex.video);
+        html += '<div class="pdf-ex-row" data-section-title="'+escAttr(titulo)+'" data-video-url="'+escAttr(ex.video||'')+'" data-pdf-source="'+(sourceRows.push(ex.source)-1)+'">'
           + '<div class="pdf-ex-name"><span class="pdf-ex-title" data-pdf-editable>' + escHtml(ex.nome) + '</span> '
           + '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" class="yt-link" contenteditable="false">(Vídeo)</a> '
           + '<span class="pdf-ex-details" data-pdf-editable>' + escHtml(ex.detalhes) + '</span></div></div>';
@@ -5141,7 +5142,7 @@ window.AvaliacaoTreinoSync = (function () {
     html += '<div class="pdf-footer">' + escHtml(footer) + ' — ' + escHtml(hoje) + '</div>';
 
     document.getElementById('pdfBody').innerHTML = html;
-    WorkoutPDFReview.mount(document.getElementById('pdfBody'),document.getElementById('pdfReviewTools'),function(exercise,video,section){return ytSearchUrl(exercise,nomeAluno,section,video);},ytIcon());
+    WorkoutPDFReview.mount(document.getElementById('pdfBody'),document.getElementById('pdfReviewTools'),function(exercise,video,section){return ytSearchUrl(exercise,nomeAluno,section,video);},ytIcon(),function(row,url){var source=sourceRows[Number(row.dataset.pdfSource)];if(!source||!source.isConnected||document.getElementById('searchName').value.trim()!==nomeAluno)return;atribuirVideoExercicio(source,url);pushState();concluirAutoSave();});
     document.getElementById('pdfViewerModal').classList.add('open');
   }
 
@@ -5150,10 +5151,13 @@ window.AvaliacaoTreinoSync = (function () {
     document.getElementById('pdfViewerModal').classList.remove('open');
   };
 
-  document.getElementById('downloadPdfBtn').onclick = async function() {
+  const sendPdfBtn=document.createElement('button');sendPdfBtn.type='button';sendPdfBtn.id='sendPdfBtn';sendPdfBtn.textContent='📤 Enviar PDF';sendPdfBtn.style.cssText='background:#1e6f3f;color:white;border:0;border-radius:16px;padding:7px 12px;margin-right:5px';document.getElementById('downloadPdfBtn').before(sendPdfBtn);
+  sendPdfBtn.onclick=function(){exportarPDFTreino(true);};
+  document.getElementById('downloadPdfBtn').onclick=function(){exportarPDFTreino(false);};
+  async function exportarPDFTreino(sharing) {
     if(!WorkoutPDFReview.beforeExport())return;
     guardarContextoPDF();
-    const viewer = TreinoPDFViewer.reserve();
+    const viewer = sharing?null:TreinoPDFViewer.reserve();
     const el = document.getElementById('pdfBody');
     const nomeAluno = safeFileName(document.getElementById('searchName').value.trim() || 'treino');
     
@@ -5171,17 +5175,18 @@ window.AvaliacaoTreinoSync = (function () {
     try {
       var pdfReady = await ensureHtml2Pdf();
       if (!pdfReady) {
+        if(sharing)throw Error('Não foi possível preparar o arquivo PDF. Tente novamente com internet.');
         abrirPDFParaImpressao(viewer);
         exibirMensagem('⚠️ CDN do PDF indisponível. Abrindo modo alternativo para salvar/imprimir com links.', '#b8860b', false);
         return;
       }
       const doc = await html2pdf().set(opt).from(el).toPdf().get('pdf');
-      TreinoPDFViewer.deliver(doc,opt.filename,viewer);
-      exibirMensagem('✅ PDF salvo! Os links (Vídeo) funcionam no PDF.', '#1e6f3f', false);
+      if(sharing)TreinoPDFViewer.shareReady(doc,opt.filename);else TreinoPDFViewer.deliver(doc,opt.filename,viewer);
+      exibirMensagem(sharing?'✅ PDF pronto. Toque em Compartilhar PDF para enviar o arquivo.':'✅ PDF pronto! Os links (Vídeo) funcionam no PDF.', '#1e6f3f', false);
     } catch(e) {
       TreinoPDFViewer.close(viewer);
       console.error(e);
-      exibirMensagem('❌ Erro ao gerar PDF', '#b22222', false);
+      exibirMensagem('❌ '+(e.message||'Erro ao gerar PDF'), '#b22222', false);
     }
   };
   /* ===== UTILITÁRIOS ===== */
@@ -5331,7 +5336,7 @@ window.AvaliacaoTreinoSync = (function () {
     ['A','B','C','D','E','F'].forEach(function(sec) {
       var exs = [];
       if (sections[sec]) sections[sec].querySelectorAll('li').forEach(function(li) {
-        var t = li.innerText.trim();
+        var t = textoDoExercicio(li,true);
         if (t && !/Seção vazia|Nenhum exercício|Sem exercícios|Sem treino cadastrado|Nenhum aluno/.test(t)) exs.push(t);
       });
       dados.treino[sec] = exs;
@@ -5533,13 +5538,36 @@ window.AvaliacaoTreinoSync = (function () {
     }
     return { nome: clean, detalhes: '', separador: '' };
   }
+  // Keep selected video URLs in the exercise itself, including portable text copies.
+  function videoDoExercicio(row) {
+    var link=row.querySelector('a[href]');if(!link)return '';
+    try{var url=WorkoutPDFReview.videoURL(link.getAttribute('href'));var parsed=new URL(url);if(parsed.hostname==='caio.tail953b6e.ts.net'&&parsed.pathname==='/r/yt')url=parsed.searchParams.get('url')||'';return WorkoutPDFReview.videoURL(url);}catch(error){return '';}
+  }
+  function textoDoExercicio(row,comLink) {
+    var clone=row.cloneNode(true),url=videoDoExercicio(row);
+    clone.querySelectorAll('a').forEach(function(link){if(/^\(?v[ií]deo\)?$|^youtube$/i.test(link.textContent.trim()))link.remove();else link.replaceWith(document.createTextNode(link.textContent));});
+    var text=clone.textContent.trim();return text+(comLink&&url?' [Vídeo: '+url+']':'');
+  }
+  function separarLinkExercicio(raw) {
+    var text=String(raw||''),url='';
+    // Legacy HTML and anchors are converted to safe, plain portable text.
+    if(/<\/?(?:span|a|b|strong)\b/i.test(text)){var holder=document.createElement('template');holder.innerHTML=text;text=textoDoExercicio(holder.content,true);}
+    text=text.replace(/\[v[ií]deo:\s*(https?:\/\/[^\s\]]+)\]/gi,function(all,value){try{url=WorkoutPDFReview.videoURL(value);}catch(error){}return '';});
+    if(!url)text=text.replace(/https?:\/\/[^\s<>"\]]+/gi,function(value){try{url=WorkoutPDFReview.videoURL(value);}catch(error){}return '';});
+    return {text:text.trim(),url:url};
+  }
+  function atribuirVideoExercicio(row,url){
+    row.querySelectorAll('a[href]').forEach(function(link){if(/^\(?v[ií]deo\)?$|^youtube$/i.test(link.textContent.trim()))link.remove();else link.replaceWith(document.createTextNode(link.textContent));});
+    if(url){var link=document.createElement('a');link.className='exercise-video';link.href=url;link.target='_blank';link.rel='noopener';link.textContent='(Vídeo)';row.append(document.createTextNode(' '),link);}
+  }
   function formatExerciseLine(line) {
     if (!line || line.trim() === '') return null;
-    var clean = cleanLine(line).replace(/\*\*/g, '');
+    var linked=separarLinkExercicio(line);
+    var clean = cleanLine(linked.text).replace(/\*\*/g, '');
     if (!clean) return null;
     var ex = separarExercicio(clean);
     return '<li><span class="bold">' + escHtml(ex.nome) + '</span>'
-      + escHtml(ex.separador + ex.detalhes) + '</li>';
+      + escHtml(ex.separador + ex.detalhes) + (linked.url?' <a class="exercise-video" href="'+escAttr(linked.url)+'" target="_blank" rel="noopener">(Vídeo)</a>':'') + '</li>';
   }
 
   /* ===== NORMALIZAÇÃO DE TEXTO COLADO ===== */
@@ -5560,7 +5588,8 @@ window.AvaliacaoTreinoSync = (function () {
   // processar o texto colado, tanto no colar de uma seção quanto no Treino Completo/OCR.
   function preprocessPastedText(text) {
     if (!text) return '';
-    return WorkoutImport.clean(text);
+    var urls=[];var protectedText=String(text).replace(/https?:\/\/[^\s<>"\]]+/gi,function(url){return 'TREINOVIDEOLINKTOKEN'+(urls.push(url)-1)+'END';});
+    return WorkoutImport.clean(protectedText).replace(/TREINOVIDEOLINKTOKEN(\d+)END/g,function(all,index){return urls[Number(index)];});
   }
 
   /* ===== PREENCHER / LIMPAR SEÇÕES ===== */
@@ -5620,7 +5649,7 @@ window.AvaliacaoTreinoSync = (function () {
     var titulo = h2 ? h2.innerText.trim() : 'Seção ' + secId;
     var txt = titulo + '\n' + '='.repeat(titulo.length) + '\n';
     ol.querySelectorAll('li').forEach(function(li) {
-      var t = li.innerText.trim();
+      var t = textoDoExercicio(li,true);
       if (t && !t.includes('Seção vazia') && !t.includes('Nenhum exercício')) txt += '• ' + t + '\n';
     });
     var ta = document.createElement('textarea'); ta.value = txt;
@@ -5635,7 +5664,7 @@ window.AvaliacaoTreinoSync = (function () {
       txt += titulo + '\n' + '='.repeat(titulo.length) + '\n';
       var ol = sections[sec];
       if (ol) ol.querySelectorAll('li').forEach(function(li) {
-        var t = li.innerText.trim();
+        var t = textoDoExercicio(li,true);
         if (t && !t.includes('Seção vazia') && !t.includes('Nenhum exercício')) txt += '• ' + t + '\n';
       });
       txt += '\n';
@@ -7994,7 +8023,7 @@ window.AvaliacaoTreinoSync = (function () {
     return holder.innerHTML;
   }
   var sectionClipboard=null,sectionMenu=null,sectionMenuContext=null;
-  function sectionPlain(data){var holder=document.createElement('div');return data.titulo+'\n'+data.itens.map(function(html){holder.innerHTML=html;return '• '+holder.textContent;}).join('\n');}
+  function sectionPlain(data){var holder=document.createElement('div');return data.titulo+'\n'+data.itens.map(function(html){holder.innerHTML=html;return '• '+textoDoExercicio(holder,true);}).join('\n');}
   function abrirAcoesTreino(config,sec){
     if(!sectionMenu){
       sectionMenu=document.createElement('dialog');sectionMenu.id='sectionActionsDialog';sectionMenu.className='app-dialog';sectionMenu.style.cssText='box-sizing:border-box;width:min(94vw,420px);max-height:90dvh;overflow:auto;border:1px solid #cbd5e1;border-radius:12px;padding:16px;color:#29465a;background:white';
@@ -8180,7 +8209,7 @@ window.AvaliacaoTreinoSync = (function () {
     var ids=sec==='all'?SECOES.slice():[sec];
     openPasteModal(sec==='all'?'full':'section',sec==='all'?null:sec);
     var texto=ids.map(function(id){
-      var linhas=itensDaLista(sections[id]).map(function(li,i){return (i+1)+'. '+li.innerText.trim();});
+      var linhas=itensDaLista(sections[id]).map(function(li,i){return (i+1)+'. '+textoDoExercicio(li,true);});
       return getTituloSecao(id)+'\n'+linhas.join('\n');
     }).join('\n\n');
     document.getElementById('pasteTextarea').value=texto;
@@ -8338,7 +8367,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('copyExerciseBtn').addEventListener('click',async function(){
     var context=menuContext;
     if(!context||!context.row.isConnected)return;
-    var text=(context.config.main?context.row:context.row.querySelector('.exercise-text')).textContent.trim();
+    var text=textoDoExercicio(context.config.main?context.row:context.row.querySelector('.exercise-text'),true);
     ultimoExercicioCopiado = text;
     var status=document.getElementById('exerciseCopyStatus');
     exerciseMenu.querySelectorAll('.exercise-copy-fallback').forEach(function(el){el.remove();});
@@ -9363,7 +9392,7 @@ window.AvaliacaoTreinoSync = (function () {
           '</div>'+
           '<div class="info-field full-width">'+
             '<label for="infoWhats">Whats:</label>'+
-            '<div class="info-input-wrap">'+
+            '<div class="info-input-wrap whatsapp-input-wrap">'+
               '<input type="tel" id="infoWhats" placeholder="DDD + WhatsApp">'+
               '<button type="button" class="field-action-btn clear-field-btn" data-target="infoWhats" title="Limpar WhatsApp">✕</button>'+
               '<button type="button" class="field-action-btn copy-field-btn" data-target="infoWhats" data-label="WhatsApp" title="Copiar WhatsApp">📋</button>'+
@@ -9405,7 +9434,7 @@ window.AvaliacaoTreinoSync = (function () {
     var visible=alunoNaTela(),parts=[];
     SECOES.forEach(function(sec){
       var lines;
-      if(visible&&visible.student_id===student.student_id)lines=itensDaLista(sections[sec]).map(function(li){return li.innerText.trim();});
+      if(visible&&visible.student_id===student.student_id)lines=itensDaLista(sections[sec]).map(function(li){return textoDoExercicio(li,true);});
       else lines=(student.treino[sec]||[]).map(function(html){var div=document.createElement('div');div.innerHTML=html;return div.textContent;});
       lines=lines.filter(function(line){return line&&!line.includes('Seção vazia')&&!line.includes('Nenhum exercício');});
       if(lines.length)parts.push((visible&&visible.student_id===student.student_id?getTituloSecao(sec):(student.titulos||{})[sec]||sec)+'\n'+lines.map(function(line){return '• '+line;}).join('\n'));
@@ -11353,7 +11382,7 @@ window.AvaliacaoTreinoSync = (function () {
     var scope=document.getElementById('bulkScope').value;
     (scope==='all'?SECOES:[scope]).forEach(function(sec){
       sections[sec].querySelectorAll('li').forEach(function(li,index){
-        var before=li.innerText.trim(),after=ajustarPrescricaoEmLote(before,sets,reps);
+        var before=textoDoExercicio(li,true),linked=separarLinkExercicio(before),after=ajustarPrescricaoEmLote(linked.text,sets,reps)+(linked.url?' [Vídeo: '+linked.url+']':'');
         if(after===before)return;
         bulkChanges.push({row:li,before:before,after:after});
         var item=document.createElement('div');item.className='bulk-preview-row';

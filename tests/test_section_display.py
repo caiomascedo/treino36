@@ -19,7 +19,7 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Mostrar todas',exact=True).click();expect(page.locator('.section.sec-b')).to_be_visible()
  page.get_by_role('checkbox',name='Mostrar seção A na tela',exact=True).uncheck();expect(page.locator('.section.sec-a')).not_to_be_visible()
  # Hiding the main section does not remove it from the optional PDF chooser.
- page.locator('#pdfBtn').click();expect(page.get_by_role('checkbox',name='Incluir seção A no PDF',exact=True)).to_be_checked();expect(page.locator('#pdfBody .pdf-ex-title')).to_contain_text('Agachamento');page.locator('#closePdfViewer').click()
+ page.locator('#pdfBtn').click();page.locator('.pdf-section-choice > summary').click();expect(page.get_by_role('checkbox',name='Incluir seção A no PDF',exact=True)).to_be_checked();expect(page.locator('#pdfBody .pdf-ex-title')).to_contain_text('Agachamento');page.locator('#closePdfViewer').click()
  page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Bruno"] .aluno-nome').click();expect(page.locator('.section.sec-a')).to_be_visible();expect(page.locator('.section.sec-b')).to_be_visible()
  page.locator('#listBtn').click();page.locator('.aluno-list-item[data-nome="Ana"] .aluno-nome').click();expect(page.locator('.section.sec-a')).not_to_be_visible()
  page.reload();expect(page.locator('.section.sec-a')).not_to_be_visible();assert page.evaluate("JSON.parse(localStorage.getItem('treinoAlunos'))[0].treino.A")==['Agachamento — 3×12']
