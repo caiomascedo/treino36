@@ -10705,10 +10705,12 @@ window.AvaliacaoTreinoSync = (function () {
     if(!picker||!workout)return;
     var wId=workout.workout_id;
     var sId=workout.student_id?'student-'+workout.student_id:'';
-    for(var i=0;i<picker.options.length;i++){
-      var val=picker.options[i].value;
-      if(val===wId||(sId&&val===sId)){picker.selectedIndex=i;return;}
-    }
+    // Archives share the pupil ID with the cover: match the workout first.
+    var options=Array.from(picker.options),exact=options.find(function(option){return wId&&option.value===wId;});
+    if(exact){picker.value=exact.value;return;}
+    var active=workout.status==='active'||alunos.some(function(student){return student.student_id===workout.student_id&&student.treino_id===wId;});
+    var cover=active&&sId?options.find(function(option){return option.value===sId;}):null;
+    picker.selectedIndex=cover?options.indexOf(cover):-1;
   }
 
   function popularPickersComparacao(student,currentWorkout,previousWorkout,termoBusca){
