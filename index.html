@@ -1493,7 +1493,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=4"></script>
-<script src="pdf-review.js?v=1"></script>
+<script src="pdf-review.js?v=2"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -1505,7 +1505,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=1">
+<link rel="stylesheet" href="pdf-review.css?v=2">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -5137,7 +5137,7 @@ window.AvaliacaoTreinoSync = (function () {
     html += '<div class="pdf-footer">' + escHtml(footer) + ' — ' + escHtml(hoje) + '</div>';
 
     document.getElementById('pdfBody').innerHTML = html;
-    WorkoutPDFReview.mount(document.getElementById('pdfBody'),document.getElementById('pdfReviewTools'),function(exercise,video,section){return ytSearchUrl(exercise,nomeAluno,section,video);});
+    WorkoutPDFReview.mount(document.getElementById('pdfBody'),document.getElementById('pdfReviewTools'),function(exercise,video,section){return ytSearchUrl(exercise,nomeAluno,section,video);},ytIcon());
     document.getElementById('pdfViewerModal').classList.add('open');
   }
 
@@ -5157,7 +5157,7 @@ window.AvaliacaoTreinoSync = (function () {
       margin: [5, 8, 5, 8],
       filename: 'treino_' + nomeAluno + '.pdf',
       image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 1.8, useCORS: true, logging: false, letterRendering: true },
+      html2canvas: { scale: 1.8, useCORS: true, logging: false, letterRendering: true, scrollX:0, scrollY:0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
       pagebreak: { mode: 'avoid-all' },
       enableLinks: true
@@ -5230,8 +5230,8 @@ window.AvaliacaoTreinoSync = (function () {
     }
     win.document.open();
     win.document.write('<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Treino PDF</title><style>' +
-      'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px}.yt-link{color:#b22222;text-decoration:underline;font:inherit;white-space:nowrap;margin:0 3px}.pdf-ex-title{font-weight:bold}.yt-link svg{display:none}.pdf-start-btn{background:#16a34a;color:white;text-decoration:none;border-radius:3px;padding:2px 6px;font-size:10px;font-weight:bold;display:inline-block;margin-left:6px;vertical-align:middle}@media print{a[href]:after{content:""}}' +
-      '</style></head><body>' + pdfBody.innerHTML + '<script>setTimeout(function(){window.print();},300);<\/script></body></html>');
+      'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px}.yt-link{display:inline-block;color:#b22222;text-decoration:none;border-bottom:1px solid #b22222;font:inherit;font-weight:bold;white-space:nowrap;margin:0 3px}.pdf-style-old .yt-link{border:0;background:red;color:white;border-radius:3px;padding:2px 5px;font-size:10px}.pdf-ex-title{font-weight:bold}.yt-link svg{display:none}.pdf-start-btn{background:#16a34a;color:white;text-decoration:none;border-radius:3px;padding:2px 6px;font-size:10px;font-weight:bold;display:inline-block;margin-left:6px;vertical-align:middle}@media print{a[href]:after{content:""}}' +
+      '</style></head><body class="'+(pdfBody.classList.contains('pdf-style-old')?'pdf-style-old':'')+'">' + pdfBody.innerHTML + '<script>setTimeout(function(){window.print();},300);<\/script></body></html>');
     win.document.close();
   }
   /* ===== HISTÓRICO UNDO/REDO ===== */
@@ -7988,11 +7988,37 @@ window.AvaliacaoTreinoSync = (function () {
     if (!(prefixo ? texto.slice(prefixo[0].length) : texto).trim()) holder.appendChild(document.createTextNode('TREINO'));
     return holder.innerHTML;
   }
+  var sectionClipboard=null,sectionMenu=null,sectionMenuContext=null;
+  function sectionPlain(data){var holder=document.createElement('div');return data.titulo+'\n'+data.itens.map(function(html){holder.innerHTML=html;return '• '+holder.textContent;}).join('\n');}
+  function abrirAcoesTreino(config,sec){
+    if(!sectionMenu){
+      sectionMenu=document.createElement('dialog');sectionMenu.id='sectionActionsDialog';sectionMenu.className='app-dialog';sectionMenu.style.cssText='box-sizing:border-box;width:min(94vw,420px);max-height:90dvh;overflow:auto;border:1px solid #cbd5e1;border-radius:12px;padding:16px;color:#29465a;background:white';
+      sectionMenu.innerHTML='<h3 data-title style="margin:0 0 10px"></h3><p data-description></p><div style="display:flex;flex-wrap:wrap;gap:7px"><button type="button" data-copy>📋 Copiar seção</button><button type="button" data-paste>📋 Colar seção</button></div><div data-manual hidden><textarea aria-label="Texto da seção para colar" style="box-sizing:border-box;width:100%;height:120px;font-size:16px;margin:8px 0"></textarea><button type="button" data-apply>Colar exercícios</button></div><p><label>Duplicar para <select aria-label="Destino da seção duplicada" data-destination></select></label> <button type="button" data-duplicate>⧉ Duplicar seção</button></p><small>A duplicação usa uma seção vazia. Colar acrescenta exercícios, sem apagar os atuais.</small><p role="status"></p><button type="button" data-close>Fechar</button>';
+      document.body.append(sectionMenu);var q=function(selector){return sectionMenu.querySelector(selector);};
+      q('[data-close]').onclick=function(){sectionMenu.close();};
+      q('[data-copy]').onclick=async function(){var ctx=sectionMenuContext;sectionClipboard={titulo:ctx.data[ctx.sec].titulo,itens:ctx.data[ctx.sec].itens.slice(),origem:ctx.sec};try{await navigator.clipboard.writeText(sectionPlain(sectionClipboard));q('[role=status]').textContent='Seção copiada. Abra os pontinhos da seção de destino e toque em Colar seção.';}catch(error){q('[role=status]').textContent='Seção copiada dentro do site. Você já pode colar em outra seção.';}};
+      q('[data-paste]').onclick=function(){if(sectionClipboard)inserirSecaoCopiada(sectionMenuContext,sectionMenuContext.sec,sectionClipboard,false);else{q('[data-manual]').hidden=false;q('textarea').focus();q('[role=status]').textContent='Cole o texto da seção aqui. Os exercícios atuais serão mantidos.';}};
+      q('[data-apply]').onclick=function(){var lines=preprocessPastedText(q('textarea').value).split(/\r?\n/),title='',source='A',items=[];lines.forEach(function(line){line=line.trim();if(!line||/^[=ニ]+$/.test(line))return;var heading=parseTitleLine(line);if(heading&&!title){title=line;source=heading.sec||'A';return;}line=line.replace(/^(?:[•●*-]|\d+[.)])\s*/,'');var holder=document.createElement('div');holder.innerHTML=formatExerciseLine(line);var li=holder.querySelector('li');if(li)items.push(li.innerHTML);});if(!items.length){q('[role=status]').textContent='Cole pelo menos um exercício.';return;}inserirSecaoCopiada(sectionMenuContext,sectionMenuContext.sec,{titulo:title||'Treino',itens:items,origem:source},false);};
+      q('[data-duplicate]').onclick=function(){var ctx=sectionMenuContext;inserirSecaoCopiada(ctx,q('[data-destination]').value,{...ctx.data[ctx.sec],origem:ctx.sec},true);};
+    }
+    var draft=!config.main&&zoomMode==='paste',data=draft?zoomDraft:dadosDoEditor();sectionMenuContext={config:config,sec:sec,draft:draft,data:JSON.parse(JSON.stringify(data)),name:document.getElementById('searchName').value,snapshot:JSON.stringify(draft?zoomDraft:getCurrentState())};
+    sectionMenu.querySelector('[data-title]').textContent='Seção '+sec;sectionMenu.querySelector('[data-description]').textContent=data[sec].titulo;sectionMenu.querySelector('[role=status]').textContent='';sectionMenu.querySelector('[data-manual]').hidden=true;sectionMenu.querySelector('textarea').value='';sectionMenu.querySelector('[data-copy]').disabled=!data[sec].itens.length;
+    var select=sectionMenu.querySelector('[data-destination]');select.replaceChildren();todasSecoes.filter(function(id){return id!==sec;}).forEach(function(id){var option=document.createElement('option');option.value=id;option.disabled=!!data[id].itens.length;option.textContent=id+(option.disabled?' · já tem exercícios':' · vazia');select.append(option);});var empty=Array.from(select.options).find(function(option){return !option.disabled;});select.value=empty?empty.value:'';sectionMenu.querySelector('[data-duplicate]').disabled=!empty||!data[sec].itens.length;sectionMenu.showModal();
+  }
+  function inserirSecaoCopiada(ctx,dest,source,onlyEmpty){
+    var status=sectionMenu.querySelector('[role=status]');
+    if(ctx.name!==document.getElementById('searchName').value||ctx.snapshot!==JSON.stringify(ctx.draft?zoomDraft:getCurrentState())){status.textContent='O treino mudou. Feche e abra o menu novamente.';return;}
+    if(!dest||!source.itens.length||(onlyEmpty&&ctx.data[dest].itens.length)){status.textContent='Escolha uma seção vazia para duplicar.';return;}
+    var empty=!ctx.data[dest].itens.length,title=renomearTituloTreino(source.titulo,dest,source.origem);
+    if(ctx.draft){zoomDraft[dest]={titulo:empty?title:zoomDraft[dest].titulo,itens:zoomDraft[dest].itens.concat(source.itens)};if(!draftTouched.includes(dest))draftTouched.push(dest);registrarHistoricoRascunho();}
+    else{pushState();if(dest==='F'&&!secaoFAtiva)setSecaoFAtiva(true,true);var items=ctx.data[dest].itens.concat(source.itens);sections[dest].innerHTML=items.map(function(html){return '<li>'+html+'</li>';}).join('');if(empty)setTituloSecao(dest,title);pushState();concluirAutoSave();agendarAlcasPrincipais();}
+    sectionMenu.close();if(expandedSectionId)renderExpandedSection();exibirMensagem('Seção '+dest+' atualizada. Os outros treinos foram mantidos.','#1e6f3f',false);
+  }
   function criarAlcaTreino(sec, main) {
     var grip = document.createElement('button'); grip.type = 'button'; grip.className = 'workout-grip';
     grip.dataset.section = sec; grip.textContent = '⋮⋮';
-    grip.title = 'Segure e arraste o treino inteiro. Use ↑/↓ pelo teclado para mudar a ordem.';
-    grip.setAttribute('aria-label', 'Mover treino ' + sec + '. Segure e arraste ou use as setas.');
+    grip.title = 'Toque para copiar, colar ou duplicar a seção. Segure para arrastar o treino inteiro.';
+    grip.setAttribute('aria-label', 'Opções do treino ' + sec + '. Toque para abrir; segure para arrastar.');
     grip.disabled = !main && zoomMode !== 'paste' && !SECOES.includes(sec);
     return grip;
   }
@@ -8085,7 +8111,7 @@ window.AvaliacaoTreinoSync = (function () {
       if (grip) e.preventDefault();
       var rect = group.getBoundingClientRect();
       var drag = { config: config, id: e.pointerId, group: group, sec: config.sec(group),
-        x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, active: false };
+        x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, active: false, grip:!!grip };
       workoutDrag = drag;
       if (grip) config.root.setPointerCapture(drag.id);
       drag.timer = setTimeout(function() {
@@ -8118,13 +8144,14 @@ window.AvaliacaoTreinoSync = (function () {
     });
     config.root.addEventListener('pointerup', function(e) {
       var drag = workoutDrag; if (!drag || drag.config !== config || drag.id !== e.pointerId) return;
-      drag.x = e.clientX; drag.y = e.clientY; finalizarArrasteTreino(true);
+      drag.x = e.clientX; drag.y = e.clientY;var tap=drag.grip&&!drag.active&&Math.hypot(drag.x-drag.startX,drag.y-drag.startY)<10;var sec=drag.sec;finalizarArrasteTreino(true);if(tap)abrirAcoesTreino(config,sec);
     });
     ['pointercancel', 'lostpointercapture'].forEach(function(type) {
       config.root.addEventListener(type, function(e) {
         if (workoutDrag && workoutDrag.config === config && workoutDrag.id === e.pointerId) finalizarArrasteTreino(false);
       });
     });
+    config.root.addEventListener('click',function(e){var grip=e.target.closest('.workout-grip');if(grip&&!grip.disabled&&e.detail===0){e.preventDefault();abrirAcoesTreino(config,grip.dataset.section);}});
     config.root.addEventListener('contextmenu', function(e) {
       if (e.target.closest(config.main ? '.workout-grip,.section-header h2' : '.workout-grip,.zoom-section h3')) e.preventDefault();
     });
@@ -8707,7 +8734,7 @@ window.AvaliacaoTreinoSync = (function () {
       '</div>'+
     '</div>'+
     '<label for="historyVersion">Treino / Versão</label><select id="historyVersion" style="width:100%;font-size:0.82rem;font-weight:600;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;"></select><pre id="historyVersionText" class="version-content"></pre>'+
-    '<div class="dialog-actions"><button id="compareSelectedVersion">Comparar com atual</button><button data-close>Fechar</button></div>');
+    '<p id="historyPromotionStatus" role="status" style="font-size:12px"></p><div class="dialog-actions"><button id="promoteHistoryVersion" title="Usar o treino completo como capa; a capa atual fica nos anteriores">Usar como capa</button><button id="compareSelectedVersion">Comparar com atual</button><button data-close>Fechar</button></div>');
 
   function atualizarVersoesHistorico(termoBusca) {
     var select = document.getElementById('historyVersion');
@@ -8886,6 +8913,7 @@ window.AvaliacaoTreinoSync = (function () {
     var select = document.getElementById('historyVersion');
     if (!select || !select.value) {
       document.getElementById('historyVersionText').textContent = 'Nenhum treino disponível para exibição.';
+      document.getElementById('promoteHistoryVersion').disabled=true;
       return;
     }
     var res = (typeof resolverTreinoComparacao === 'function') ? resolverTreinoComparacao(select.value) : null;
@@ -8895,6 +8923,7 @@ window.AvaliacaoTreinoSync = (function () {
       var rotulo = res.isCapa ? ('Capa: ' + (res.workout.name || 'Treino atual')) : (res.workout.name || 'Treino anterior');
       document.getElementById('historyStudentName').textContent = stNome + ' · ' + rotulo + (historyScope ? ' · Seção ' + historyScope : '');
       var btnCompare = document.getElementById('compareSelectedVersion'); if (btnCompare) btnCompare.disabled = false;
+      document.getElementById('promoteHistoryVersion').disabled=!!res.isCapa;
       var eb = document.getElementById('editHistoryVersion'); if (eb) { eb.disabled = false; eb.textContent = res.isCapa ? 'Editar Capa' : 'Editar anterior'; }
     } else {
       var v = historyStudent && Array.isArray(historyStudent.historicoTreinos) ? historyStudent.historicoTreinos.find(function(x){return x.workout_id===select.value;}) : null;
@@ -8902,7 +8931,15 @@ window.AvaliacaoTreinoSync = (function () {
     }
   }
 
-  document.getElementById('historyVersion').onchange=renderVersao;
+  document.getElementById('promoteHistoryVersion').onclick=function(){
+    var selected=document.getElementById('historyVersion').value,status=document.getElementById('historyPromotionStatus');concluirAutoSave();var resolved=resolverTreinoComparacao(selected);if(!resolved||resolved.isCapa||!resolved.student)return;
+    var owner=resolved.student,previous=cloneData(owner),chosen=cloneData(resolved.workout);
+    arquivarTreino(owner);owner.treino=cloneData(chosen.treino);owner.titulos=cloneData(chosen.titulos||{});owner.secaoFAtiva=!!chosen.secaoFAtiva;owner.treinoNome=chosen.name||chosen.treinoNome||'Treino de '+owner.nome;owner.treinoProtegido=true;owner.atualizadoEm=new Date().toISOString();
+    if(chosen.validadeTreino)owner.validadeTreino={...cloneData(chosen.validadeTreino),treinoId:owner.treino_id};
+    if(!salvarLocalStorage()){Object.keys(owner).forEach(function(key){delete owner[key];});Object.assign(owner,previous);status.textContent='Não foi possível trocar a capa. O treino anterior foi mantido.';return;}
+    historyStudent=owner;historyScope=null;historySearchInput.value=owner.nome;document.getElementById('historyWorkoutSearchInput').value='';atualizarVersoesHistorico('');document.getElementById('historyVersion').value='student-'+owner.student_id;renderVersao();carregarTreinoAluno(owner);status.textContent='Treino definido como capa de '+owner.nome+'. A capa anterior ficou guardada no histórico.';
+  };
+  document.getElementById('historyVersion').onchange=function(){document.getElementById('historyPromotionStatus').textContent='';renderVersao();};
   document.getElementById('compareSelectedVersion').onclick=function(){
     var select = document.getElementById('historyVersion');
     if (!select || !select.value) return;
