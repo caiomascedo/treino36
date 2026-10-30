@@ -1488,7 +1488,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="avaliacao-import.js?v=21"></script>
 <script src="workout-validity.js?v=2"></script>
 <script src="workout-history-tools.js?v=2"></script>
-<script src="compare-version-picker.js?v=3"></script>
+<script src="compare-version-picker.js?v=4"></script>
 <script src="archive-workout-editor.js?v=1"></script>
 <link rel="stylesheet" href="archive-workout-editor.css?v=1">
 <script src="section-display.js?v=1"></script>
@@ -1510,7 +1510,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=9">
+<link rel="stylesheet" href="pdf-review.css?v=10">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -4958,6 +4958,7 @@ window.AvaliacaoTreinoSync = (function () {
   let SECOES = [...SECOES_BASE];
   let secaoFAtiva = false;
   var sectionDisplay=null;
+  var mainArchiveEdit=null,mainArchiveRestore=null;try{mainArchiveRestore=JSON.parse(sessionStorage.getItem('treinoMainArchiveEdit')||'null');}catch(error){}
   
   const SEC_COLORS = { A:'sec-a-color', B:'sec-b-color', C:'sec-c-color', D:'sec-d-color', E:'sec-e-color', F:'sec-f-color' };
   let autoSaveTimer = null;
@@ -5345,10 +5346,12 @@ window.AvaliacaoTreinoSync = (function () {
       dados.treino[sec] = exs;
       dados.titulos[sec] = getTituloSecao(sec);
     });
+    if(mainArchiveEdit)dados.archiveEditTarget={studentId:mainArchiveEdit.studentId,index:mainArchiveEdit.index};
     return dados;
   }
   function salvarDadosAluno(dados, registrarLancamento) {
     if (!dados) return false;
+    if(dados.archiveEditTarget)return salvarAnteriorPrincipal(dados);
     var aluno = buscarAluno(dados.nome);
     var agora = new Date().toISOString();
     if (aluno) {
@@ -6286,7 +6289,7 @@ window.AvaliacaoTreinoSync = (function () {
           if (favScrollMoved) return;
           var a = buscarAluno(f.nome);
           if (a) {
-            carregarTreinoAluno(a);
+            if(!carregarTreinoAluno(a))return;
             exibirMensagem('✅ Treino de ' + escHtml(a.nome) + ' carregado.', '#1e6f3f', false);
             renderizarBarraFavoritos();
             try { tab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' }); } catch(err){}
@@ -6352,7 +6355,7 @@ window.AvaliacaoTreinoSync = (function () {
     var val = document.getElementById('searchName').value;
     var nome = val.trim();
     var titulo = document.getElementById('alunoAtualTitulo');
-    titulo.textContent = nome ? 'Treino de ' + nome : '';
+    titulo.textContent = nome ? (mainArchiveEdit?'Anterior '+(mainArchiveEdit.index+1)+' · '+nome:'Treino de '+nome) : '';
     titulo.hidden = !nome;
     document.getElementById('alunoAtualCabecalho').hidden = !nome;
     var clearBtn = document.getElementById('clearNameBtn');
@@ -6362,6 +6365,7 @@ window.AvaliacaoTreinoSync = (function () {
     if(typeof sequenceTracker!=='undefined'&&sequenceTracker)sequenceTracker.refresh();
   }
   function registrarAlunoSelecionado(nome) {
+    if(mainArchiveEdit&&String(nome||'').trim()!==mainArchiveEdit.studentName){if(!sairEdicaoAnteriorPrincipal())return;}
     nome = String(nome || '').trim();
     if(appSelectionReady&&pdfReturnContext&&nome!==pdfReturnContext.name)limparContextoPDF();
     document.getElementById('searchName').value = nome;
@@ -6425,6 +6429,8 @@ window.AvaliacaoTreinoSync = (function () {
   /* ===== CARREGAR/SALVAR/APAGAR ALUNO ===== */
   function carregarTreinoAluno(aluno) {
     if (!aluno || !aluno.treino) return false;
+    if(mainArchiveEdit&&!sairEdicaoAnteriorPrincipal())return false;
+    aluno=alunos.find(function(saved){return saved.student_id===aluno.student_id;})||aluno;
     finalizarArrasteTreino(false); finalizarArrasteExercicio(false);
     garantirHistorico(aluno);
     concluirAutoSave();
@@ -6991,7 +6997,7 @@ window.AvaliacaoTreinoSync = (function () {
       function abrirAluno(item) {
           var aluno = buscarAluno(item.dataset.nome);
           if (aluno) {
-            carregarTreinoAluno(aluno);
+            if(!carregarTreinoAluno(aluno))return;
             exibirMensagem('✅ Treino de ' + escHtml(aluno.nome) + ' carregado.', '#1e6f3f', false);
           }
           modal.style.visibility = 'hidden';
@@ -7106,7 +7112,9 @@ window.AvaliacaoTreinoSync = (function () {
       if (!dstNome) return;
       concluirAutoSave();
       var ori = buscarAluno(oriNome); if (!ori) return;
+      if(mainArchiveEdit&&ori.student_id===mainArchiveEdit.studentId){var visibleArchive=capturarTreinoAtual();ori=Object.assign({},ori,{treino:visibleArchive.treino,titulos:visibleArchive.titulos,secaoFAtiva:visibleArchive.secaoFAtiva});}
       var dst = buscarAluno(dstNome);
+      if(mainArchiveEdit&&dst&&dst.student_id===mainArchiveEdit.studentId){aplicarDadosNaTela(cloneData(ori));modal.style.visibility='hidden';exibirMensagem('Treino copiado para o anterior em edição.','#1e6f3f',false);return;}
       if (dst) {
         arquivarTreino(dst);
         dst.treino = JSON.parse(JSON.stringify(ori.treino));
@@ -7210,6 +7218,7 @@ window.AvaliacaoTreinoSync = (function () {
   if (clearNameBtn) {
     clearNameBtn.addEventListener('click', function() {
       var input = document.getElementById('searchName');
+      if(mainArchiveEdit&&!sairEdicaoAnteriorPrincipal())return;
       input.value = '';
       registrarAlunoSelecionado('');
       fecharSugestoes();
@@ -8533,6 +8542,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   function salvarDadosAluno(dados, registrarLancamento) {
     if(!dados)return false;
+    if(dados.archiveEditTarget)return salvarAnteriorPrincipal(dados);
     var a=dados.student_id?alunos.find(function(x){return x.student_id===dados.student_id;}):buscarAluno(dados.nome);
     if(!a)return false;
     garantirHistorico(a);
@@ -8572,6 +8582,7 @@ window.AvaliacaoTreinoSync = (function () {
     return true;
   }
   function salvarAlunoAtual(registrarLancamento) {
+    if(mainArchiveEdit){clearTimeout(autoSaveTimer);autoSavePendente=null;var archivedSaved=salvarAnteriorPrincipal(capturarTreinoAtual());atualizarStatusSalvo(archivedSaved?'✅ Anterior salvo':'⚠️ Anterior não salvo',!archivedSaved);return;}
     if(registrarLancamento===false){concluirAutoSave();return;}
     abrirSalvarTreino(capturarTreinoAtual());
   }
@@ -8591,9 +8602,7 @@ window.AvaliacaoTreinoSync = (function () {
   function escolherSugestao(nome) {
     var a = buscarAluno(nome);
     if (!a) return;
-    searchNameInput.value = a.nome;
-    registrarAlunoSelecionado(a.nome);
-    carregarTreinoAluno(a);
+    if(!carregarTreinoAluno(a))return;
     destinoSugeridoId = null;
     destinoNomeDigitado = '';
     fecharSugestoes();
@@ -8611,22 +8620,60 @@ window.AvaliacaoTreinoSync = (function () {
     atualizarDestinoSalvamento();
     salvarAlunoAtual();
   }
+  function atualizarModoAnteriorPrincipal(){
+    if(typeof coverBadge!=='undefined'&&coverBadge){coverBadge.textContent=mainArchiveEdit?'EDITANDO ANTERIOR '+(mainArchiveEdit.index+1)+' · '+mainArchiveEdit.studentName:'Capa · Treino principal';coverBadge.classList.toggle('archive-main-warning',!!mainArchiveEdit);}
+    var back=document.getElementById('backToWorkoutCover');if(back)back.hidden=!mainArchiveEdit;
+    var save=document.getElementById('saveBtn');if(save)save.textContent=mainArchiveEdit?'💾 Salvar anterior':'💾 Salvar';
+    var input=document.getElementById('searchName');if(input)input.readOnly=!!mainArchiveEdit;var title=document.getElementById('alunoAtualTitulo');if(title&&input)title.textContent=mainArchiveEdit?'Anterior '+(mainArchiveEdit.index+1)+' · '+mainArchiveEdit.studentName:(input.value.trim()?'Treino de '+input.value.trim():'');
+    document.body.classList.toggle('editing-archived-workout',!!mainArchiveEdit);
+    ['createWorkoutBtn','createSectionWorkout','workoutValidityBtn','sequenceEnabled','deleteBtn'].forEach(function(id){var button=document.getElementById(id);if(button)button.disabled=!!mainArchiveEdit;});
+  }
+  function lembrarAnteriorPrincipal(){if(!mainArchiveEdit)return;try{sessionStorage.setItem('treinoMainArchiveEdit',JSON.stringify({studentId:mainArchiveEdit.studentId,index:mainArchiveEdit.index,workoutId:mainArchiveEdit.baseline.workout_id,signature:WorkoutHistoryTools.signature(mainArchiveEdit.baseline)}));}catch(error){}}
+  function salvarAnteriorPrincipal(dados){
+    if(!dados||!mainArchiveEdit)return false;
+    var target=dados.archiveEditTarget||{studentId:mainArchiveEdit.studentId,index:mainArchiveEdit.index};
+    if(target.studentId!==mainArchiveEdit.studentId||target.index!==mainArchiveEdit.index)return false;
+    try{
+      var records=JSON.parse(localStorage.getItem('treinoAlunos')||'[]'),owner=records.find(function(student){return student.student_id===target.studentId;}),version=owner?.historicoTreinos?.[target.index];
+      if(!version||JSON.stringify(version)!==JSON.stringify(mainArchiveEdit.baseline))throw Error('Este anterior mudou em outra janela. Copie o texto antes de reabrir; sua edição continua na tela.');
+      var unchanged=JSON.stringify([dados.treino,dados.titulos,!!dados.secaoFAtiva])===JSON.stringify([mainArchiveEdit.screenBaseline.treino,mainArchiveEdit.screenBaseline.titulos,!!mainArchiveEdit.screenBaseline.secaoFAtiva]);
+      if(unchanged)return true;
+      var now=new Date().toISOString();if(!Array.isArray(version.revisoes))version.revisoes=[];
+      if(!mainArchiveEdit.revisionStarted)version.revisoes.push({edited_at:now,treino:cloneData(version.treino),titulos:cloneData(version.titulos||{}),secaoFAtiva:!!version.secaoFAtiva});
+      var nextTraining=cloneData(version.treino||{}),nextTitles=cloneData(version.titulos||{});todasSecoes.forEach(function(sec){if(JSON.stringify(dados.treino[sec]||[])!==JSON.stringify(mainArchiveEdit.screenBaseline.treino[sec]||[]))nextTraining[sec]=cloneData(dados.treino[sec]||[]);if(dados.titulos[sec]!==mainArchiveEdit.screenBaseline.titulos[sec])nextTitles[sec]=dados.titulos[sec];});version.treino=nextTraining;version.titulos=nextTitles;version.secaoFAtiva=!!dados.secaoFAtiva;version.edited_at=now;
+      var old=alunos;alunos=records;if(!salvarLocalStorage()){alunos=old;throw Error('Não foi possível salvar este anterior. Sua edição foi mantida na tela.');}
+      mainArchiveEdit.baseline=cloneData(version);mainArchiveEdit.screenBaseline=cloneData(dados);mainArchiveEdit.revisionStarted=true;lembrarAnteriorPrincipal();return true;
+    }catch(error){exibirMensagem(error.message,'#b22222',false);atualizarStatusSalvo('⚠️ Anterior não salvo',true);return false;}
+  }
+  function sairEdicaoAnteriorPrincipal(){
+    if(!mainArchiveEdit)return true;
+    if(!salvarAnteriorPrincipal(capturarTreinoAtual())){document.getElementById('searchName').value=mainArchiveEdit.studentName;atualizarNomeTreino();return false;}
+    clearTimeout(autoSaveTimer);autoSavePendente=null;mainArchiveEdit=null;
+    if(appSelectionReady)try{sessionStorage.removeItem('treinoMainArchiveEdit');}catch(error){}
+    atualizarModoAnteriorPrincipal();return true;
+  }
   function carregarVersaoNaTela(aluno, versao) {
+    if(mainArchiveEdit&&!sairEdicaoAnteriorPrincipal())return false;
     concluirAutoSave();
-    pushState();
-    todasSecoes.forEach(function(s){
-      sections[s].innerHTML = (versao.treino[s]||[]).map(formatExerciseLine).filter(Boolean).join('');
-      setTituloSecao(s, (versao.titulos||{})[s] || s + '. TREINO');
-    });
-    setSecaoFAtiva(!!versao.secaoFAtiva, true);
-    alunoVinculadoId = aluno.student_id;
-    searchNameInput.value = aluno.nome;
-    registrarAlunoSelecionado(aluno.nome);
-    pushState();
-    fecharSugestoes();
-    if(typeof atualizarIndicadorObs === 'function') atualizarIndicadorObs();
-    var vNome = (versao.name && !versao.name.toLowerCase().startsWith('treino de ')) ? versao.name : (versao.treinoNome || 'anterior');
-    exibirMensagem('✅ Treino "' + vNome + '" de ' + aluno.nome + ' carregado na tela.', '#1e6f3f', false);
+    var index=(aluno.historicoTreinos||[]).indexOf(versao);
+    if(versao.comparison_key&&versao.comparison_key.startsWith('archive:')){try{var ref=JSON.parse(decodeURIComponent(versao.comparison_key.slice(8)));if(ref[0]===aluno.student_id)index=ref[1];}catch(error){}}
+    if(index<0)index=(aluno.historicoTreinos||[]).findIndex(function(item){return item.workout_id===versao.workout_id&&WorkoutHistoryTools.signature(item)===WorkoutHistoryTools.signature(versao);});
+    var records=JSON.parse(localStorage.getItem('treinoAlunos')||'[]'),owner=records.find(function(student){return student.student_id===aluno.student_id;}),version=owner?.historicoTreinos?.[index];
+    if(!version){exibirMensagem('Este anterior não está mais disponível. Reabra o histórico.','#b22222',false);return false;}
+    alunos=records;mainArchiveEdit={studentId:owner.student_id,studentName:owner.nome,index:index,baseline:cloneData(version),screenBaseline:null};
+    isUndoRedoAction=true;
+    todasSecoes.forEach(function(sec){sections[sec].innerHTML=(version.treino[sec]||[]).map(formatExerciseLine).filter(Boolean).join('')||'<li><span class="bold">⚠️</span> Sem exercícios</li>';setTituloSecao(sec,(version.titulos||{})[sec]||sec+'. TREINO');});
+    setSecaoFAtiva(!!version.secaoFAtiva,true);alunoVinculadoId=owner.student_id;registrarAlunoSelecionado(owner.nome);isUndoRedoAction=false;
+    mainArchiveEdit.screenBaseline=cloneData(capturarTreinoAtual());initHistory();atualizarModoAnteriorPrincipal();lembrarAnteriorPrincipal();fecharSugestoes();if(sectionDisplay)sectionDisplay.refresh();agendarAlcasPrincipais();
+    exibirMensagem('Editando Anterior '+(index+1)+' de '+owner.nome+'. O botão Salvar altera apenas este anterior.','#916313',false);return true;
+  }
+  function restaurarAnteriorPrincipal(){
+    var saved=mainArchiveRestore;mainArchiveRestore=null;if(!saved)return;
+    var owner=alunos.find(function(student){return student.student_id===saved.studentId;});if(!owner){try{sessionStorage.removeItem('treinoMainArchiveEdit');}catch(error){}return;}
+    var history=owner.historicoTreinos||[],matches=history.map(function(version,index){return {version,index};}).filter(function(item){return saved.workoutId&&item.version.workout_id===saved.workoutId;});
+    var item=matches.length===1?matches[0]:{version:history[saved.index],index:saved.index};
+    if(!item.version||(matches.length!==1&&WorkoutHistoryTools.signature(item.version)!==saved.signature)){try{sessionStorage.removeItem('treinoMainArchiveEdit');}catch(error){}return;}
+    carregarVersaoNaTela(owner,Object.assign(cloneData(item.version),{comparison_key:chaveAnteriorComparacao(owner,item.index)}));
   }
 
   function mostrarSugestoes() {
@@ -8670,7 +8717,7 @@ window.AvaliacaoTreinoSync = (function () {
         hist.forEach(function(v, idx) {
           var vNome = (v.name && !v.name.toLowerCase().startsWith('treino de ')) ? v.name : (v.treinoNome || ('Anterior ' + (hist.length - idx)));
           var vData = v.archived_at ? new Date(v.archived_at).toLocaleDateString('pt-BR') : '';
-          html += '<div class="name-suggestion-subitem" data-student-id="' + escAttr(a.student_id) + '" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history" role="button" tabindex="0" title="Carregar: ' + escAttr(vNome) + '">' +
+          html += '<div class="name-suggestion-subitem" data-student-id="' + escAttr(a.student_id) + '" data-history-index="'+(hist.length-idx-1)+'" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history" role="button" tabindex="0" title="Carregar: ' + escAttr(vNome) + '">' +
             '<div class="sub-name">↳ <span class="sub-badge anterior">◷ Ant ' + (hist.length - idx) + '</span> <span>' + escHtml(vNome) + (vData ? ' <small style="color:#94a3b8;">(' + vData + ')</small>' : '') + '</span></div>' +
             '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history">Carregar</button>' +
           '</div>';
@@ -8704,7 +8751,7 @@ window.AvaliacaoTreinoSync = (function () {
           escolherSugestao(a.nome);
         } else {
           var wId = item.dataset.workoutId;
-          var v = (a.historicoTreinos || []).find(function(x) { return x.workout_id === wId; });
+          var v=item.dataset.historyIndex!==undefined?(a.historicoTreinos||[])[Number(item.dataset.historyIndex)]:(a.historicoTreinos||[]).find(function(x){return x.workout_id===wId;});
           if (v) {
             carregarVersaoNaTela(a, v);
           }
@@ -8720,6 +8767,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   searchNameInput.addEventListener('input',function(){destinoSugeridoId=null;destinoNomeDigitado='';atualizarDestinoSalvamento();});
   function abrirSalvarTreino(dados,callback,workoutName) {
+    if(mainArchiveEdit){return salvarAnteriorPrincipal(dados||capturarTreinoAtual());}
     concluirAutoSave();
     var typed=searchNameInput.value.trim();
     if(!dados||!typed){exibirMensagem('Digite o nome da pessoa para salvar.','#b22222',false);searchNameInput.focus();return false;}
@@ -8847,6 +8895,7 @@ window.AvaliacaoTreinoSync = (function () {
       select.selectedIndex = 0;
     }
 
+    if(mainArchiveEdit&&historyStudent&&historyStudent.student_id===mainArchiveEdit.studentId&&!q){var activeOption=Array.from(select.options).find(function(option){return option.dataset.historyStudent===mainArchiveEdit.studentId&&Number(option.dataset.historyIndex)===mainArchiveEdit.index;});if(activeOption)select.selectedIndex=Array.from(select.options).indexOf(activeOption);}
     var hasOptions = select.options.length > 0;
     var btnCompare = document.getElementById('compareSelectedVersion');
     if (btnCompare) btnCompare.disabled = !hasOptions;
@@ -8961,6 +9010,7 @@ window.AvaliacaoTreinoSync = (function () {
     var res = versaoSelecionadaHistorico();
     if (res && res.workout) {
       document.getElementById('historyVersionText').textContent = textoTreino(res.workout, historyScope);
+      if(typeof editHistoryTextButton!=='undefined'&&editHistoryTextButton)editHistoryTextButton.hidden=!!res.isCapa;
       var stNome = res.student ? res.student.nome : (historyStudent ? historyStudent.nome : '');
       var versionIndex=select.selectedOptions[0]?.dataset.historyIndex!==undefined?Number(select.selectedOptions[0].dataset.historyIndex):(res.student.historicoTreinos||[]).findIndex(function(v){return v.workout_id===res.workout.workout_id;});
       var rotulo=res.isCapa?'CAPA ATUAL':('Anterior '+(versionIndex+1)+' · arquivado');
@@ -8974,7 +9024,7 @@ window.AvaliacaoTreinoSync = (function () {
       document.getElementById('historyStudentName').textContent = stNome + ' · ' + rotulo + (historyScope ? ' · Seção ' + historyScope : '');
       var btnCompare = document.getElementById('compareSelectedVersion'); if (btnCompare) btnCompare.disabled = false;
       document.getElementById('promoteHistoryVersion').disabled=!!res.isCapa;document.getElementById('deleteHistoryVersion').disabled=false;var duplicates=repetidosDoTreino(res);document.getElementById('historyDuplicateStatus').textContent=duplicates.length?'Conteúdo repetido neste aluno: '+duplicates.map(function(item){return item.label;}).join(' · '):'Nenhum outro treino com conteúdo igual neste aluno. A comparação ignora apenas formatação, maiúsculas, acentos e espaços.';
-      var eb = document.getElementById('editHistoryVersion'); if (eb) { eb.disabled = false; eb.textContent = res.isCapa ? 'Editar Capa' : 'Editar anterior'; }
+      var eb = document.getElementById('editHistoryVersion'); if (eb) { eb.disabled = false; eb.textContent = res.isCapa ? 'Editar Capa' : 'Editar anterior na tela'; }
     } else {
       var v = historyStudent && Array.isArray(historyStudent.historicoTreinos) ? historyStudent.historicoTreinos.find(function(x){return x.workout_id===select.value;}) : null;
       document.getElementById('historyVersionText').textContent = v ? textoTreino(v, historyScope) : 'Treino não encontrado.';
@@ -9093,12 +9143,12 @@ window.AvaliacaoTreinoSync = (function () {
     historyLoadScreenBtn.onclick = function() {
       var select = document.getElementById('historyVersion');
       var val = select ? select.value : '';
-      var res = (typeof resolverTreinoComparacao === 'function' && val) ? resolverTreinoComparacao(val) : null;
+      var res = versaoSelecionadaHistorico();
       if (res && res.student && res.workout) {
         if (res.isCapa) {
           carregarTreinoAluno(res.student);
         } else {
-          carregarVersaoNaTela(res.student, res.workout);
+          if(!carregarVersaoNaTela(res.student, res.workout))return;
         }
         document.getElementById('searchName').value = res.student.nome;
         fecharSugestoes();
@@ -10685,6 +10735,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('compareLabels').after(compareTools);compareTools.after(compareHeader);
   var previousPickerUI=CompareVersionPicker.mount(document.getElementById('comparePreviousPicker'));
   CompareLayout.mount(compareDialog);
+  var editComparedOnMain=document.createElement('button');editComparedOnMain.type='button';editComparedOnMain.id='editComparedPreviousOnMain';editComparedOnMain.textContent='Editar anterior na tela';document.getElementById('comparePreviousPicker').after(editComparedOnMain);editComparedOnMain.onclick=function(){var res=resolverTreinoComparacao(document.getElementById('comparePreviousPicker').value);if(res&&!res.isCapa&&carregarVersaoNaTela(res.student,res.workout)){compareDialog.close();if(historyDialog.open)historyDialog.close();}};
   var compareApply=document.createElement('button');compareApply.id='applyCompareEdit';compareApply.className='primary';compareApply.textContent='Aplicar alterações';compareDialog.querySelector('.dialog-actions').prepend(compareApply);
   function estadoComparacao(){return JSON.stringify({current:compareContext.current,previous:compareContext.previous});}
   function rotuloVersao(v,index){return WorkoutHistoryTools.versionLabel(v,index);}
@@ -11087,7 +11138,7 @@ window.AvaliacaoTreinoSync = (function () {
       if(JSON.stringify([draft.treino,draft.titulos,!!draft.secaoFAtiva])===JSON.stringify([baseline.treino,baseline.titulos||{},!!baseline.secaoFAtiva]))return false;
       var now=new Date().toISOString();if(!Array.isArray(version.revisoes))version.revisoes=[];version.revisoes.push({edited_at:now,treino:cloneData(version.treino),titulos:cloneData(version.titulos||{}),secaoFAtiva:!!version.secaoFAtiva});version.treino=cloneData(draft.treino);version.titulos=cloneData(draft.titulos);version.secaoFAtiva=!!draft.secaoFAtiva;version.edited_at=now;
       var previousRecords=alunos;alunos=latest;if(!salvarLocalStorage()){alunos=previousRecords;throw Error('Não foi possível salvar. Seu rascunho foi mantido; a versão anterior permanece salva.');}
-      historyStudent=target;atualizarVersoesHistorico('');var select=document.getElementById('historyVersion'),selected=Array.from(select.options).find(function(item){return item.dataset.historyStudent===studentId&&Number(item.dataset.historyIndex)===index;});if(selected)select.selectedIndex=Array.from(select.options).indexOf(selected);renderVersao();document.getElementById('historyPromotionStatus').textContent='Anterior '+(index+1)+' salvo. A capa atual foi mantida.';return true;
+      historyStudent=target;atualizarVersoesHistorico('');var select=document.getElementById('historyVersion'),selected=Array.from(select.options).find(function(item){return item.dataset.historyStudent===studentId&&Number(item.dataset.historyIndex)===index;});if(selected)select.selectedIndex=Array.from(select.options).indexOf(selected);renderVersao();document.getElementById('historyPromotionStatus').textContent='Anterior '+(index+1)+' salvo. A capa atual foi mantida.';if(mainArchiveEdit&&mainArchiveEdit.studentId===studentId&&mainArchiveEdit.index===index){clearTimeout(autoSaveTimer);autoSavePendente=null;mainArchiveEdit=null;carregarVersaoNaTela(target,Object.assign(cloneData(version),{comparison_key:chaveAnteriorComparacao(target,index)}));}return true;
     }});
   }
   // O histórico fica acessível tanto por Anteriores quanto pelo seletor do comparativo.
@@ -11098,7 +11149,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (!select || !select.value) return;
     var res = versaoSelecionadaHistorico();
     if (!res || !res.workout) return;
-    if(!res.isCapa){editarAnteriorCompleto(res);return;}
+    if(!res.isCapa){if(carregarVersaoNaTela(res.student,res.workout))historyDialog.close();return;}
     var targetStudent = historyStudent || res.student || alunoNaTela();
     var currentWorkout = targetStudent ? snapshotAluno(targetStudent) : res.workout;
     var rotuloRight = res.isCapa ? ('Capa (' + res.student.nome + ')') : (res.workout.name || 'Anterior');
@@ -11109,6 +11160,7 @@ window.AvaliacaoTreinoSync = (function () {
     compareEditing = true;
     atualizarLadoEditavel();
   };
+  var editHistoryTextButton=document.createElement('button');editHistoryTextButton.id='editHistoryTextVersion';editHistoryTextButton.textContent='Editar texto / Cola';historyDialog.querySelector('.dialog-actions').prepend(editHistoryTextButton);editHistoryTextButton.onclick=function(){var res=versaoSelecionadaHistorico();if(res&&!res.isCapa)editarAnteriorCompleto(res);};
   var originalOpenHistory=abrirHistorico;
   abrirHistorico=function(scope,compare,alunoAlvo){
     originalOpenHistory(scope,compare,alunoAlvo);
@@ -11117,6 +11169,7 @@ window.AvaliacaoTreinoSync = (function () {
   };
   var coverBadge=document.createElement('span');coverBadge.className='cover-badge';coverBadge.textContent='Capa · Treino principal';
   document.querySelector('.workout-tools').prepend(coverBadge);
+  var backToCover=document.createElement('button');backToCover.id='backToWorkoutCover';backToCover.type='button';backToCover.textContent='↩ Voltar à capa';backToCover.hidden=true;coverBadge.after(backToCover);backToCover.onclick=function(){var id=mainArchiveEdit&&mainArchiveEdit.studentId;if(!id)return;if(!sairEdicaoAnteriorPrincipal())return;var owner=alunos.find(function(student){return student.student_id===id;});if(owner)carregarTreinoAluno(owner);};atualizarModoAnteriorPrincipal();
 
   /* Biblioteca de treinos prontos: referência recebida, atuais e históricos. */
   var libraryItems=[],librarySelected=null;
@@ -11501,6 +11554,7 @@ window.AvaliacaoTreinoSync = (function () {
   else if (alunos.length) carregarTreinoAluno(alunos[0]);
   else registrarAlunoSelecionado('');
   restaurarContextoPDF(true);
+  restaurarAnteriorPrincipal();
   appSelectionReady=true;
 
   initHistory();

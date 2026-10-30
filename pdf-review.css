@@ -22,3 +22,7 @@
 #compareWorkoutsDialog .compare-selection-controls{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;margin:5px 0;font:12px Arial;color:#29465a}#compareWorkoutsDialog .compare-selection-controls button{border:1px solid #b6d6c4;border-radius:7px;padding:8px 10px;background:#e6f3eb;color:#1e6f3f;font:bold 12px Arial;cursor:pointer}#pdfReviewTools .pdf-link-options button{border:1px solid #b6d6c4;border-radius:7px;padding:7px 9px;background:#e6f3eb;color:#1e6f3f;font:12px Arial;cursor:pointer}
 
 #pdfReviewTools #pdfStartOnly[aria-pressed=true]{background:#1e6f3f;border-color:#1e6f3f;color:white}
+
+.cover-badge.archive-main-warning{display:block!important;flex-basis:100%;width:100%;box-sizing:border-box;padding:9px;background:#fff2cf;border:1px solid #ddb75c;border-radius:7px;color:#775317;font-weight:bold}#backToWorkoutCover{background:#fff2cf;color:#775317;border:1px solid #ddb75c;padding:7px;border-radius:6px}#backToWorkoutCover[hidden]{display:none!important}#editComparedPreviousOnMain{border:1px solid #d6b867;border-radius:6px;padding:7px;background:#fff2cf;color:#775317;font:12px Arial}body.editing-archived-workout .workout-sequence{display:none!important}
+
+.cover-badge.archive-main-warning{font-size:12px;line-height:1.4;overflow-wrap:anywhere}body.editing-archived-workout #deleteBtn:disabled{opacity:.4;cursor:default}

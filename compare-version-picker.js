@@ -20,7 +20,7 @@ window.CompareVersionPicker={mount(select){
     }
     if(!count){const empty=document.createElement('p');empty.textContent='Nenhum treino encontrado.';list.append(empty);}
   }
-  function sync(){select.hidden=true;selected.textContent=select.selectedOptions[0]?.textContent||'Selecione um treino';button.hidden=!!select.dataset.suggestion;button.disabled=select.options.length===0;}
+  function sync(){select.hidden=true;selected.textContent=select.selectedOptions[0]?.textContent||'Selecione um treino';button.hidden=!!select.dataset.suggestion;button.disabled=select.options.length===0;const edit=document.getElementById('editComparedPreviousOnMain');if(edit){edit.disabled=!select.value.startsWith('archive:');edit.hidden=!!select.dataset.suggestion;}}
   dialog.addEventListener('close',()=>{button.setAttribute('aria-expanded','false');button.focus({preventScroll:true});});button.onclick=()=>{search.value='';render();dialog.showModal();button.setAttribute('aria-expanded','true');title.focus({preventScroll:true});};search.oninput=render;sync();return {sync};
 }};
 
