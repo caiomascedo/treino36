@@ -1,0 +1,10 @@
+.cmfit-count-compact{display:block;border:1px solid #d7e6df;border-radius:8px;background:#f1f7f4;color:#1e6f3f;padding:7px 10px;margin:0 0 12px;font-size:.78rem;cursor:pointer}
+#cmfitCollectionDialog{max-height:85dvh;overflow:auto}
+#cmfitCollectionDialog .cmfit-total{font-weight:700;color:#1e6f3f}
+.cmfit-collection-description{font-size:.8rem;color:#56636e}
+.cmfit-collection-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.cmfit-collection-groups a{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #dde6e1;border-radius:8px;padding:9px;color:#243a4d;text-decoration:none;font-size:.78rem;overflow-wrap:anywhere}
+.cmfit-group-count{flex-shrink:0;font-weight:700;color:#1e6f3f}
+.cmfit-collection-open{display:inline-flex;align-items:center;padding:8px 10px;background:#1e6f3f;color:white;border-radius:8px;text-decoration:none;font-size:.8rem}
+@media(max-width:360px){.cmfit-collection-groups{grid-template-columns:1fr}}
+@media print{#cmfitCollectionBtn,#generatorCmfitCount,#cmfitCollectionDialog{display:none!important}}
