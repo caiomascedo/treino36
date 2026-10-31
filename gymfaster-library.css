@@ -7,3 +7,6 @@
 .search-bar > #gymfasterWorkoutABtn{grid-column:span 4;background:#1e6f3f;color:white}
 
 #gymfasterLibrary .gym-motion{display:block;width:100%;height:min(26vh,220px);object-fit:contain;background:white}
+
+.search-bar > #cmfitWorkoutABtn{grid-column:span 4;background:#142319;color:#8dffb9}
+.search-bar > #pdfBtn,.search-bar > #cmfitWorkoutABtn{grid-column:span 3}

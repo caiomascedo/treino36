@@ -72,7 +72,7 @@ window.GymFasterLibrary = (() => {
   async function open(options) {
     if (!controls) controls = create();
     previousFocus = document.activeElement; selection = options || null;
-    controls.help.textContent = options ? 'Escolha o vídeo de “' + options.name + '”. A escolha fica salva neste exercício. ' + (options.context === 'gif' ? 'O movimento aparecerá na ficha em GIF.' : 'O PDF abre o vídeo por link.') : 'Explore a coleção. Para montar a ficha animada do aluno, use o botão GIF · GymFaster ao lado do PDF.';
+    controls.help.textContent = options ? 'Escolha o vídeo de “' + options.name + '”. A escolha fica salva neste exercício. ' + (options.context === 'gif' ? 'O movimento aparecerá na ficha em GIF.' : 'O PDF abre o vídeo por link.') : 'Explore a coleção. Para montar a ficha animada do aluno, use os botões GIF CM e GIF Gym ao lado do PDF.';
     controls.search.value = options ? options.name : ''; controls.group.value = ''; controls.gender.value = '';
     controls.status.textContent = 'Carregando catálogo…';
     dialog.querySelector('.gym-results').replaceChildren();
@@ -123,10 +123,12 @@ window.GymFasterLibrary = (() => {
     if (!menu) return;
     const library = el('button', {type: 'button', id: 'gymfasterCollectionBtn'}, '🎞 GymFaster · 534 vídeos');
     library.onclick = () => { document.getElementById('moreOptions').open = false; open(); };
-    const start = el('button', {type: 'button', id: 'gymfasterWorkoutABtn'}, '🎞 GIF · GymFaster');
-    start.onclick = () => { document.getElementById('moreOptions').open = false; GymFasterWorkout.open(); };
+    const start = el('button', {type: 'button', id: 'gymfasterWorkoutABtn'}, '🎞 GIF Gym');
+    start.onclick = () => { document.getElementById('moreOptions').open = false; GymFasterWorkout.open('gymfaster'); };
     menu.append(library);
-    document.getElementById('pdfBtn').after(start);
+    const cm = el('button', {type:'button',id:'cmfitWorkoutABtn'}, '🎞 GIF CM');
+    cm.onclick = () => GymFasterWorkout.open('cm');
+    document.getElementById('pdfBtn').after(cm, start);
   });
   return {open, addChoice, prepareA};
 })();
