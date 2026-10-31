@@ -5,3 +5,5 @@
 #pdfReviewTools .gym-selected{flex-basis:100%;color:#1e6f3f;overflow-wrap:anywhere}#pdfReviewTools .gym-selected:empty{display:none}
 
 .search-bar > #gymfasterWorkoutABtn{grid-column:span 4;background:#1e6f3f;color:white}
+
+#gymfasterLibrary .gym-motion{display:block;width:100%;height:min(26vh,220px);object-fit:contain;background:white}
