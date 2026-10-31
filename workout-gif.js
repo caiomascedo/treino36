@@ -1,234 +1,122 @@
 window.GymFasterWorkout = (() => {
   'use strict';
-  let integration, dialog, controls, catalog, workout, selected, cards = [], worker, busy = false, cancelled = false, generation = 0, layoutHeader = 175, file, blobURL;
-  const DURATION = 5, FPS = 20, WIDTH = 800, CARD = 270, HEADER = 175;
-  const node = (tag, attrs = {}, text) => {
-    const item = document.createElement(tag);
-    for (const [key, value] of Object.entries(attrs)) item.setAttribute(key, value);
-    if (text !== undefined) item.textContent = text;
-    return item;
-  };
-  const normalized = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  function configure(options) { integration = options; }
-  function clearResult() {
-    file = null;
-    if (blobURL) URL.revokeObjectURL(blobURL);
-    blobURL = null;
-    controls.result.replaceChildren(); controls.result.hidden = true;
-    controls.share.hidden = true; controls.download.hidden = true;
+  const WIDTH=800,CARD=270,HEADER=175,FRAMES=100,SLOT_W=350,SLOT_H=242;
+  const themes={cm:{name:'CM',bg:'#050906',card:'#0a110d',ink:'#f3faf5',green:'#3aeb91'},gymfaster:{name:'GymFaster',bg:'#eff5f1',card:'#fff',ink:'#1b3428',green:'#176b43'}};
+  let integration,dialog,controls,videos=[],catalogPromise,workout,selected,cards=[],mode='gymfaster',file,blobURL,observer,job=null,sequence=0,layoutHeader=HEADER,focusReturn;
+  const match=()=>window.WorkoutVideoMatch;
+  const node=(tag,attrs={},text)=>{const item=document.createElement(tag);Object.entries(attrs).forEach(([key,value])=>item.setAttribute(key,value));if(text!==undefined)item.textContent=text;return item;};
+  const prefKey='treinoGifChoicesV1';
+  function preferences(){try{return JSON.parse(localStorage.getItem(prefKey)||'{}')||{};}catch(error){return {};}}
+  function choiceKey(name){return mode+':'+match().canonical(name);}
+  function remember(name,asset){try{const prefs=preferences();prefs[choiceKey(name)]=asset.id;localStorage.setItem(prefKey,JSON.stringify(prefs));}catch(error){}}
+  function configure(options){integration=options;}
+  function clearResult(){file=null;if(blobURL)URL.revokeObjectURL(blobURL);blobURL=null;controls.result.replaceChildren();controls.result.hidden=true;controls.share.hidden=true;controls.download.hidden=true;}
+  function cancel(){if(!job)return;job.cancelled=true;job.abort.abort();job.worker?.terminate();if(job.decoder){job.decoder.pause();job.decoder.removeAttribute('src');job.decoder.load();}}
+  function disposeCards(){observer?.disconnect();cards.forEach(card=>{card.video.pause();card.video.removeAttribute('src');card.video.load();if(card.localURL)URL.revokeObjectURL(card.localURL);});cards=[];}
+  function create(){
+    dialog=node('dialog',{id:'workoutGifDialog','aria-labelledby':'workoutGifTitle'});
+    const heading=node('h3',{id:'workoutGifTitle'}),help=node('p',{},'Monte a ficha com movimentos do corpo inteiro. O GIF repete por 5 segundos e pode ser baixado ou compartilhado.'),student=node('strong',{class:'gif-student'});
+    const library=node('select',{'aria-label':'Biblioteca dos GIFs'});library.append(node('option',{value:'cm'},'CM · traços brancos e músculos verdes'),node('option',{value:'gymfaster'},'GymFaster · modelo anatômico'));
+    const section=node('select',{'aria-label':'Treino para o GIF'}),status=node('p',{role:'status','aria-live':'polite'}),list=node('div',{class:'gif-cards'}),result=node('div',{class:'gif-result',hidden:''});
+    const accept=node('button',{type:'button',class:'gif-accept-suggestions',hidden:''},'Usar sugestões mostradas');
+    const actions=node('div',{class:'gif-actions'}),generate=node('button',{type:'button',class:'gif-primary'}),share=node('button',{type:'button',hidden:''},'Compartilhar GIF'),download=node('button',{type:'button',hidden:''},'Baixar GIF'),stop=node('button',{type:'button',hidden:''},'Cancelar geração'),close=node('button',{type:'button'},'Fechar');
+    actions.append(generate,share,download,stop,close);dialog.append(heading,help,student,library,section,status,accept,list,result,actions);document.body.append(dialog);
+    controls={heading,student,library,section,status,list,result,accept,generate,share,download,stop};
+    library.onchange=()=>{mode=library.value;render();};section.onchange=()=>{selected=workout.sections.find(s=>s.id===section.value);render();};
+    accept.onclick=()=>{cards.filter(c=>!c.asset&&c.suggestions.length).forEach(c=>selectAsset(c,c.suggestions[0]));readiness();};
+    generate.onclick=generateGIF;stop.onclick=cancel;close.onclick=()=>dialog.close();
+    dialog.addEventListener('close',()=>{sequence++;cancel();disposeCards();clearResult();if(focusReturn?.isConnected)focusReturn.focus();});
+    download.onclick=()=>{if(!file||!blobURL)return;const link=node('a',{href:blobURL,download:file.name});document.body.append(link);link.click();link.remove();};
+    share.onclick=async()=>{if(!file)return;try{if(navigator.canShare?.({files:[file]}))await navigator.share({files:[file],title:'Treino '+selected.id+' · '+themes[mode].name});else{controls.status.textContent='Baixe o GIF e anexe a imagem na conversa do aluno.';download.click();}}catch(error){if(error.name!=='AbortError')controls.status.textContent='Não foi possível compartilhar. Use Baixar GIF e anexe a imagem na conversa.';}};
   }
-  function create() {
-    dialog = node('dialog', {id: 'workoutGifDialog', 'aria-labelledby': 'workoutGifTitle'});
-    const heading = node('h3', {id: 'workoutGifTitle'}, 'Treino em GIF · GymFaster');
-    const help = node('p', {}, 'Confira os vídeos na ficha e gere um único GIF animado para enviar. Duração: 5 segundos em repetição.');
-    const section = node('select', {'aria-label': 'Treino para o GIF'});
-    const student = node('strong', {class: 'gif-student'});
-    const status = node('p', {role: 'status', 'aria-live': 'polite'});
-    const list = node('div', {class: 'gif-cards'}), result = node('div', {class: 'gif-result', hidden: ''});
-    const actions = node('div', {class: 'gif-actions'});
-    const generate = node('button', {type: 'button', class: 'gif-primary'}, 'Gerar GIF animado');
-    const share = node('button', {type: 'button', hidden: ''}, 'Compartilhar GIF');
-    const download = node('button', {type: 'button', hidden: ''}, 'Baixar GIF');
-    const cancel = node('button', {type: 'button', hidden: ''}, 'Cancelar geração');
-    const close = node('button', {type: 'button'}, 'Fechar');
-    actions.append(generate, share, download, cancel, close);
-    dialog.append(heading, help, student, section, status, list, result, actions);
-    document.body.append(dialog);
-    controls = {section, student, status, list, result, generate, share, download, cancel};
-    section.onchange = () => { selected = workout.sections.find(s => s.id === section.value); render(); };
-    generate.onclick = generateGIF;
-    cancel.onclick = () => { cancelled = true; stopWorker(); };
-    close.onclick = () => dialog.close();
-    dialog.addEventListener('close', () => {
-      cancelled = true; generation++; stopWorker(); setBusy(false);
-      cards.forEach(card => { card.video.pause(); card.video.removeAttribute('src'); card.video.load(); if (card.localURL) URL.revokeObjectURL(card.localURL); });
-      cards = []; clearResult();
-      document.getElementById('gymfasterWorkoutABtn')?.focus();
-    });
-    download.onclick = () => {
-      if (!file || !blobURL) return;
-      const link = node('a', {href: blobURL, download: file.name}); document.body.append(link); link.click(); link.remove();
-    };
-    share.onclick = async () => {
-      if (!file) return;
-      try {
-        if (navigator.canShare?.({files: [file]})) await navigator.share({files: [file], title: 'Treino ' + selected.id});
-        else { controls.status.textContent = 'Baixe o GIF e anexe a imagem na conversa do aluno.'; download.click(); }
-      } catch (error) { if (error.name !== 'AbortError') controls.status.textContent = 'Não foi possível compartilhar. Use Baixar GIF e anexe a imagem na conversa.'; }
-    };
+  function setBusy(busy){controls.library.disabled=busy;controls.section.disabled=busy;controls.generate.disabled=busy||!cards.length;controls.accept.disabled=busy;controls.stop.hidden=!busy;cards.forEach(c=>{c.choose.disabled=busy;c.upload.disabled=busy;c.suggestionBox.querySelectorAll('button').forEach(b=>b.disabled=busy);});}
+  function readiness(){
+    if(job)return;
+    const missing=cards.filter(c=>!c.asset),ready=cards.length-missing.length,suggested=missing.filter(c=>c.suggestions.length).length;
+    controls.generate.disabled=!cards.length;
+    controls.generate.textContent=missing.length?'Revisar '+missing.length+' exercício'+(missing.length>1?'s':''):'Gerar GIF '+themes[mode].name;
+    controls.accept.hidden=!suggested;controls.accept.textContent='Usar sugestões mostradas ('+suggested+')';
+    controls.status.textContent=cards.length?ready+'/'+cards.length+' demonstrações prontas. '+(missing.length?'Confira as sugestões destacadas; combinações foram separadas mantendo os blocos do treino.':'Confira os movimentos e gere o GIF.'): 'Este treino está vazio. Adicione os exercícios na ficha.';
   }
-  function exactVideo(row) {
-    if (row.video) {
-      try { const url = new URL(row.video); const id = url.hostname === 'drive.google.com' && (url.pathname.match(/\/file\/d\/([^/]+)/)?.[1] || url.searchParams.get('id')); return catalog.videos.find(video => video.id === id) || null; }
-      catch (error) { return null; }
-    }
-    const name = normalized(row.nome);
-    return catalog.videos.find(video => video.gender === 'Feminino' && normalized(video.name) === name) || null;
+  function assetURL(asset){return asset.localURL||asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';}
+  function playVisible(card){if(card.visible&&card.asset&&!job){if(!card.video.getAttribute('src'))card.video.src=assetURL(card.asset);card.video.play().catch(()=>{});}else card.video.pause();}
+  function setVideo(card,asset,reason){
+    if(card.localURL&&card.localURL!==asset?.localURL)URL.revokeObjectURL(card.localURL);
+    card.localURL=asset?.localURL||null;card.asset=asset;
+    card.video.pause();card.video.removeAttribute('src');card.video.load();card.video.hidden=!asset;
+    card.article.classList.toggle('gif-missing',!asset);
+    card.caption.textContent=asset?asset.name+' · '+(asset.localURL?'Arquivo local · reenvie ao reabrir a ficha':themes[asset.collection].name)+(reason?' · '+reason:''):'Escolha a demonstração deste exercício.';
+    card.suggestionBox.hidden=!!asset;playVisible(card);clearResult();
   }
-  function setVideo(card, video) {
-    if (card.localURL && card.localURL !== video?.localURL) URL.revokeObjectURL(card.localURL);
-    card.localURL = video?.localURL || null; card.asset = video;
-    card.video.pause(); card.video.removeAttribute('src');
-    card.caption.textContent = video ? video.name + ' · ' + (video.localURL ? 'Arquivo local · reenvie ao reabrir a ficha' : video.gender) : 'Escolha a demonstração para este exercício.';
-    card.video.hidden = !video;
-    if (video) { card.video.src = video.localURL || 'gymfaster-media/' + video.id + '.mp4'; card.video.load(); card.video.play().catch(() => {}); }
-    clearResult();
+  function selectAsset(card,asset){
+    remember(card.row.nome,asset);
+    if(!card.row.compound){integration.save(card.row.source,asset.url,workout.student);card.row.video=asset.url;}
+    setVideo(card,asset,'Escolhido por você');readiness();
   }
-  function render() {
-    clearResult();
-    cards.forEach(card => { card.video.pause(); card.video.removeAttribute('src'); card.video.load(); if (card.localURL) URL.revokeObjectURL(card.localURL); });
-    cards = []; controls.list.replaceChildren();
-    controls.student.textContent = workout.student + ' · ' + (selected?.title || 'Treino');
-    if (!selected?.rows.length) { controls.status.textContent = 'Este treino está vazio. Adicione os exercícios na ficha.'; controls.generate.disabled = true; return; }
-    controls.generate.disabled = false;
-    controls.status.textContent = 'Confira a variação de cada exercício. As sugestões com nome idêntico aparecem na ficha; escolha os vídeos que faltam.';
-    selected.rows.forEach((row, index) => {
-      const article = node('article', {class: 'gif-card'}), text = node('div', {class: 'gif-card-text'});
-      const name = node('strong', {}, (index + 1) + '. ' + row.nome), details = node('p', {}, row.detalhes), caption = node('small');
-      const choose = node('button', {type: 'button'}, 'Escolher vídeo GymFaster');
-      const video = node('video', {muted: '', playsinline: '', loop: '', preload: 'metadata', 'aria-label': 'Demonstração de ' + row.nome});
-      video.muted = true;
-      const upload = node('button', {type: 'button'}, 'Vídeo do aparelho'), input = node('input', {type: 'file', accept: 'video/*', hidden: '', 'aria-label': 'Arquivo de vídeo de ' + row.nome});
-      const card = {row, video, caption, choose, upload, asset: null, localURL: null};
-      upload.onclick = () => input.click();
-      input.onchange = () => {
-        const file = input.files?.[0]; if (!file || busy) return;
-        if (!file.type.startsWith('video/') || file.size > 100 * 1048576) { controls.status.textContent = 'Escolha um arquivo de vídeo de até 100 MB.'; input.value = ''; return; }
-        setVideo(card, {name: file.name, localURL: URL.createObjectURL(file)});
-        controls.status.textContent = 'Vídeo do aparelho adicionado só para este GIF. O link salvo no treino foi mantido. Reenvie o arquivo ao reabrir a ficha.';
-      };
-      video.onerror = () => { if (card.asset) { caption.textContent = 'Não foi possível carregar ' + card.asset.name + '. Verifique a internet e tente escolher o vídeo novamente.'; } };
-      choose.onclick = () => GymFasterLibrary.open({name: row.nome, context: 'gif', apply(asset) {
-        if (!dialog.open || busy) return;
-        integration.save(row.source, asset.url, workout.student);
-        row.video = asset.url; setVideo(card, asset);
-      }});
-      text.append(name, details, caption, choose, upload, input); article.append(text, video); controls.list.append(article); cards.push(card);
-      setVideo(card, exactVideo(row));
-    });
+  function expandedRows(){return selected.rows.flatMap((row,index)=>{const parts=match().parts(row.nome),reps=row.detalhes.replace(/^[\s—–-]+/,'').match(/^(\s*\d+\s*[x×])\s*([\d\s–-]+)\+([\d\s–-]+)$/i);return parts.map((name,part)=>({...row,nome:name,video:parts.length===1?row.video:'',compound:parts.length>1?row.nome:null,label:String(index+1)+(parts.length>1?String.fromCharCode(97+part):''),detalhes:parts.length===2&&reps?reps[1]+' '+reps[part+2].trim():row.detalhes}));});}
+  function render(){
+    if(job)return;
+    clearResult();disposeCards();controls.list.replaceChildren();dialog.dataset.library=mode;controls.library.value=mode;controls.heading.textContent='Treino em GIF · '+themes[mode].name;controls.student.textContent=workout.student+' · '+(selected?.title||'Treino');
+    if(!selected){readiness();return;}
+    observer=new IntersectionObserver(entries=>entries.forEach(entry=>{const card=cards.find(c=>c.article===entry.target);if(card){card.visible=entry.isIntersecting;playVisible(card);}}),{root:dialog,rootMargin:'30px'});
+    const prefs=preferences();
+    expandedRows().forEach(row=>{
+      const article=node('article',{class:'gif-card'}),text=node('div',{class:'gif-card-text'}),name=node('strong',{},row.label+'. '+row.nome),details=node('p',{},row.detalhes),caption=node('small'),suggestionBox=node('div',{class:'gif-suggestions'}),choose=node('button',{type:'button'},'Escolher outro vídeo'),upload=node('button',{type:'button'},'Vídeo do aparelho'),input=node('input',{type:'file',accept:'video/*',hidden:'','aria-label':'Arquivo de vídeo de '+row.nome});
+      const video=node('video',{muted:'',playsinline:'',loop:'',preload:'none','aria-label':'Demonstração de '+row.nome});video.muted=true;
+      const resolution=match().resolve(row,videos,mode,prefs[choiceKey(row.nome)]),card={row,article,video,caption,choose,upload,suggestionBox,suggestions:resolution.suggestions,asset:null,localURL:null,visible:false};
+      if(row.compound)text.append(node('small',{class:'gif-block'},'Bloco '+row.label.replace(/[a-z]$/,'')+' · '+row.compound));
+      resolution.suggestions.forEach(asset=>{const button=node('button',{type:'button'},'Usar '+themes[asset.collection].name+': '+asset.name);button.onclick=()=>selectAsset(card,asset);suggestionBox.append(button);});
+      choose.onclick=()=>openPicker(card);
+      upload.onclick=()=>input.click();input.onchange=()=>{const chosen=input.files?.[0];if(!chosen||job)return;if((!chosen.type.startsWith('video/')&&!/\.(mp4|m4v|mov|webm)$/i.test(chosen.name))||chosen.size>100*1048576){controls.status.textContent='Escolha um vídeo de até 100 MB.';return;}setVideo(card,{name:chosen.name,collection:mode,localURL:URL.createObjectURL(chosen)},'Usado somente neste GIF');readiness();};
+      video.onerror=()=>{if(card.asset&&!job)card.caption.textContent='A prévia não carregou. Você pode tentar Gerar GIF para carregar a demonstração novamente.';};
+      text.append(name,details,caption,suggestionBox,choose,upload,input);article.append(text,video);controls.list.append(article);cards.push(card);setVideo(card,resolution.video,resolution.reason);observer.observe(article);
+    });readiness();
   }
-  async function open() {
-    if (!integration) return;
-    if (!dialog) create();
-    workout = integration.read();
-    controls.section.replaceChildren();
-    workout.sections.forEach(section => controls.section.append(node('option', {value: section.id}, section.title)));
-    selected = workout.sections.find(section => section.id === 'A') || workout.sections[0];
-    controls.section.value = selected?.id || '';
-    if (!dialog.open) dialog.showModal();
-    controls.status.textContent = 'Carregando os vídeos para o GIF…';
-    try {
-      if (!catalog) { const response = await fetch('gymfaster-catalog.json?v=1'); if (!response.ok) throw Error('Catálogo indisponível'); catalog = await response.json(); }
-      if (dialog.open) render();
-    } catch (error) { controls.status.textContent = 'Não foi possível carregar o catálogo. Feche e tente novamente.'; }
+  function openPicker(card){
+    const picker=node('dialog',{class:'gif-video-picker','aria-label':'Escolher vídeo para '+card.row.nome}),title=node('h3',{},card.row.nome),search=node('input',{type:'search','aria-label':'Buscar demonstração',placeholder:'Nome, aparelho ou abreviação'}),library=node('select',{'aria-label':'Biblioteca da demonstração'}),list=node('div',{class:'gif-picker-results'}),close=node('button',{type:'button'},'Fechar');
+    library.append(node('option',{value:mode},themes[mode].name),node('option',{value:mode==='cm'?'gymfaster':'cm'},themes[mode==='cm'?'gymfaster':'cm'].name));search.value=card.row.nome;
+    function update(){list.replaceChildren();const pool=videos.filter(v=>v.collection===library.value),query=search.value.trim(),ranked=query?match().rank(query,pool,library.value).map(r=>r.video):pool;const found=ranked.length?ranked:pool.filter(v=>match().canonical(v.name).includes(match().canonical(query)));if(!found.length)list.append(node('p',{},'Tente menos palavras ou use um vídeo do aparelho.'));found.slice(0,80).forEach(asset=>{const button=node('button',{type:'button'},asset.name+' · '+(asset.gender==='CM'?'CM':asset.gender));button.onclick=()=>{selectAsset(card,asset);picker.close();};list.append(button);});}
+    search.oninput=update;library.onchange=update;close.onclick=()=>picker.close();picker.append(title,search,library,list,close);document.body.append(picker);picker.onclose=()=>picker.remove();update();picker.showModal();
   }
-  function stopWorker() { if (worker) { worker.terminate(); worker = null; } }
-  function setBusy(value) {
-    busy = value; controls.generate.disabled = value; controls.section.disabled = value;
-    controls.cancel.hidden = !value; cards.forEach(card => { card.choose.disabled = value; card.upload.disabled = value; });
+  async function loadCatalogs(){if(!catalogPromise)catalogPromise=Promise.all(['cmfit-catalog.json?v=1','gymfaster-catalog.json?v=1'].map(async url=>{const response=await fetch(url);if(!response.ok)throw Error('Catálogo indisponível');return response.json();})).then(([cm,gym])=>videos=[...cm.videos.map(v=>({...v,collection:'cm'})),...gym.videos.map(v=>({...v,collection:'gymfaster'}))]).catch(error=>{catalogPromise=null;throw error;});return catalogPromise;}
+  async function open(library='gymfaster'){
+    if(!integration||job)return;if(!dialog)create();const token=++sequence;focusReturn=document.activeElement;mode=themes[library]?library:'gymfaster';workout=integration.read();controls.section.replaceChildren();workout.sections.forEach(s=>controls.section.append(node('option',{value:s.id},s.title)));selected=workout.sections.find(s=>s.id==='A')||workout.sections[0];controls.section.value=selected?.id||'';controls.generate.disabled=true;if(!dialog.open)dialog.showModal();controls.status.textContent='Carregando as bibliotecas CM e GymFaster…';
+    try{await loadCatalogs();if(dialog.open&&token===sequence)render();}catch(error){controls.status.textContent='Não foi possível carregar as bibliotecas. Feche e tente novamente.';}
   }
-  function waitForVideo(video) {
-    if (video.error) return Promise.reject(Error('Não foi possível carregar uma demonstração. Escolha o vídeo novamente.'));
-    if (video.readyState >= 2 && Number.isFinite(video.duration)) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(Error('O vídeo não carregou. Confira a internet e tente novamente.')), 20000);
-      const cancellation = setInterval(() => { if (cancelled) finish(Error('Geração cancelada.')); }, 100);
-      const loaded = () => finish(); const failed = () => finish(Error('Não foi possível carregar uma demonstração. Escolha o vídeo novamente.'));
-      function finish(error) { clearTimeout(timer); clearInterval(cancellation); video.removeEventListener('loadeddata', loaded); video.removeEventListener('error', failed); error ? reject(error) : resolve(); }
-      video.addEventListener('loadeddata', loaded, {once: true}); video.addEventListener('error', failed, {once: true});
-    });
-  }
-  function seek(video, time) {
-    if (Math.abs(video.currentTime - time) < 0.001 && video.readyState >= 2) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(Error('A leitura de um vídeo demorou demais. Tente novamente.')), 10000);
-      const done = () => finish(Math.abs(video.currentTime - time) > 0.08 ? Error('Não foi possível ler o movimento deste vídeo. Confira a internet e tente novamente.') : null);
-      function finish(error) { clearTimeout(timer); video.removeEventListener('seeked', done); error ? reject(error) : resolve(); }
-      video.addEventListener('seeked', done, {once: true}); video.currentTime = time;
-    });
-  }
-  function send(data, transfers = []) {
-    const target = worker;
-    return new Promise((resolve, reject) => {
-      const timer = setInterval(() => { if (cancelled || worker !== target) finish(Error('Geração cancelada.')); }, 100);
-      const response = event => event.data.type === 'error' ? finish(Error(event.data.message)) : finish(null, event.data);
-      const fail = () => finish(Error('Não foi possível gerar o GIF neste navegador.'));
-      function finish(error, value) { clearInterval(timer); target.removeEventListener('message', response); target.removeEventListener('error', fail); error ? reject(error) : resolve(value); }
-      target.addEventListener('message', response); target.addEventListener('error', fail); target.postMessage(data, transfers);
-    });
-  }
-  function wrap(ctx, text, x, y, width, lineHeight) {
-    let line = '';
-    for (const word of text.split(/\s+/)) {
-      const next = line ? line + ' ' + word : word;
-      if (ctx.measureText(next).width > width && line) { ctx.fillText(line, x, y); y += lineHeight; line = word; } else line = next;
-    }
-    if (line) ctx.fillText(line, x, y);
-    return y + lineHeight;
-  }
-  function lineCount(ctx, text, width) {
-    let lines = 1, line = '';
-    for (const word of text.split(/\s+/)) { const next = line ? line + ' ' + word : word; if (ctx.measureText(next).width > width && line) { lines++; line = word; } else line = next; }
-    return lines;
-  }
-  function layout(ctx) {
-    ctx.font = 'bold 29px Arial'; layoutHeader = Math.max(HEADER, 88 + lineCount(ctx, selected.title, 744) * 32 + 55);
-    let top = layoutHeader;
-    cards.forEach((card, index) => {
-      ctx.font = 'bold 23px Arial'; const names = lineCount(ctx, (index + 1) + '. ' + card.row.nome, 358);
-      ctx.font = '20px Arial'; const details = lineCount(ctx, card.row.detalhes, 358);
-      card.top = top; card.height = Math.max(CARD, Math.max(38 + names * 28 + 13, 120) + details * 26 + 25); top += card.height;
-    });
-    return top + 50;
-  }
-  function paint(ctx, canvas) {
-    ctx.fillStyle = '#eff5f1'; ctx.fillRect(0, 0, WIDTH, canvas.height);
-    ctx.fillStyle = '#176b43'; ctx.fillRect(0, 0, WIDTH, 7); ctx.font = 'bold 23px Arial'; ctx.fillText('CAIO MACÊDO · PERSONAL TRAINER', 28, 43);
-    ctx.fillStyle = '#1b3428'; ctx.font = 'bold 29px Arial'; wrap(ctx, selected.title, 28, 88, 744, 32);
-    ctx.font = '19px Arial'; ctx.fillText(workout.student.slice(0, 65), 28, layoutHeader - 29);
-    cards.forEach((card, index) => {
-      const top = card.top;
-      ctx.fillStyle = '#fff'; ctx.fillRect(20, top, 760, card.height - 12);
-      ctx.fillStyle = '#1b3428'; ctx.font = 'bold 23px Arial';
-      const next = wrap(ctx, (index + 1) + '. ' + card.row.nome, 36, top + 38, 358, 28);
-      ctx.fillStyle = '#176b43'; ctx.font = '20px Arial'; wrap(ctx, card.row.detalhes, 36, Math.max(next + 13, top + 120), 358, 26);
-      const video = card.video, scale = Math.min(350 / video.videoWidth, 242 / video.videoHeight);
-      const width = video.videoWidth * scale, height = video.videoHeight * scale;
-      ctx.drawImage(video, 410 + (350 - width) / 2, top + 5 + (242 - height) / 2, width, height);
-    });
-    ctx.fillStyle = '#176b43'; ctx.font = '17px Arial'; ctx.fillText((cards.some(card => card.localURL) ? 'Demonstrações escolhidas · Treino ' : 'Demonstrações GymFaster · Treino ') + selected.id, 28, canvas.height - 20);
-  }
-  async function generateGIF() {
-    if (busy || !cards.length) return;
-    if (cards.some(card => !card.asset)) { controls.status.textContent = 'Escolha um vídeo para cada exercício antes de gerar o GIF. Nenhuma variação será substituída automaticamente.'; return; }
-    if (cards.length > 20) { controls.status.textContent = 'Use até 20 exercícios por GIF. Divida esta seção para gerar as fichas.'; return; }
-    clearResult(); setBusy(true); cancelled = false; const token = ++generation;
-    try {
-      controls.status.textContent = 'Carregando as demonstrações…';
-      cards.forEach(card => card.video.pause());
-      await Promise.all(cards.map(card => waitForVideo(card.video)));
-      if (cancelled || token !== generation) throw Error('Geração cancelada.');
-      const canvas = document.createElement('canvas'); canvas.width = WIDTH; canvas.height = HEADER + cards.length * CARD + 50;
-      const ctx = canvas.getContext('2d', {willReadFrequently: true}); const height = layout(ctx); if (height > 12000) throw Error('Esta ficha ficou muito longa. Divida o treino ou reduza o texto para gerar o GIF.'); canvas.height = height; worker = new Worker('workout-gif-worker.js?v=1');
-      for (let frame = 0; frame < DURATION * FPS; frame++) {
-        if (cancelled || token !== generation) throw Error('Geração cancelada.');
-        await Promise.all(cards.map(card => seek(card.video, Math.max(0.001, frame / (DURATION * FPS) * card.video.duration))));
-        if (cancelled || token !== generation) throw Error('Geração cancelada.');
-        paint(ctx, canvas);
-        const pixels = ctx.getImageData(0, 0, WIDTH, canvas.height).data.buffer;
-        await send({type: 'frame', width: WIDTH, height: canvas.height, pixels}, [pixels]);
-        controls.status.textContent = 'Gerando GIF: ' + (frame + 1) + '%';
+  function check(active){if(active.cancelled||active!==job||!dialog.open)throw Error('Geração cancelada.');}
+  function mediaEvent(video,event,active,action){return new Promise((resolve,reject)=>{let settled=false;const timeout=setTimeout(()=>finish(Error('Não foi possível ler o vídeo. Confira a conexão e tente novamente.')),15000),poll=setInterval(()=>{try{check(active);}catch(error){finish(error);}},100);const done=()=>finish(),failed=()=>{console.warn('GIF decoder',active.currentName,video.error?.code,video.error?.message);finish(Error('Não foi possível ler '+(active.currentName||'esta demonstração')+'. Escolha outro vídeo ou um arquivo MP4.'));};function finish(error){if(settled)return;settled=true;clearTimeout(timeout);clearInterval(poll);video.removeEventListener(event,done);video.removeEventListener('error',failed);error?reject(error):resolve();}video.addEventListener(event,done,{once:true});video.addEventListener('error',failed,{once:true});try{action();}catch(error){finish(error);}});}
+  async function loadDecoder(url,active){const video=active.decoder;await mediaEvent(video,'loadeddata',active,()=>{video.src=url;video.preload='auto';video.load();});if(!Number.isFinite(video.duration)||video.duration<=0)throw Error('A duração de um vídeo não foi reconhecida. Escolha outro arquivo.');return video;}
+  async function seek(video,time,active){check(active);if(Math.abs(video.currentTime-time)>0.0001||video.readyState<2)await mediaEvent(video,'seeked',active,()=>{video.currentTime=time;});check(active);if(Math.abs(video.currentTime-time)>0.08)throw Error('Não foi possível avançar o movimento. Tente novamente.');await new Promise(resolve=>requestAnimationFrame(resolve));check(active);}
+  function send(active,data,transfers=[]){return new Promise((resolve,reject)=>{let settled=false;const target=active.worker,timeout=setTimeout(()=>finish(Error('A geração demorou demais. Tente um treino menor.')),120000),poll=setInterval(()=>{try{check(active);}catch(error){finish(error);}},100);const response=event=>{if(event.data.type==='progress'){controls.status.textContent='Finalizando GIF: '+event.data.percent+'%';return;}event.data.type==='error'?finish(Error(event.data.message)):finish(null,event.data);},failed=()=>finish(Error('Não foi possível iniciar o gerador. Recarregue o treino36 e tente novamente.'));function finish(error,value){if(settled)return;settled=true;clearTimeout(timeout);clearInterval(poll);target.removeEventListener('message',response);target.removeEventListener('error',failed);error?reject(error):resolve(value);}target.addEventListener('message',response);target.addEventListener('error',failed);target.postMessage(data,transfers);});}
+  function wrap(ctx,text,x,y,width,step){let line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){ctx.fillText(line,x,y);y+=step;line=word;}else line=next;}if(line)ctx.fillText(line,x,y);return y+step;}
+  function lineCount(ctx,text,width){let n=1,line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){n++;line=word;}else line=next;}return n;}
+  function layout(ctx){ctx.font='bold 29px Arial';layoutHeader=Math.max(HEADER,88+lineCount(ctx,selected.title,744)*32+55);let top=layoutHeader;cards.forEach(c=>{ctx.font='bold 23px Arial';const names=lineCount(ctx,c.row.label+'. '+c.row.nome,358);ctx.font='20px Arial';c.top=top;c.height=Math.max(CARD,Math.max(38+names*28+13,120)+lineCount(ctx,c.row.detalhes,358)*26+25);top+=c.height;});return top+50;}
+  function paint(ctx,canvas){const t=themes[mode];ctx.fillStyle=t.bg;ctx.fillRect(0,0,WIDTH,canvas.height);ctx.fillStyle=t.green;ctx.fillRect(0,0,WIDTH,7);ctx.font='bold 23px Arial';ctx.fillText('CAIO MACÊDO · PERSONAL TRAINER',28,43);ctx.fillStyle=t.ink;ctx.font='bold 29px Arial';wrap(ctx,selected.title,28,88,744,32);ctx.font='19px Arial';ctx.fillText(workout.student.slice(0,65),28,layoutHeader-29);cards.forEach(c=>{ctx.fillStyle=t.card;ctx.fillRect(20,c.top,760,c.height-12);ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';const y=wrap(ctx,c.row.label+'. '+c.row.nome,36,c.top+38,358,28);ctx.fillStyle=t.green;ctx.font='20px Arial';wrap(ctx,c.row.detalhes,36,Math.max(y+13,c.top+120),358,26);});ctx.fillStyle=t.green;ctx.font='17px Arial';const sources=new Set(cards.map(c=>c.asset.localURL?'arquivo local':themes[c.asset.collection].name));ctx.fillText('Demonstrações '+[...sources].join(' + ')+' · Treino '+selected.id,28,canvas.height-20);}
+  function drawSlot(ctx,video,asset){ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,SLOT_W,SLOT_H);const scale=Math.min(SLOT_W/video.videoWidth,SLOT_H/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;ctx.drawImage(video,(SLOT_W-w)/2,(SLOT_H-h)/2,w,h);}
+  async function generateGIF(){
+    if(job||!cards.length)return;const missing=cards.filter(c=>!c.asset);if(missing.length){controls.status.textContent='Falta confirmar: '+missing.map(c=>c.row.nome).join(', ')+'. Toque numa sugestão ou escolha um vídeo.';missing[0].article.scrollIntoView({block:'center'});return;}if(cards.length>20){controls.status.textContent='Use até 20 demonstrações por GIF. Divida esta seção.';return;}
+    clearResult();const active={cancelled:false,abort:new AbortController(),worker:null,decoder:node('video',{muted:'',playsinline:'',preload:'auto','aria-hidden':'true',class:'gif-decoder'}),urls:[]};active.decoder.muted=true;job=active;dialog.append(active.decoder);setBusy(true);cards.forEach(c=>{c.video.pause();c.video.removeAttribute('src');c.video.load();});
+    try{
+      const canvas=document.createElement('canvas');canvas.width=WIDTH;const ctx=canvas.getContext('2d',{willReadFrequently:true}),height=layout(ctx);if(height>12000)throw Error('A ficha ficou muito longa. Divida o treino para gerar o GIF.');canvas.height=height;paint(ctx,canvas);const base=ctx.getImageData(0,0,WIDTH,height).data.buffer;
+      const slot=document.createElement('canvas');slot.width=SLOT_W;slot.height=SLOT_H;const sc=slot.getContext('2d',{willReadFrequently:true});const unique=new Map();cards.forEach(c=>{c.key=assetURL(c.asset);if(!unique.has(c.key))unique.set(c.key,{asset:c.asset,key:c.key,url:null});});
+      let index=0;
+      for(const item of unique.values()){
+        check(active);controls.status.textContent='Carregando movimento '+(++index)+'/'+unique.size+'…';
+        const timer=setTimeout(()=>active.abort.abort(),60000);let response;try{response=await fetch(item.key,{signal:active.abort.signal,cache:'force-cache'});if(!response.ok)throw Error('Não foi possível carregar '+item.asset.name+'. Tente novamente.');const blob=await response.blob();item.url=URL.createObjectURL(blob);active.urls.push(item.url);}finally{clearTimeout(timer);}
+        active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);await seek(video,0.001,active);drawSlot(sc,video,item.asset);cards.filter(c=>c.key===item.key).forEach(c=>ctx.drawImage(slot,410,c.top+5));
       }
-      const result = await send({type: 'finish'});
-      if (cancelled || token !== generation || !dialog.open) return;
-      file = new File([result.bytes], 'treino_' + selected.id + '_' + workout.student.slice(0, 80).replace(/[^a-z0-9áéíóúâêôãõç_-]+/gi, '_') + '.gif', {type: 'image/gif'});
-      blobURL = URL.createObjectURL(file);
-      controls.result.replaceChildren(node('img', {src: blobURL, alt: 'Treino ' + selected.id + ' com exercícios em movimento'})); controls.result.hidden = false;
-      controls.share.hidden = false; controls.download.hidden = false;
-      controls.status.textContent = 'GIF pronto · 5 segundos · ' + (file.size / 1048576).toFixed(1) + ' MB. Confira abaixo e compartilhe a imagem.';
-      controls.result.scrollIntoView({block: 'start'});
-    } catch (error) { if (dialog.open && token === generation) controls.status.textContent = error.message || 'Não foi possível gerar o GIF. Tente novamente.'; }
-    finally { if (token === generation) { stopWorker(); setBusy(false); if (dialog.open) cards.forEach(card => card.video.play().catch(() => {})); } }
+      check(active);const sample=ctx.getImageData(0,0,WIDTH,height).data.buffer;active.worker=new Worker('workout-gif-worker.js?v=2');await send(active,{type:'init',width:WIDTH,height,count:FRAMES,base,sample,slots:cards.map(c=>({key:c.key,x:410,y:c.top+5,width:SLOT_W,height:SLOT_H}))},[base,sample]);
+      index=0;
+      for(const item of unique.values()){
+        active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);
+        for(let frame=0;frame<FRAMES;frame++){
+          await seek(video,Math.max(0.001,frame/FRAMES*video.duration),active);drawSlot(sc,video,item.asset);const pixels=sc.getImageData(0,0,SLOT_W,SLOT_H).data.buffer;await send(active,{type:'cache',key:item.key,frame,pixels},[pixels]);controls.status.textContent='Preparando movimento '+(index+1)+'/'+unique.size+' · '+Math.round((index*FRAMES+frame+1)/(unique.size*FRAMES)*85)+'%';
+        }index++;
+      }
+      controls.status.textContent='Finalizando GIF…';const result=await send(active,{type:'finish'});check(active);
+      file=new File([result.bytes],'treino_'+selected.id+'_'+mode+'_'+workout.student.slice(0,80).replace(/[^a-z0-9áéíóúâêôãõç_-]+/gi,'_')+'.gif',{type:'image/gif'});blobURL=URL.createObjectURL(file);controls.result.replaceChildren(node('img',{src:blobURL,alt:'Treino '+selected.id+' · '+themes[mode].name+' em movimento'}));controls.result.hidden=false;controls.share.hidden=false;controls.download.hidden=false;controls.status.textContent='GIF pronto · '+themes[mode].name+' · 5 segundos · '+(file.size/1048576).toFixed(1)+' MB. Confira e compartilhe.';controls.result.scrollIntoView({block:'start'});
+    }catch(error){if(dialog.open&&job===active)controls.status.textContent=active.cancelled?'Geração cancelada. Você pode tentar novamente.':error.name==='AbortError'?'O carregamento demorou demais. Verifique a conexão e tente novamente.':error.message||'Não foi possível gerar o GIF. Tente novamente.';}
+    finally{active.worker?.terminate();active.decoder.pause();active.decoder.removeAttribute('src');active.decoder.load();active.decoder.remove();active.urls.forEach(url=>URL.revokeObjectURL(url));if(job===active){job=null;setBusy(false);if(dialog.open)cards.forEach(playVisible);}}
   }
-  return {configure, open};
+  return {configure,open};
 })();
