@@ -119,9 +119,10 @@ window.GymFasterLibrary = (() => {
     if (!menu) return;
     const library = el('button', {type: 'button', id: 'gymfasterCollectionBtn'}, '🎞 GymFaster · 534 vídeos');
     library.onclick = () => { document.getElementById('moreOptions').open = false; open(); };
-    const start = el('button', {type: 'button', id: 'gymfasterWorkoutABtn'}, '📤 Treino A · vídeos GymFaster');
+    const start = el('button', {type: 'button', id: 'gymfasterWorkoutABtn'}, '🎞 GymFaster');
     start.onclick = () => { document.getElementById('moreOptions').open = false; document.getElementById('pdfBtn').click(); prepareA(); };
-    menu.append(library, start);
+    menu.append(library);
+    document.getElementById('pdfBtn').after(start);
   });
   return {open, addChoice, prepareA};
 })();
