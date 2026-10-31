@@ -22,6 +22,9 @@
 <script src="storage-adapter.js?v=24"></script>
 <script src="storage-photo-manager.js?v=1" defer></script>
 <script src="storage-space.js?v=3" defer></script>
+<script src="cmfit-library-summary.js?v=1"></script>
+<link rel="stylesheet" href="cmfit-library-summary.css?v=1">
+<script id="cmfitCollectionData" type="application/json">{"updatedAt":"2026-10-31","folderUrl":"https://drive.google.com/drive/folders/1zaymUl0xLnAHPWkrIu8SXmpe94yUBI-O","groups":[{"name":"Abdômen e core","count":42,"folderUrl":"https://drive.google.com/drive/folders/1jZwRlUiWpEnipTvh5lH6-S6SjVSN5i-b"},{"name":"Adutores","count":4,"folderUrl":"https://drive.google.com/drive/folders/1JdVxDnVniFh5o6uDa_wCdq6wRmr4fuF5"},{"name":"Antebraços e pegada","count":4,"folderUrl":"https://drive.google.com/drive/folders/114fpv7PV1LFY-t1_Nwf6ii25cIW8SyAp"},{"name":"Bíceps","count":10,"folderUrl":"https://drive.google.com/drive/folders/1JztmoZVQRcC1LFHmIZlx3lHYPfmufN9B"},{"name":"Cardio e corpo inteiro","count":24,"folderUrl":"https://drive.google.com/drive/folders/18rk6YbYzpWdQnh0swyS_JnjvPnUY3NIi"},{"name":"Costas e lombar","count":41,"folderUrl":"https://drive.google.com/drive/folders/1aB8FNz1aA0HKX_CRTQ0neWi-3Ciu_Mb-"},{"name":"Glúteos","count":34,"folderUrl":"https://drive.google.com/drive/folders/1fPr8rayySwDiE61ztC2GY6ZGqGBxBG8a"},{"name":"Mobilidade e alongamentos","count":14,"folderUrl":"https://drive.google.com/drive/folders/1yJ06riNbkX9YPSk7PF_gHtu4FHslALzI"},{"name":"Ombros","count":26,"folderUrl":"https://drive.google.com/drive/folders/188zbHjZ2xSXst0F-SuEXiA6YSK3bT66S"},{"name":"Panturrilhas","count":6,"folderUrl":"https://drive.google.com/drive/folders/1rURrSnmM4E03rHCHfrSp7fG6LmNRjtAY"},{"name":"Peitoral","count":27,"folderUrl":"https://drive.google.com/drive/folders/1kRIwL-HBNfyQxdG-VtUtZn7YUkXVz77C"},{"name":"Posteriores de coxa","count":19,"folderUrl":"https://drive.google.com/drive/folders/1qSzcLVRkEYxUno7Cbju4VvlU76LjxtJQ"},{"name":"Quadríceps","count":38,"folderUrl":"https://drive.google.com/drive/folders/1fcHVPXmvU4effOMDdSJal35J86TKMY8d"},{"name":"Trapézio","count":2,"folderUrl":"https://drive.google.com/drive/folders/1sTG4JDpTWw4yAJW3x5bQdswZIbqp5lM3"},{"name":"Tríceps","count":18,"folderUrl":"https://drive.google.com/drive/folders/1WWjlmCw3kkNGFNdh38ANZaNMwK1Cd7NI"}]}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Treinos do Caio</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -9239,6 +9242,10 @@ window.AvaliacaoTreinoSync = (function () {
     '<p id="generatorStatus" role="status"></p><div id="generatorPreview" hidden><label for="generatorText">Confira e edite o treino</label><textarea id="generatorText"></textarea>'+
     '<p id="generatorCoverHint"></p><div class="dialog-actions"><button id="compareGenerated">Comparar com a capa</button><button id="activateGenerated" class="primary">Usar como capa</button></div></div>'+
     '<div class="dialog-actions"><button data-close>Fechar</button></div>');
+  if(window.CMFitLibrarySummary){
+    var cmfitCatalog=JSON.parse(document.getElementById('cmfitCollectionData').textContent);
+    CMFitLibrarySummary.mount({catalog:cmfitCatalog,createDialog:criarDialogo,menu:document.querySelector('#moreOptions .more-options-menu'),moreOptions:document.getElementById('moreOptions'),generator:generatorDialog});
+  }
   function limparPreviaGerador(){generatorPrepared=null;generatorTargetId=null;document.getElementById('generatorPreview').hidden=true;document.getElementById('generatorText').value='';document.getElementById('generatorStatus').textContent='Escolha o treino e a pessoa, depois toque em Gerar sugestão.';}
   function abrirGerador(scope){
     concluirAutoSave();generatorScope=scope||null;generatorOriginal=null;limparPreviaGerador();generatorSources=[];
