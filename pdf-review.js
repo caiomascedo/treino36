@@ -47,8 +47,12 @@ window.WorkoutPDFReview=(()=>{
       const entry={input,link,title,row,custom:'',valid:true};entries.push(entry);
       function update(){const exercise=title.textContent.trim()||original;name.textContent=number+'. '+exercise;search.href='https://www.youtube.com/results?search_query='+encodeURIComponent(exercise+' academia como fazer');try{entry.custom=videoURL(input.value);entry.valid=true;input.setCustomValidity('');const tracked=makeURL(exercise,entry.custom,row.dataset.sectionTitle);link.href=tracking.value==='direct'?directVideoURL(tracked):tracked;status.textContent='';}catch(error){entry.valid=false;input.setCustomValidity(error.message);status.textContent=error.message+' Corrija o campo ou toque em Automático.';}}
       function remember(){update();if(!entry.valid)return;if(onVideoChange)onVideoChange(row,entry.custom);}
-      paste.onclick=async()=>{try{input.value=await navigator.clipboard.readText();remember();}catch(error){videos.open=true;group.panel.open=true;input.focus();status.textContent='Toque e segure no campo para colar o link; o navegador não liberou a colagem rápida.';}};
-      entry.update=update;input.oninput=remember;reset.onclick=()=>{input.value='';remember();};title.addEventListener('input',update);update();
+      paste.onclick=async()=>{try{input.value=await navigator.clipboard.readText();input.dispatchEvent(new Event('input',{bubbles:true}));}catch(error){videos.open=true;group.panel.open=true;input.focus();status.textContent='Toque e segure no campo para colar o link; o navegador não liberou a colagem rápida.';}};
+      entry.update=update;input.oninput=remember;reset.onclick=()=>{input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));};title.addEventListener('input',update);update();
+    }
+    if(window.GymFasterLibrary){
+      for(const entry of entries)GymFasterLibrary.addChoice({item:entry.input.closest(".pdf-video-choice"),input:entry.input,title:entry.title});
+      const prepare=node("button",{type:"button",class:"gym-prepare-a"},"Preparar treino A · GymFaster");prepare.onclick=()=>GymFasterLibrary.prepareA();tools.prepend(prepare);
     }
     applyModel();applyLinkOptions();
     current={finish,validate(){if(!sectionInputs.some(input=>input.checked)){status.textContent='Selecione pelo menos uma seção para gerar o PDF.';sectionBox.scrollIntoView({block:'nearest'});return false;}const invalid=includeVideos.checked&&entries.find(entry=>!entry.valid&&!entry.row.closest('.pdf-sec').hidden);if(invalid){videos.open=true;invalid.input.closest('.pdf-video-section').open=true;invalid.input.reportValidity();invalid.input.focus();return false;}finish();return true;}};
