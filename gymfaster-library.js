@@ -34,12 +34,13 @@ window.GymFasterLibrary = (() => {
     const status = el('p', {role: 'status'}), list = el('div', {class: 'gym-results'});
     const preview = el('div', {class: 'gym-preview', hidden: ''});
     const close = el('button', {type: 'button', class: 'gym-close'}, 'Fechar');
+    function clearPreview() { preview.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('src'); video.load(); }); preview.replaceChildren(); preview.hidden = true; }
     close.onclick = () => dialog.close();
     dialog.append(heading, help, search, filters, status, preview, list, close);
     document.body.append(dialog);
-    dialog.addEventListener('close', () => { preview.replaceChildren(); preview.hidden = true; selection = null; if (previousFocus?.isConnected) previousFocus.focus(); });
+    dialog.addEventListener('close', () => { clearPreview(); selection = null; if (previousFocus?.isConnected) previousFocus.focus(); });
     function render() {
-      list.replaceChildren(); preview.replaceChildren(); preview.hidden = true;
+      list.replaceChildren(); clearPreview();
       if (!catalog) return;
       const words = normalize(search.value).split(' ').filter(Boolean);
       const matches = catalog.videos.filter(video => (!group.value || video.group === group.value) && (!gender.value || video.gender === gender.value) && words.every(word => normalize(video.name).includes(word)));
@@ -49,8 +50,11 @@ window.GymFasterLibrary = (() => {
         const actions = el('div', {class: 'gym-actions'}), watch = el('button', {type: 'button'}, 'Ver movimento');
         const original = el('a', {href: video.url, target: '_blank', rel: 'noopener noreferrer'}, 'Abrir no Drive');
         watch.onclick = () => {
-          preview.replaceChildren(el('strong', {}, video.name + ' · ' + video.gender), el('iframe', {src: 'https://drive.google.com/file/d/' + video.id + '/preview', title: video.name, allow: 'fullscreen', allowfullscreen: ''}));
+          clearPreview();
+          const motion = selection?.context === 'gif' ? el('video', {src: 'gymfaster-media/' + video.id + '.mp4', controls: '', loop: '', playsinline: '', muted: '', class: 'gym-motion', 'aria-label': video.name}) : el('iframe', {src: 'https://drive.google.com/file/d/' + video.id + '/preview', title: video.name, allow: 'fullscreen', allowfullscreen: ''});
+          preview.replaceChildren(el('strong', {}, video.name + ' · ' + video.gender), motion);
           preview.hidden = false; preview.scrollIntoView({block: 'nearest'});
+          if (motion.tagName === 'VIDEO') { motion.muted = true; motion.play().catch(() => {}); }
         };
         actions.append(watch, original);
         if (selection) {
@@ -68,7 +72,7 @@ window.GymFasterLibrary = (() => {
   async function open(options) {
     if (!controls) controls = create();
     previousFocus = document.activeElement; selection = options || null;
-    controls.help.textContent = options ? 'Escolha o vídeo de “' + options.name + '”. A escolha fica salva neste exercício. O PDF abre o vídeo por link.' : 'Explore a coleção. Para vincular os vídeos ao aluno, abra PDF → Vídeos → GymFaster em cada exercício.';
+    controls.help.textContent = options ? 'Escolha o vídeo de “' + options.name + '”. A escolha fica salva neste exercício. ' + (options.context === 'gif' ? 'O movimento aparecerá na ficha em GIF.' : 'O PDF abre o vídeo por link.') : 'Explore a coleção. Para montar a ficha animada do aluno, use o botão GIF · GymFaster ao lado do PDF.';
     controls.search.value = options ? options.name : ''; controls.group.value = ''; controls.gender.value = '';
     controls.status.textContent = 'Carregando catálogo…';
     dialog.querySelector('.gym-results').replaceChildren();
@@ -119,8 +123,8 @@ window.GymFasterLibrary = (() => {
     if (!menu) return;
     const library = el('button', {type: 'button', id: 'gymfasterCollectionBtn'}, '🎞 GymFaster · 534 vídeos');
     library.onclick = () => { document.getElementById('moreOptions').open = false; open(); };
-    const start = el('button', {type: 'button', id: 'gymfasterWorkoutABtn'}, '🎞 GymFaster');
-    start.onclick = () => { document.getElementById('moreOptions').open = false; document.getElementById('pdfBtn').click(); prepareA(); };
+    const start = el('button', {type: 'button', id: 'gymfasterWorkoutABtn'}, '🎞 GIF · GymFaster');
+    start.onclick = () => { document.getElementById('moreOptions').open = false; GymFasterWorkout.open(); };
     menu.append(library);
     document.getElementById('pdfBtn').after(start);
   });

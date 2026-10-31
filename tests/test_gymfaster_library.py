@@ -29,7 +29,7 @@ with sync_playwright() as p:
     page.goto('http://gym.test/');page.evaluate('TreinoStorage.ready')
     seed=[{'student_id':'gym-one','nome':'Teste Gym','treino':{'A':['Cadeira extensora — 3×12','Glúteo na polia — 3×12 [Vídeo: https://example.com/meu-video]'],'B':['Remada — 4×10']},'titulos':{'A':'A. Pernas','B':'B. Costas'}}]
     page.evaluate('(data)=>localStorage.setItem("treinoAlunos",JSON.stringify(data))',seed);page.reload()
-    page.locator('#moreOptions > summary').click();page.locator('#gymfasterWorkoutABtn').click()
+    page.locator('#pdfBtn').click();page.get_by_role('button',name='Preparar treino A · GymFaster',exact=True).click()
     expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
     expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_attribute('data-pdf-section','A')
     choices=page.locator('.pdf-video-choice');expect(choices.nth(1).locator('input')).to_have_value('https://example.com/meu-video')
@@ -87,7 +87,7 @@ with sync_playwright() as p:
     dialog.get_by_role('button',name='Fechar',exact=True).click()
     # An absent A must not hide another available section.
     page.evaluate("()=>{const people=JSON.parse(localStorage.getItem('treinoAlunos'));people[0].treino.A=[];localStorage.setItem('treinoAlunos',JSON.stringify(people));}")
-    page.reload();page.locator('#moreOptions > summary').click();page.locator('#gymfasterWorkoutABtn').click()
+    page.reload();page.locator('#pdfBtn').click();page.get_by_role('button',name='Preparar treino A · GymFaster',exact=True).click()
     expect(page.locator('#pdfReviewTools [role=status]')).to_contain_text('treino A está vazio')
     expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
     assert not errors,errors
