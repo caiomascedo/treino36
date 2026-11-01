@@ -11,7 +11,7 @@ window.GymFasterLibrary = (() => {
   const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   async function load() {
     if (catalog) return catalog;
-    if (!pending) pending = fetch('gymfaster-catalog.json?v=2').then(response => {
+    if (!pending) pending = fetch('gymfaster-catalog.json?v=3').then(response => {
       if (!response.ok) throw Error('Catálogo indisponível.');
       return response.json();
     }).then(data => {

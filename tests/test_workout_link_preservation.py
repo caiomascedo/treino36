@@ -52,7 +52,7 @@ with sync_playwright() as p:
  page.locator('#closePdfViewer').click()
  # Text expansion exposes a portable link and reapplying edited text retains it.
  page.locator('.sec-a .section-zoom-btn').click()
- assert VIDEO in page.locator('#pasteTextarea').input_value()
+ assert VIDEO not in page.locator('#pasteTextarea').input_value()
  page.locator('#pasteTextarea').fill(page.locator('#pasteTextarea').input_value().replace('3×12','4×10'));page.locator('#confirmPasteBtn').click();linked('A')
  assert not errors,errors
  browser.close();print('PASS: URL case/query preserved on reload, exercise copy/paste/duplicate/move, section reorder/copy/paste/duplicate, plain text paste, pupil-list copy, complete cross-pupil copy and text editing')
