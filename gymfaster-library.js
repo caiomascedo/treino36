@@ -116,7 +116,7 @@ window.GymFasterLibrary = (() => {
     const panel = tools.querySelector('.pdf-video-section');
     if (panel && !panel.hidden) { panel.open = true; panel.parentElement.parentElement.open = true; }
     const status = tools.querySelector('[role="status"]');
-    status.textContent = 'Treino A selecionado. Toque em GymFaster em cada exercício para conferir e salvar o vídeo. Depois use Enviar PDF. Os vídeos abrem pelos links do PDF.';
+    status.textContent = 'Treino A selecionado. Toque em GIFs em cada exercício para conferir e associar a demonstração. Depois use Enviar PDF. Os vídeos abrem pelos links do PDF.';
     tools.scrollIntoView({block: 'start'});
   }
   document.addEventListener('DOMContentLoaded', () => {

@@ -1502,14 +1502,14 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=5"></script>
 <script src="video-library-preferences.js?v=1"></script>
-<script src="gymfaster-library.js?v=7"></script>
+<script src="gymfaster-library.js?v=8"></script>
 <script src="workout-video-match.js?v=2"></script>
 <script src="video-preview.js?v=1"></script>
-<script src="workout-gif.js?v=11"></script>
+<script src="workout-gif.js?v=12"></script>
 <script src="media-visibility.js?v=1"></script>
 <link rel="stylesheet" href="workout-gif.css?v=9">
 <link rel="stylesheet" href="gymfaster-library.css?v=5">
-<script src="pdf-review.js?v=8"></script>
+<script src="pdf-review.js?v=9"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -1521,7 +1521,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=11">
+<link rel="stylesheet" href="pdf-review.css?v=12">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -5158,7 +5158,10 @@ window.AvaliacaoTreinoSync = (function () {
     html += '<div class="pdf-footer">' + escHtml(footer) + ' — ' + escHtml(hoje) + '</div>';
 
     document.getElementById('pdfBody').innerHTML = html;
-    WorkoutPDFReview.mount(document.getElementById('pdfBody'),document.getElementById('pdfReviewTools'),function(exercise,video,section){return ytSearchUrl(exercise,nomeAluno,section,video);},ytIcon(),function(row,url){var source=sourceRows[Number(row.dataset.pdfSource)];if(!source||!source.isConnected||document.getElementById('searchName').value.trim()!==nomeAluno)return;atribuirVideoExercicio(source,url);pushState();concluirAutoSave();});
+    WorkoutPDFReview.mount(document.getElementById('pdfBody'),document.getElementById('pdfReviewTools'),function(exercise,video,section){return ytSearchUrl(exercise,nomeAluno,section,video);},ytIcon(),function(row,url){var source=sourceRows[Number(row.dataset.pdfSource)];if(!source||!source.isConnected||document.getElementById('searchName').value.trim()!==nomeAluno)return;atribuirVideoExercicio(source,url);pushState();concluirAutoSave();},{
+      read:function(row){var source=sourceRows[Number(row.dataset.pdfSource)];return source?.isConnected?gifsDoExercicio(source):[];},
+      choose:function(row,title,refresh){GymFasterWorkout.pick({name:title,previewIcon:true,persistChoice:false,onSelect:function(asset,partName){var source=sourceRows[Number(row.dataset.pdfSource)];if(!source?.isConnected||document.getElementById('searchName').value.trim()!==nomeAluno)return;var parts=WorkoutVideoMatch.parts(title),index=Math.max(0,parts.findIndex(function(name){return WorkoutVideoMatch.canonical(name)===WorkoutVideoMatch.canonical(partName);})),gifs=gifsDoExercicio(source);while(gifs.length<=index)gifs.push('');gifs[index]=asset.url;atribuirGIFExercicio(source,gifs);pushState();concluirAutoSave();var slot=row.querySelector('.pdf-media-links');slot.querySelectorAll('.pdf-gif-link').forEach(function(a){a.remove();});gifs.forEach(function(url,i){if(!url)return;var a=document.createElement('a');a.className='pdf-gif-link';a.href=url;a.target='_blank';a.rel='noopener';a.textContent='(GIFs'+(gifs.length>1?' '+(i+1):'')+')';slot.append(a);});WorkoutPDFReview.refreshMedia();refresh();}});}
+    });
     document.getElementById('pdfViewerModal').classList.add('open');
   }
 

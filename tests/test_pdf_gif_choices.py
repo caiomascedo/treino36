@@ -1,0 +1,33 @@
+"""PDF uses the full GIF picker, with independent sample links, previews and library edits."""
+import os,json,base64,urllib.request
+from pathlib import Path
+from urllib.parse import urlparse,parse_qs
+import fitz
+from playwright.sync_api import sync_playwright,expect
+ROOT=Path(__file__).resolve().parents[1];ENGINE=os.getenv('GIF_TEST_BROWSER','chromium')
+cm=json.loads((ROOT/'cmfit-catalog.json').read_text())['videos'];gym=json.loads((ROOT/'gymfaster-catalog.json').read_text())['videos'];smith=next(v for v in cm if v['name']=='Agachamento no smith');sumo=next(v for v in gym if v['name']=='Agachamento Sumô com Halter' and v['gender']=='Feminino')
+YT='https://www.youtube.com/watch?v=keep_YT1234';CDN='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';cache=Path('/tmp/treino36-html2pdf.bundle.js')
+if not cache.exists():cache.write_bytes(urllib.request.urlopen(CDN).read())
+with sync_playwright() as p:
+ b=p.webkit.launch(executable_path=os.environ['PLAYWRIGHT_WEBKIT_EXECUTABLE']) if ENGINE=='webkit' else p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ c=b.new_context(viewport={'width':390,'height':844});c.add_init_script("window.pdfWindows=[];window.pdfBlobs=new Map();const create=URL.createObjectURL.bind(URL);URL.createObjectURL=b=>{const u=create(b);pdfBlobs.set(u,b);return u};window.open=()=>{const v={closed:false,document:{title:'',body:{textContent:''}},location:{replace(u){v.url=u}},close(){this.closed=true}};pdfWindows.push(v);return v}")
+ def route(r):
+  if r.request.url==CDN:r.fulfill(body=cache.read_bytes(),content_type='application/javascript');return
+  u=urlparse(r.request.url)
+  if u.scheme in ['blob','data']:r.continue_();return
+  f=ROOT/u.path.lstrip('/')
+  if f.is_dir():f/='index.html'
+  if u.hostname=='pdf-gif.test' and f.is_file():r.fulfill(body=f.read_bytes(),content_type={'.js':'application/javascript','.css':'text/css','.json':'application/json','.mp4':'video/mp4'}.get(f.suffix,'text/html'))
+  else:r.fulfill(status=404)
+ c.route('**/*',route);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ page.goto('http://pdf-gif.test/');page.evaluate('TreinoStorage.ready');page.evaluate('(url)=>localStorage.setItem("treinoAlunos",JSON.stringify([{student_id:"pdf-gifs",nome:"Teste PDF GIFs",treino:{A:["Agachamento Smith + Ag Sumo — 3x8+10 [Vídeo: "+url+"] [GIFs: - | -]"]},titulos:{A:"A. Pernas"}}]))',YT);page.reload();page.locator('#pdfBtn').click();page.locator('#pdfReviewTools > details:not(.pdf-section-choice)>summary').click();page.locator('.pdf-video-section>summary').click();choice=page.locator('.pdf-video-choice').first;expect(choice.locator('.pdf-gif-count')).to_have_text('0/2 GIFs associados');expect(choice.locator('input')).to_have_value(YT)
+ before=page.evaluate('localStorage.getItem("treinoAlunos")');choice.get_by_role('button',name='GIFs',exact=True).click();picker=page.locator('.gif-video-picker');expect(picker.get_by_role('button',name='Editar biblioteca',exact=True)).to_be_visible();expect(picker.get_by_role('combobox',name='Biblioteca da demonstração')).to_have_value('both');picker.get_by_role('button',name='Ver todos os vídeos',exact=True).click();expect(picker.locator('[data-video-id]')).to_have_count(992);expect(picker.locator('.gif-preview-eye svg')).to_have_count(992)
+ row=picker.locator('[data-video-id="'+smith['id']+'"]').locator('..');row.locator('.gif-preview-eye').click();preview=page.locator('#movementPreview');expect(preview).to_be_visible();page.wait_for_function('document.querySelector("#movementPreview video").readyState>=2',timeout=20000);assert page.evaluate('localStorage.getItem("treinoAlunos")')==before;preview.get_by_role('button').click();row.locator('[data-video-id]').click();preview.get_by_role('button').click();expect(choice.locator('.pdf-gif-count')).to_have_text('1/2 GIFs associados');expect(choice.locator('input')).to_have_value(YT)
+ choice.get_by_role('button',name='GIFs',exact=True).click();picker.locator('.gif-picker-parts button').last.click();picker.get_by_role('button',name='Editar biblioteca',exact=True).click();row=picker.locator('[data-video-id="'+sumo['id']+'"]').locator('..');row.get_by_role('button',name='Renomear',exact=True).click();picker.get_by_role('textbox',name='Novo nome do vídeo').fill('Sumô teste PDF');picker.get_by_role('button',name='Salvar nome',exact=True).click();expect(picker.locator('[data-video-id="'+sumo['id']+'"]').locator('..')).to_contain_text('Nome original:');picker.locator('[data-video-id="'+sumo['id']+'"]').click();preview.get_by_role('button').click();expect(choice.locator('.pdf-gif-count')).to_have_text('2/2 GIFs associados');expect(page.locator('#pdfBody .pdf-gif-link')).to_have_count(2)
+ stored=json.loads(page.evaluate('localStorage.getItem("treinoAlunos")'))[0]['treino']['A'][0];assert YT in stored and smith['url'] in stored and sumo['url'] in stored
+ choice.get_by_role('button',name='Ver GIF de Ag Sumo',exact=True).click();expect(preview.locator('h3')).to_contain_text('Sumô teste PDF');preview.get_by_role('button').click();page.screenshot(path='/tmp/pdf-gif-controls-'+ENGINE+'.png')
+ page.locator('#downloadPdfBtn').click();page.wait_for_function('pdfWindows.length===1&&pdfWindows[0].url',timeout=30000);encoded=page.evaluate('''async()=>btoa(Array.from(new Uint8Array(await pdfBlobs.get(pdfWindows[0].url).arrayBuffer()),v=>String.fromCharCode(v)).join(''))''')
+ with fitz.open(stream=base64.b64decode(encoded),filetype='pdf') as doc:
+  links=[link.get('uri','') for p in doc for link in p.get_links()];assert smith['url'] in links and sumo['url'] in links;assert any(parse_qs(urlparse(u).query).get('url')==[YT] for u in links)
+ page.locator('#closePdfViewer').click();page.reload();page.locator('#pdfBtn').click();page.locator('#pdfReviewTools > details:not(.pdf-section-choice)>summary').click();page.locator('.pdf-video-section>summary').click();expect(page.locator('.pdf-gif-count')).to_have_text('2/2 GIFs associados');expect(page.locator('.pdf-video-choice input')).to_have_value(YT);expect(page.locator('.main-exercise-eye,.mobility-eye')).to_have_count(0);assert not errors,errors;b.close()
+ print('PASS',ENGINE,': full PDF GIF picker with 992 clips, eye playback before selection, library rename and both-source filters; per-part samples persist alongside YouTube; exported PDF contains all three independent links; no main-list eyes')
