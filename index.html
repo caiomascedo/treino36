@@ -1510,7 +1510,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="media-visibility.js?v=2"></script>
 <link rel="stylesheet" href="workout-gif.css?v=11">
 <link rel="stylesheet" href="gymfaster-library.css?v=6">
-<script src="pdf-review.js?v=13"></script>
+<script src="pdf-review.js?v=14"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -1522,7 +1522,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=15">
+<link rel="stylesheet" href="pdf-review.css?v=16">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -5257,10 +5257,11 @@ window.AvaliacaoTreinoSync = (function () {
       exibirMensagem('❌ Permita pop-ups para usar o modo alternativo de PDF.', '#b22222', false);
       return;
     }
+    var reviewCSS='';try{var reviewSheet=Array.from(document.styleSheets).find(function(sheet){return sheet.href&&sheet.href.includes('/pdf-review.css');});if(reviewSheet)reviewCSS=Array.from(reviewSheet.cssRules).map(function(rule){return rule.cssText;}).join('\n').replaceAll('#pdfBody','body');}catch(e){}
     win.document.open();
     win.document.write('<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Treino PDF</title><style>' +
       'body{font-family:Arial,sans-serif;margin:10mm;color:#222}.pdf-title{font-size:16px;font-weight:bold;text-align:center;color:#b22222}.pdf-subtitle,.pdf-footer{text-align:center;color:#555;font-size:11px}.pdf-sec{margin:8px 0;border-left:3px solid #ccc;padding-left:8px}.pdf-sec-title{font-weight:bold;text-transform:uppercase;margin-bottom:4px}.pdf-ex-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:3px 0}.pdf-ex-name{font-size:12px;flex:1;min-width:0}.pdf-media-links{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:12px}.pdf-ex-row{align-items:baseline}.pdf-gif-link{color:#23657b;white-space:nowrap}.pdf-media-links[hidden],.pdf-media-links [hidden]{display:none!important}.yt-link{display:inline-block;color:#b22222;text-decoration:none;border-bottom:1px solid #b22222;font:inherit;font-weight:bold;white-space:nowrap;margin:0 3px}.pdf-style-old .yt-link{border:0;background:red;color:white;border-radius:3px;padding:2px 5px;font-size:10px}.pdf-ex-title{font-weight:bold}.yt-link svg{display:none}.pdf-start-btn{background:#16a34a;color:white;text-decoration:none;border-radius:3px;padding:2px 6px;font-size:10px;font-weight:bold;display:inline-block;margin-left:6px;vertical-align:middle}@media print{a[href]:after{content:""}}' +
-      '</style></head><body class="'+(pdfBody.classList.contains('pdf-style-old')?'pdf-style-old':'')+'">' + pdfBody.innerHTML + '<script>setTimeout(function(){window.print();},300);<\/script></body></html>');
+      reviewCSS+'</style></head><body class="'+(pdfBody.classList.contains('pdf-style-old')?'pdf-style-old':'')+'">' + pdfBody.innerHTML + '<script>setTimeout(function(){window.print();},300);<\/script></body></html>');
     win.document.close();
   }
   /* ===== HISTÓRICO UNDO/REDO ===== */

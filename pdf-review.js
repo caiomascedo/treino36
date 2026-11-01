@@ -26,33 +26,33 @@ window.WorkoutPDFReview=(()=>{
     let preferences={};try{preferences=JSON.parse(localStorage.getItem('treinoPdfLinkOptions')||'{}')||{};}catch(error){}
     includeVideos.checked=preferences.videos!==false;includeGifs.checked=preferences.gifs===true;
     tracking.value=preferences.tracking==='direct'?'direct':'tracked';includeStart.checked=typeof preferences.start==='boolean'?preferences.start:tracking.value!=='direct';
-    const compoundLabel=node('label'),separate=node('input',{type:'checkbox','aria-label':'Separar conjugados no PDF'}),colorLabel=node('label'),colors=node('input',{type:'checkbox','aria-label':'Cores nos conjugados do PDF'});
-    separate.checked=preferences.compounds===true;colors.checked=preferences.colors===true;compoundLabel.append(separate,document.createTextNode('Separar conjugados no PDF'));colorLabel.append(colors,document.createTextNode('Cores nos conjugados do PDF'));linkOptions.append(compoundLabel,colorLabel);
+    const compoundLabel=node('label'),separate=node('input',{type:'checkbox','aria-label':'Vídeos individuais nos conjugados'}),colorLabel=node('label'),colors=node('input',{type:'checkbox','aria-label':'Cores nos conjugados do PDF'});
+    separate.checked=preferences.compounds===true;colors.checked=preferences.colors===true;compoundLabel.append(separate,document.createTextNode('Vídeos individuais nos conjugados'));colorLabel.append(colors,document.createTextNode('Cores nos conjugados do PDF'));linkOptions.append(compoundLabel,colorLabel);
     const palette=['#b91c1c','#15803d','#ca8a04','#111111','#1d4ed8','#9333ea','#c2410c','#0f766e','#be185d','#4338ca'];
     function compoundNames(entry){return WorkoutVideoMatch.parts(entry.title.textContent);}
     function refreshCompound(entry){
       if(!entry.parts)return;
       const names=compoundNames(entry),active=separate.checked&&names.length>1,slot=entry.row.querySelector('.pdf-ex-name');
       entry.row.classList.toggle('pdf-has-compound',active);entry.partFields.hidden=!active;
-      entry.baseControls.forEach(el=>el.hidden=active);entry.view.replaceChildren();entry.partLinks=[];entry.partValid=true;
+      entry.baseControls.forEach(el=>el.hidden=active);if(entry.gifArea){if(active)entry.partFields.after(entry.gifArea);else entry.input.after(entry.gifArea);}entry.view.replaceChildren();entry.partLinks=[];entry.partValid=true;
       if(!active)return;
-      entry.link.remove();const heading=node('strong',{class:'pdf-compound-heading'},entry.number+'. CONJUGADO');entry.view.append(heading);
-      names.forEach((name,i)=>{const line=node('div',{class:'pdf-compound-name'},entry.number+String.fromCharCode(97+i)+'. '+name);if(colors.checked){const dot=node('span',{'aria-hidden':'true'},'● ');dot.style.color=palette[i%palette.length];line.prepend(dot);}entry.view.append(line);});
-      const dose=node('div',{class:'pdf-compound-dose'}),details=entry.row.querySelector('.pdf-ex-details').textContent.replace(/^\s*[—–]\s*/,''),doses=details.split(/\s*\+\s*/);
-      doses.forEach((value,i)=>{if(i)dose.append(document.createTextNode(' + '));const span=node('span',{},value);if(colors.checked&&doses.length===names.length)span.style.color=palette[i%palette.length];dose.append(span);});entry.view.append(dose);
-      const links=node('div',{class:'pdf-compound-links'});entry.view.append(links);
+      entry.link.remove();
+      names.forEach((name,i)=>{if(i)entry.view.append(document.createTextNode(' + '));const span=node('span',{class:'pdf-compound-name'},name);if(colors.checked)span.style.color=palette[i%palette.length];entry.view.append(span);});
+      const dose=node('span',{class:'pdf-compound-dose'}),details=entry.row.querySelector('.pdf-ex-details').textContent,doses=details.split(/\s*\+\s*/);
+      doses.forEach((value,i)=>{if(i)dose.append(document.createTextNode(' + '));const span=node('span',{},value);if(colors.checked&&doses.length===names.length)span.style.color=palette[i%palette.length];dose.append(span);});entry.view.append(document.createTextNode(' '),dose);
+      const links=node('span',{class:'pdf-compound-links'}),tail=node('span',{class:'pdf-compound-tail'}),lastDose=dose.lastElementChild;lastDose.replaceWith(tail);tail.append(lastDose,document.createTextNode('\u00a0'),links);
       names.forEach((name,i)=>{const a=node('a',{class:'yt-link',target:'_blank',rel:'noopener','aria-label':'Vídeo de '+name,title:name});
         try{const custom=videoURL(entry.parts[i]?.input.value??entry.urls[i]??''),url=makeURL(name,custom,entry.row.dataset.sectionTitle);a.href=tracking.value==='direct'?directVideoURL(url):url;entry.parts[i]?.input.setCustomValidity('');}catch(error){entry.partValid=false;entry.parts[i]?.input.setCustomValidity(error.message);status.textContent=error.message;}
-        if(model.value==='old')a.innerHTML=(icon||'▶')+' YouTube '+(i+1);else a.textContent='(Vídeo '+(i+1)+')';
-        if(colors.checked){const color=palette[i%palette.length];a.style.color=model.value==='old'?'white':color;a.style.borderColor=color;if(model.value==='old')a.style.background=color;}
-        if(includeVideos.checked&&entry.row.dataset.allowVideo!=='false')links.append(a);entry.partLinks.push(a);
+        a.textContent='('+(model.value==='old'?'YouTube':'Vídeo')+' '+(i+1)+')';
+        if(colors.checked){const color=palette[i%palette.length];a.style.color=color;a.style.borderColor=color;}
+        if(includeVideos.checked&&entry.row.dataset.allowVideo!=='false'){if(links.childNodes.length)links.append(document.createTextNode(' '));links.append(a);}entry.partLinks.push(a);
       });
-      if(includeGifs.checked&&entry.row.dataset.allowGifs!=='false')entry.gifLinks.forEach((a,i)=>{const part=Number(a.dataset.gifPart??i);if(part<names.length){if(colors.checked)a.style.color=palette[part%palette.length];else a.style.removeProperty('color');links.append(a);}});
+      if(includeGifs.checked&&entry.row.dataset.allowGifs!=='false')entry.gifLinks.forEach((a,i)=>{const part=Number(a.dataset.gifPart??i);if(part<names.length){if(colors.checked)a.style.color=palette[part%palette.length];else a.style.removeProperty('color');if(links.childNodes.length)links.append(document.createTextNode(' '));links.append(a);}});
       slot.append(entry.view);
     }
     function setupCompound(entry,number,item){
       entry.number=number;entry.urls=[];try{entry.urls=JSON.parse(entry.row.dataset.videoUrls||'[]');}catch(error){}if(!entry.urls.length&&entry.input.value)entry.urls=[entry.input.value];
-      entry.baseControls=[...item.children];entry.partFields=node('div',{class:'pdf-compound-choices'});entry.view=node('div',{class:'pdf-compound-view'});entry.row.querySelector('.pdf-ex-name').append(entry.view);entry.parts=[];item.append(entry.partFields);
+      entry.baseControls=[...item.children];entry.partFields=node('div',{class:'pdf-compound-choices'});entry.view=node('span',{class:'pdf-compound-view'});entry.row.querySelector('.pdf-ex-name').append(entry.view);entry.parts=[];item.append(entry.partFields);
       function fields(){const names=compoundNames(entry);entry.partFields.replaceChildren();entry.parts=(names.length>1?names:[]).map((name,i)=>{const label=node('label'),input=node('input',{type:'url',placeholder:'Automático · cole o link deste exercício','aria-label':'Vídeo '+(i+1)+' de '+name}),search=node('a',{href:'https://www.youtube.com/results?search_query='+encodeURIComponent(name+' academia como fazer'),target:'_blank',rel:'noopener'},'Buscar vídeo'),reset=node('button',{type:'button'},'Automático');input.value=entry.urls[i]||'';label.append(node('span',{},number+String.fromCharCode(97+i)+'. '+name),input,search,reset);entry.partFields.append(label);input.oninput=()=>{try{const value=videoURL(input.value);input.setCustomValidity('');entry.urls[i]=value;entry.row.dataset.videoUrls=JSON.stringify(entry.urls);if(i===0){entry.input.value=value;entry.row.dataset.videoUrl=value;}if(onVideoChange)onVideoChange(entry.row,value,i);refreshCompound(entry);}catch(error){input.setCustomValidity(error.message);entry.partValid=false;status.textContent=error.message;}};reset.onclick=()=>{input.value='';input.oninput();};return {input};});refreshCompound(entry);}
       fields();entry.title.addEventListener('input',fields);entry.row.querySelector('.pdf-ex-details').addEventListener('input',()=>refreshCompound(entry));
     }
@@ -85,7 +85,7 @@ window.WorkoutPDFReview=(()=>{
     if(window.GymFasterLibrary){
       for(const entry of entries){
         if(!samples){GymFasterLibrary.addChoice({item:entry.input.closest('.pdf-video-choice'),input:entry.input,title:entry.title});continue;}
-        const area=node('div',{class:'pdf-gif-controls'}),choose=node('button',{type:'button',class:'pdf-gif-choice'},'GIFs'),count=node('small',{class:'pdf-gif-count'}),previews=node('div',{class:'pdf-gif-previews'});area.append(choose,count,previews);entry.input.closest('.pdf-video-choice').append(area);
+        const area=node('div',{class:'pdf-gif-controls'}),choose=node('button',{type:'button',class:'pdf-gif-choice'},'GIFs'),count=node('small',{class:'pdf-gif-count'}),previews=node('div',{class:'pdf-gif-previews'});area.append(choose,count,previews);entry.gifArea=area;entry.input.after(area);
         function refresh(){const urls=samples.read(entry.row),names=WorkoutVideoMatch.parts(entry.title.textContent);const matched=urls.slice(0,names.length).filter(Boolean).length,extra=urls.slice(names.length).filter(Boolean).length;count.textContent=matched+'/'+names.length+' GIFs associados'+(extra?' · '+extra+' sem exercício correspondente; revise os nomes':'');previews.replaceChildren();urls.slice(0,names.length).forEach((url,index)=>{if(!url)return;const name=names[index],view=node('button',{type:'button','aria-label':'Ver GIF de '+name},(names.length>1?name+' ':'')+'(GIFs)');view.onclick=()=>GymFasterWorkout.pick({name,video:url,previewOnly:true});previews.append(view);});}
         choose.onclick=()=>samples.choose(entry.row,entry.title.textContent,refresh);entry.title.addEventListener('input',refresh);refresh();
       }
