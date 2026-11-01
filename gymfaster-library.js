@@ -11,7 +11,7 @@ window.GymFasterLibrary = (() => {
   const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   async function load() {
     if (catalog) return catalog;
-    if (!pending) pending = fetch('gymfaster-catalog.json?v=1').then(response => {
+    if (!pending) pending = fetch('gymfaster-catalog.json?v=2').then(response => {
       if (!response.ok) throw Error('Catálogo indisponível.');
       return response.json();
     }).then(data => {
@@ -121,7 +121,8 @@ window.GymFasterLibrary = (() => {
   document.addEventListener('DOMContentLoaded', () => {
     const menu = document.querySelector('#moreOptions .more-options-menu');
     if (!menu) return;
-    const library = el('button', {type: 'button', id: 'gymfasterCollectionBtn'}, '🎞 GymFaster · 534 vídeos');
+    const library = el('button', {type: 'button', id: 'gymfasterCollectionBtn'}, '🎞 GymFaster');
+    load().then(data => { const examples=data.videos.filter(video=>video.kind==='created-example').length; library.textContent='🎞 GymFaster · '+(data.videos.length-examples)+' vídeos'+(examples?' + '+examples+' exemplo'+(examples>1?'s':''):''); }).catch(()=>{});
     library.onclick = () => { document.getElementById('moreOptions').open = false; open(); };
     const gifs = el('button', {type: 'button', id: 'workoutGifsBtn'}, '🎞 GIFs');
     gifs.onclick = () => { document.getElementById('moreOptions').open = false; GymFasterWorkout.open(); };

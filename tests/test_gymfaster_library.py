@@ -8,8 +8,8 @@ ROOT=Path(__file__).resolve().parents[1]
 cache=Path('/tmp/treino36-html2pdf.bundle.js')
 if not cache.exists(): cache.write_bytes(urllib.request.urlopen('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',timeout=30).read())
 catalog=json.loads((ROOT/'gymfaster-catalog.json').read_text())
-assert len(catalog['videos'])==534
-assert len({v['id'] for v in catalog['videos']})==534
+assert len(catalog['videos'])==671
+assert len({v['id'] for v in catalog['videos']})==671
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
     context=browser.new_context(viewport={'width':390,'height':844})
@@ -36,6 +36,8 @@ with sync_playwright() as p:
     before=page.evaluate('localStorage.getItem("treinoAlunos")')
     choices.first.get_by_role('button',name='GymFaster',exact=True).click()
     dialog=page.locator('#gymfasterLibrary');expect(dialog).to_be_visible()
+    expect(dialog.locator('.gym-result')).to_have_count(2)
+    dialog.get_by_role('combobox',name='Versão GymFaster').select_option('Feminino')
     expect(dialog.locator('.gym-result')).to_have_count(1)
     dialog.get_by_role('button',name='Ver movimento').click()
     expect(dialog.locator('iframe')).to_have_attribute('src','https://drive.google.com/file/d/1J0581Mjqk4_p6XEv5-PW1RZT5miqGXRr/preview')
@@ -73,9 +75,9 @@ with sync_playwright() as p:
     # The normal PDF path still includes B; the preparation shortcut changes only the current draft.
     expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(2)
     page.locator('#closePdfViewer').click();page.locator('#moreOptions > summary').click();page.locator('#gymfasterCollectionBtn').click()
-    expect(dialog.locator('.gym-result')).to_have_count(534)
+    expect(dialog.locator('.gym-result')).to_have_count(671)
     dialog.get_by_role('combobox',name='Versão GymFaster').select_option('Masculino')
-    assert 0<dialog.locator('.gym-result').count()<534
+    assert 0<dialog.locator('.gym-result').count()<671
     expect(dialog.get_by_role('button',name='Usar este vídeo')).to_have_count(0)
     dialog.get_by_role('button',name='Fechar',exact=True).click()
     # Failed catalog loads are recoverable and do not assign or clear links.
@@ -83,7 +85,7 @@ with sync_playwright() as p:
     expect(dialog.locator('[role=status]')).to_contain_text('Não foi possível carregar')
     dialog.get_by_role('button',name='Fechar',exact=True).click();fail_catalog=False
     page.locator('#moreOptions > summary').click();page.locator('#gymfasterCollectionBtn').click()
-    expect(dialog.locator('.gym-result')).to_have_count(534)
+    expect(dialog.locator('.gym-result')).to_have_count(671)
     dialog.get_by_role('button',name='Fechar',exact=True).click()
     # An absent A must not hide another available section.
     page.evaluate("()=>{const people=JSON.parse(localStorage.getItem('treinoAlunos'));people[0].treino.A=[];localStorage.setItem('treinoAlunos',JSON.stringify(people));}")
@@ -92,4 +94,4 @@ with sync_playwright() as p:
     expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
     assert not errors,errors
     browser.close()
-print('PASS: 534 verified videos, preview, explicit variant choice, preserved manual links and workout B, persistence, mobile layout, actual A-only PDF links')
+print('PASS: 671 verified videos, preview, explicit variant choice, preserved manual links and workout B, persistence, mobile layout, actual A-only PDF links')

@@ -1,8 +1,213 @@
 {
   "source": "GymFaster",
   "folderUrl": "https://drive.google.com/drive/folders/1TEiPYZoZ7EJ9FjjrR1c8RvMy3oESEJE9",
-  "verifiedAt": "2026-10-31",
+  "verifiedAt": "2026-11-01",
   "videos": [
+    {
+      "id": "1GTMVGHoIwMN-ieKPablhOlTpIS5Y5KcK",
+      "name": "Agachamento com barra livre (exemplo criado)",
+      "url": "https://drive.google.com/file/d/1GTMVGHoIwMN-ieKPablhOlTpIS5Y5KcK/view?usp=drivesdk",
+      "group": "Exemplo Criado",
+      "gender": "Exemplo criado",
+      "kind": "created-example",
+      "sourceName": "Agachamento_Barra_Livre_Estilo_GymFaster.mp4"
+    },
+    {
+      "id": "1hzu1RA_owwbj1o-dcmOwUg_v7mVLQj4A",
+      "name": "Alongamento em Posição de Mergulho Reverso",
+      "url": "https://drive.google.com/file/d/1hzu1RA_owwbj1o-dcmOwUg_v7mVLQj4A/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1ZgNbgfIclzQYG_8dY6hyabwakCIh_ijP",
+      "name": "Alongamento de Tríceps Ajoelhado",
+      "url": "https://drive.google.com/file/d/1ZgNbgfIclzQYG_8dY6hyabwakCIh_ijP/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1OOD53tHlqpQ8pn2a8qorwwdAbr9H6kvX",
+      "name": "Extensão Reversa Lombar Tradicional",
+      "url": "https://drive.google.com/file/d/1OOD53tHlqpQ8pn2a8qorwwdAbr9H6kvX/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1ThkckcShar0piAozlw-hp7RgD69hvcPd",
+      "name": "Extensão de Tríceps Pegada Neutra na Máquina",
+      "url": "https://drive.google.com/file/d/1ThkckcShar0piAozlw-hp7RgD69hvcPd/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1_6VSF8mtC2GfEF96IFrmDZ9XpzipsOMd",
+      "name": "Extensão de Tríceps na Máquina",
+      "url": "https://drive.google.com/file/d/1_6VSF8mtC2GfEF96IFrmDZ9XpzipsOMd/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "14fHncpChzOeNI4njutvARL9eDpR0UGhQ",
+      "name": "Mergulho Tríceps Sentado na Máquina",
+      "url": "https://drive.google.com/file/d/14fHncpChzOeNI4njutvARL9eDpR0UGhQ/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1X4IB2hdG64n5v0X7QxNqYLt5vtDE4iYO",
+      "name": "Tríceps Testa com Barra W",
+      "url": "https://drive.google.com/file/d/1X4IB2hdG64n5v0X7QxNqYLt5vtDE4iYO/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1LRdCNRbtMOm76BH05x2g4WbEoGJ6OEuW",
+      "name": "Tríceps Francês Sentado com Halteres",
+      "url": "https://drive.google.com/file/d/1LRdCNRbtMOm76BH05x2g4WbEoGJ6OEuW/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1eHpsHNCiSfyxTJVP8QfgCFGdcTWSD0Vl",
+      "name": "Tríceps Coice Sentado com Halteres",
+      "url": "https://drive.google.com/file/d/1eHpsHNCiSfyxTJVP8QfgCFGdcTWSD0Vl/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1Slo6ngLthhJsFJnXzjYe1_Th1o3c_Wsy",
+      "name": "Tríceps Francês Pronado com Halteres",
+      "url": "https://drive.google.com/file/d/1Slo6ngLthhJsFJnXzjYe1_Th1o3c_Wsy/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1Cb7BGkLht3QzSn5GGSKGH-s8sIUlx9B9",
+      "name": "Tríceps Francês Unilateral com Halter",
+      "url": "https://drive.google.com/file/d/1Cb7BGkLht3QzSn5GGSKGH-s8sIUlx9B9/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "11qEHUPNPCLZ6fhVfc9msX490QYsm-EQC",
+      "name": "Tríceps Testa com Halteres",
+      "url": "https://drive.google.com/file/d/11qEHUPNPCLZ6fhVfc9msX490QYsm-EQC/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "182xWUEiE3XW89Sn3MeddMEr9-sK1HDL_",
+      "name": "Extensão Alternada Deitada com Halteres",
+      "url": "https://drive.google.com/file/d/182xWUEiE3XW89Sn3MeddMEr9-sK1HDL_/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1yAlZUX1f30mwrg-0RO6c9_gc7sGjKcf9",
+      "name": "Tríceps Coice com Halteres",
+      "url": "https://drive.google.com/file/d/1yAlZUX1f30mwrg-0RO6c9_gc7sGjKcf9/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1lKkyoNAKbWJYgTW0MjAXDMf6XjD5K6GY",
+      "name": "Tríceps Francês Inclinado com Halteres",
+      "url": "https://drive.google.com/file/d/1lKkyoNAKbWJYgTW0MjAXDMf6XjD5K6GY/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "19BTzm3ehlTJNhUudzu-NIM-K98DKkicR",
+      "name": "Supino Fechado com Halteres",
+      "url": "https://drive.google.com/file/d/19BTzm3ehlTJNhUudzu-NIM-K98DKkicR/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1qQgSq9dK8HE0R2Ge7STr8FOezbVP9oim",
+      "name": "Flexão de Braço com Pegada Fechada",
+      "url": "https://drive.google.com/file/d/1qQgSq9dK8HE0R2Ge7STr8FOezbVP9oim/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1I52sGapUlqM1SmW24vqEgkuJ6wMOyjqX",
+      "name": "Tríceps Pulley Barra Reta na Polia",
+      "url": "https://drive.google.com/file/d/1I52sGapUlqM1SmW24vqEgkuJ6wMOyjqX/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1JH61QJLxYbQrZ6lg20-ZfsA41-hsDMM2",
+      "name": "Tríceps Unilateral em Pé na Polia",
+      "url": "https://drive.google.com/file/d/1JH61QJLxYbQrZ6lg20-ZfsA41-hsDMM2/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1-TGBnwsaHufZ4P_EDCPXOLpJ7yVkp9XZ",
+      "name": "Tríceps Francês na Polia Alta com Corda",
+      "url": "https://drive.google.com/file/d/1-TGBnwsaHufZ4P_EDCPXOLpJ7yVkp9XZ/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1ajxfZSTE_H63T61xrhChSpbjt3dQSGLB",
+      "name": "Tríceps Pulley com Corda",
+      "url": "https://drive.google.com/file/d/1ajxfZSTE_H63T61xrhChSpbjt3dQSGLB/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1x7BfEkX5lfAZkhBrVS3txbAbBQSTC_Fy",
+      "name": "Tríceps Francês na Polia com Corda",
+      "url": "https://drive.google.com/file/d/1x7BfEkX5lfAZkhBrVS3txbAbBQSTC_Fy/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1TxxlVmCWgNKaEu5qo8x4rSjdShn32mfx",
+      "name": "Tríceps Testa Deitado na Polia",
+      "url": "https://drive.google.com/file/d/1TxxlVmCWgNKaEu5qo8x4rSjdShn32mfx/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "15nrs-qiMovIU9Q-jqR35YfJKd-7vn9yU",
+      "name": "Mergulho no Banco",
+      "url": "https://drive.google.com/file/d/15nrs-qiMovIU9Q-jqR35YfJKd-7vn9yU/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1ez3_kMXEzgw0EMlpMFqkiF3vC_UHsn5v",
+      "name": "Supino Fechado com Barra",
+      "url": "https://drive.google.com/file/d/1ez3_kMXEzgw0EMlpMFqkiF3vC_UHsn5v/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1RRencZgedftily4OUnp3-DKZz_yFlmY9",
+      "name": "Tríceps Pulley com Elástico",
+      "url": "https://drive.google.com/file/d/1RRencZgedftily4OUnp3-DKZz_yFlmY9/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1mmGX-TRxyFPwu8m8ll5_reF_rlmc94lf",
+      "name": "Tríceps Pulley Lateral com Elástico",
+      "url": "https://drive.google.com/file/d/1mmGX-TRxyFPwu8m8ll5_reF_rlmc94lf/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1qSwB7OUZHPyVAyLrrnhRZitXCDS23iJ6",
+      "name": "Tríceps Francês com Elástico",
+      "url": "https://drive.google.com/file/d/1qSwB7OUZHPyVAyLrrnhRZitXCDS23iJ6/view?usp=drivesdk",
+      "group": "Tríceps",
+      "gender": "Masculino"
+    },
     {
       "id": "1YhlAdj8XBUyBAJEXXELO9n8w1U_3mD1o",
       "name": "Alongamento em Posição de Mergulho Reverso",
@@ -193,6 +398,55 @@
       "gender": "Feminino"
     },
     {
+      "id": "1psP0OFfLGdty_c12GbcxAMqzNewkksik",
+      "name": "Alongamento Lateral de Pescoço",
+      "url": "https://drive.google.com/file/d/1psP0OFfLGdty_c12GbcxAMqzNewkksik/view?usp=drivesdk",
+      "group": "Trapézio",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1j7HdqM8ViJm6BQfEUFlk-sc4h5wHt5UI",
+      "name": "Depressão Escapular nas Paralelas",
+      "url": "https://drive.google.com/file/d/1j7HdqM8ViJm6BQfEUFlk-sc4h5wHt5UI/view?usp=drivesdk",
+      "group": "Trapézio",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1fRdvLX57ga36EqRQUyTNUB0vV27cs4ek",
+      "name": "Encolhimento de Ombros na Máquina",
+      "url": "https://drive.google.com/file/d/1fRdvLX57ga36EqRQUyTNUB0vV27cs4ek/view?usp=drivesdk",
+      "group": "Trapézio",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1fmTP1WnWYauNN17BG8icpKGgD-VsfKWW",
+      "name": "Encolhimento com Halteres",
+      "url": "https://drive.google.com/file/d/1fmTP1WnWYauNN17BG8icpKGgD-VsfKWW/view?usp=drivesdk",
+      "group": "Trapézio",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1dfgbtS2us2rDHBkUNSlA3nDi-9fTrb0B",
+      "name": "Encolhimento Inclinado com Halteres",
+      "url": "https://drive.google.com/file/d/1dfgbtS2us2rDHBkUNSlA3nDi-9fTrb0B/view?usp=drivesdk",
+      "group": "Trapézio",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1SF_tZkdgw0xHVF2cPoiUK8xVjTkNRByo",
+      "name": "Encolhimento com Barra",
+      "url": "https://drive.google.com/file/d/1SF_tZkdgw0xHVF2cPoiUK8xVjTkNRByo/view?usp=drivesdk",
+      "group": "Trapézio",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1M3OLMsxHKciFVoKI-zqyySMO7im_GKUz",
+      "name": "Elevação Posterior de Ombros com Barra",
+      "url": "https://drive.google.com/file/d/1M3OLMsxHKciFVoKI-zqyySMO7im_GKUz/view?usp=drivesdk",
+      "group": "Trapézio",
+      "gender": "Masculino"
+    },
+    {
       "id": "1N_RpOwkkPoPMWEyrDafbdWRQmV9Q_76g",
       "name": "Alongamento Lateral de Pescoço",
       "url": "https://drive.google.com/file/d/1N_RpOwkkPoPMWEyrDafbdWRQmV9Q_76g/view?usp=drivesdk",
@@ -240,6 +494,251 @@
       "url": "https://drive.google.com/file/d/16aKE-9Gu6lUOFZG4OXTLaMypX1IXuDLW/view?usp=drivesdk",
       "group": "Trapézio",
       "gender": "Feminino"
+    },
+    {
+      "id": "1y7m0XTqpeUcYqkgmEy03iG-x4AsiaX5Q",
+      "name": "Alongamento e Mobilidade de Ombros Sentado",
+      "url": "https://drive.google.com/file/d/1y7m0XTqpeUcYqkgmEy03iG-x4AsiaX5Q/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "12e8NxWljM26fWvZcqYtwhZc3aejZZBZl",
+      "name": "Alongamento de Deltóide Posterior",
+      "url": "https://drive.google.com/file/d/12e8NxWljM26fWvZcqYtwhZc3aejZZBZl/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1dVHh9Co4WadVSuUBKojizxXEqbxk0ebp",
+      "name": "Alongamento e Aquecimento de Ombros com Elástico",
+      "url": "https://drive.google.com/file/d/1dVHh9Co4WadVSuUBKojizxXEqbxk0ebp/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "16t8jmqAuo3h5DsE63UzZzkd5S1iryzyk",
+      "name": "Desenvolvimento Sentado no Smith",
+      "url": "https://drive.google.com/file/d/16t8jmqAuo3h5DsE63UzZzkd5S1iryzyk/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "13yKPeFzfTM3QLfX6gkR1ky1k9HMQhGTp",
+      "name": "Desenvolvimento Militar com Barra",
+      "url": "https://drive.google.com/file/d/13yKPeFzfTM3QLfX6gkR1ky1k9HMQhGTp/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1ckScHJOM91Wo6feTyOQpfz9KPxmmiNN7",
+      "name": "Crucifixo Invertido na Máquina",
+      "url": "https://drive.google.com/file/d/1ckScHJOM91Wo6feTyOQpfz9KPxmmiNN7/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1nIoZYONB6hN3iqBrbs0n32CNEaIVnWkR",
+      "name": "Desenvolvimento Militar na Máquina",
+      "url": "https://drive.google.com/file/d/1nIoZYONB6hN3iqBrbs0n32CNEaIVnWkR/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1ipJ7on-90uZ_otc5zJbJfrtqSwkx-oTA",
+      "name": "Elevação Lateral na Máquina",
+      "url": "https://drive.google.com/file/d/1ipJ7on-90uZ_otc5zJbJfrtqSwkx-oTA/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1hiZPwF44iqqlwItQ8Q_4T06CCsgKRk_f",
+      "name": "Supino Anti Gravidade com Barra W",
+      "url": "https://drive.google.com/file/d/1hiZPwF44iqqlwItQ8Q_4T06CCsgKRk_f/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1dXFnqnNRpubO3fK4la-8y-Hi0zUHUsLc",
+      "name": "Remada Alta com Halteres",
+      "url": "https://drive.google.com/file/d/1dXFnqnNRpubO3fK4la-8y-Hi0zUHUsLc/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1EHrs_qBJqwn9gTyy4HC8LrXo3NGTtro7",
+      "name": "Elevação Lateral Sentado com Halteres",
+      "url": "https://drive.google.com/file/d/1EHrs_qBJqwn9gTyy4HC8LrXo3NGTtro7/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1X_FbGJ-tkkO0Ta8jWCCdaUUqEsPOlfGJ",
+      "name": "Elevação Frontal Sentado com Halteres",
+      "url": "https://drive.google.com/file/d/1X_FbGJ-tkkO0Ta8jWCCdaUUqEsPOlfGJ/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "12Yh-nKcuqvp-LZLKdvIJipD5Ko-Aja7D",
+      "name": "Crucifixo Invertido com Halteres",
+      "url": "https://drive.google.com/file/d/12Yh-nKcuqvp-LZLKdvIJipD5Ko-Aja7D/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1t944sQrPBLAwOEB3wnaYhY2O3joUmQES",
+      "name": "Remada para Deltóide Posterior com Halteres",
+      "url": "https://drive.google.com/file/d/1t944sQrPBLAwOEB3wnaYhY2O3joUmQES/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1HtmfnRT1m7Q2J9lCLnuX-5IOAdKTwJhM",
+      "name": "Elevação Lateral Unilateral com Halter",
+      "url": "https://drive.google.com/file/d/1HtmfnRT1m7Q2J9lCLnuX-5IOAdKTwJhM/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "17N6ceLNuyFjvQmhGsYFEy-LqLu2ivoM_",
+      "name": "Elevação Lateral com Halteres",
+      "url": "https://drive.google.com/file/d/17N6ceLNuyFjvQmhGsYFEy-LqLu2ivoM_/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1d-RVH4hwv14cSDHfLjjL7Dm3ctfZjNF7",
+      "name": "Cruz de Ferro com Halteres",
+      "url": "https://drive.google.com/file/d/1d-RVH4hwv14cSDHfLjjL7Dm3ctfZjNF7/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1IVRqqByPgp_peXK5xDjAgHAf-abahE8O",
+      "name": "Crucifixo Invertido no Banco Inclinado com Halteres",
+      "url": "https://drive.google.com/file/d/1IVRqqByPgp_peXK5xDjAgHAf-abahE8O/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1KW85RI4jvlq_gtscIv1QBLaoufRl-TAz",
+      "name": "Supino Inclinado com Pegada Neutra (Martelo)",
+      "url": "https://drive.google.com/file/d/1KW85RI4jvlq_gtscIv1QBLaoufRl-TAz/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1VrgZdr1cP70MQmqPhfYCsVkzc4iM95DO",
+      "name": "Elevação Frontal com Halteres",
+      "url": "https://drive.google.com/file/d/1VrgZdr1cP70MQmqPhfYCsVkzc4iM95DO/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1Oc4I_hbqffGqHTX6Xp9eHjK3XdY1FCZj",
+      "name": "Desenvolvimento Sentado no Banco com Halteres",
+      "url": "https://drive.google.com/file/d/1Oc4I_hbqffGqHTX6Xp9eHjK3XdY1FCZj/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1-auhcaXcMN4p0Yd8coK_-_9n-5QoDnxP",
+      "name": "Desenvolvimento Arnold com Halteres",
+      "url": "https://drive.google.com/file/d/1-auhcaXcMN4p0Yd8coK_-_9n-5QoDnxP/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1jQB8Gwb7LN_dkFe3VjKnOCfPb97rqO9_",
+      "name": "Desenvolvimento Alternado com Halteres",
+      "url": "https://drive.google.com/file/d/1jQB8Gwb7LN_dkFe3VjKnOCfPb97rqO9_/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1vsJS1t3CEZpUdYwfY2h-ffj_J2p1M8zE",
+      "name": "Remada para Deltóide Posterior com Corda na Polia",
+      "url": "https://drive.google.com/file/d/1vsJS1t3CEZpUdYwfY2h-ffj_J2p1M8zE/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1UxP5goXnAU2RIv2ie-SiHhznHNnimEL4",
+      "name": "Elevação Lateral Unilateral na Polia",
+      "url": "https://drive.google.com/file/d/1UxP5goXnAU2RIv2ie-SiHhznHNnimEL4/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1s3ttZVJ8j0ed-0rCzEdYLo-CC94bzlNr",
+      "name": "Elevação Frontal Unilateral na Polia",
+      "url": "https://drive.google.com/file/d/1s3ttZVJ8j0ed-0rCzEdYLo-CC94bzlNr/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1NH2Zp50BMBdbgunhm0amvDppVMhggG8I",
+      "name": "Elevação Lateral na Polia",
+      "url": "https://drive.google.com/file/d/1NH2Zp50BMBdbgunhm0amvDppVMhggG8I/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1BQYhoGkTJJl3KXIP1y_xTuezPmQhq1E9",
+      "name": "Elevação Frontal na Polia",
+      "url": "https://drive.google.com/file/d/1BQYhoGkTJJl3KXIP1y_xTuezPmQhq1E9/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1ZyccSoPKS4e-mFCEAUcFBy5HyiB0Bk2y",
+      "name": "Crucifixo Invertido no Cross Over",
+      "url": "https://drive.google.com/file/d/1ZyccSoPKS4e-mFCEAUcFBy5HyiB0Bk2y/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "10kkvjML1lEo1PONzK9sGLTjJybr7Fctv",
+      "name": "Remada Alta com Barra (Pegada Aberta)",
+      "url": "https://drive.google.com/file/d/10kkvjML1lEo1PONzK9sGLTjJybr7Fctv/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1XxmDWK2BMsXzcp8u1ujle4oBLkeb6p2W",
+      "name": "Desenvolvimento Militar pela Nuca com Barra",
+      "url": "https://drive.google.com/file/d/1XxmDWK2BMsXzcp8u1ujle4oBLkeb6p2W/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "11bd6T4ICiA_eoTX7jJbpd01jH0Qg1axG",
+      "name": "Elevação Frontal com Barra",
+      "url": "https://drive.google.com/file/d/11bd6T4ICiA_eoTX7jJbpd01jH0Qg1axG/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1g1CdgyOyTrCJlKi9XdF2d5gdflKgM2yS",
+      "name": "Remada Alta para Deltóide Posterior com Elástico",
+      "url": "https://drive.google.com/file/d/1g1CdgyOyTrCJlKi9XdF2d5gdflKgM2yS/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1o8sSL2PIFywqC015XyRTPVHl2HKBCmA5",
+      "name": "Elevação Frontal Unilateral com Elástico",
+      "url": "https://drive.google.com/file/d/1o8sSL2PIFywqC015XyRTPVHl2HKBCmA5/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1xApwyrrtZXJMLqCJlIjK_X8WoXBNPvvn",
+      "name": "Crucifixo Invertido Curvado com Elástico",
+      "url": "https://drive.google.com/file/d/1xApwyrrtZXJMLqCJlIjK_X8WoXBNPvvn/view?usp=drivesdk",
+      "group": "Ombros",
+      "gender": "Masculino"
     },
     {
       "id": "1470GNsTOL3NO--PVzPe6hm7ssfzpZvTA",
@@ -662,6 +1161,349 @@
       "gender": "Feminino"
     },
     {
+      "id": "1sFbzyxrNiZ0e_fBQiIP0GLiwGrfetVkn",
+      "name": "Sissy Squat com Carga",
+      "url": "https://drive.google.com/file/d/1sFbzyxrNiZ0e_fBQiIP0GLiwGrfetVkn/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1ZkiEHZAL7oJDhdMa5DCgeMmT4JODC6vY",
+      "name": "Alongamento do Corredor (Passada Profunda)",
+      "url": "https://drive.google.com/file/d/1ZkiEHZAL7oJDhdMa5DCgeMmT4JODC6vY/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1QsvNO78lTz4BU4qk8UVvvZuutIl3pAHZ",
+      "name": "Alongamento de Quadríceps em Pé",
+      "url": "https://drive.google.com/file/d/1QsvNO78lTz4BU4qk8UVvvZuutIl3pAHZ/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1RBwVAAfcXdBdVzX2NBWBvxK-zKBNo1GW",
+      "name": "Alongamento de Quadríceps Deitado",
+      "url": "https://drive.google.com/file/d/1RBwVAAfcXdBdVzX2NBWBvxK-zKBNo1GW/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1dUMzCTee-jYZNwQBO9bgpRkl1DKPfwgv",
+      "name": "Alongamento com Elevação de Joelho",
+      "url": "https://drive.google.com/file/d/1dUMzCTee-jYZNwQBO9bgpRkl1DKPfwgv/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1l0dxwX4wcLaBnlR5UfqK7bLpaqJTjKKb",
+      "name": "Alongamento de Flexores de Quadril e Quadríceps",
+      "url": "https://drive.google.com/file/d/1l0dxwX4wcLaBnlR5UfqK7bLpaqJTjKKb/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1C-ZwXZZPdFNVDOZyi1LSm8w4DSKGNmSC",
+      "name": "Alongamento de Flexores de Quadril com Pé Elevado",
+      "url": "https://drive.google.com/file/d/1C-ZwXZZPdFNVDOZyi1LSm8w4DSKGNmSC/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1qAN_mXxNFdDOePdKg8JVM489OGd1NOcv",
+      "name": "Alongamento com Extensão de Quadril",
+      "url": "https://drive.google.com/file/d/1qAN_mXxNFdDOePdKg8JVM489OGd1NOcv/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1EO0X8XhmMV1u35MRY3oODVaydpVBf7Eq",
+      "name": "Alongamento com Rotação Circular de Quadril",
+      "url": "https://drive.google.com/file/d/1EO0X8XhmMV1u35MRY3oODVaydpVBf7Eq/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1LfGZbXzRwImtLI-fZe4Eu3x9CUMavUN2",
+      "name": "Alongamento de Posterior de Coxa (Isquiotibiais)",
+      "url": "https://drive.google.com/file/d/1LfGZbXzRwImtLI-fZe4Eu3x9CUMavUN2/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1y5W1MRNXKxkTTFnsDc7v0pxPXJA1ZKRa",
+      "name": "Alongamento Cruzado Ajoelhado de Flexores de Quadril",
+      "url": "https://drive.google.com/file/d/1y5W1MRNXKxkTTFnsDc7v0pxPXJA1ZKRa/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "17aVuOp3dhw2kDOtS1qiZTmuDzAffqX3v",
+      "name": "Alongamento Cervical Olhando para Cima",
+      "url": "https://drive.google.com/file/d/17aVuOp3dhw2kDOtS1qiZTmuDzAffqX3v/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1Xs-DGQcpDW2WcVRy3VDVvMOm0BH2osNj",
+      "name": "Alongamento Postura do Barco (Navasana)",
+      "url": "https://drive.google.com/file/d/1Xs-DGQcpDW2WcVRy3VDVvMOm0BH2osNj/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1dHf9rD64mxXGOBi2H69xVAojMOzPWKk0",
+      "name": "Alongamento de Quadríceps em Quatro Apoios",
+      "url": "https://drive.google.com/file/d/1dHf9rD64mxXGOBi2H69xVAojMOzPWKk0/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1Jvdspu4uizOFyw8t66QQVY4tYVUK9cLX",
+      "name": "Alongamento de Adutores",
+      "url": "https://drive.google.com/file/d/1Jvdspu4uizOFyw8t66QQVY4tYVUK9cLX/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1XxaaX_ZRHdoiDoQ7t9B0q6DecIfqYnyh",
+      "name": "Agachamento Livre",
+      "url": "https://drive.google.com/file/d/1XxaaX_ZRHdoiDoQ7t9B0q6DecIfqYnyh/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1CtLEqNfu7FnIGCgkfCCLAxd7hmB8ZiA4",
+      "name": "Leg Press Vertical no Smith",
+      "url": "https://drive.google.com/file/d/1CtLEqNfu7FnIGCgkfCCLAxd7hmB8ZiA4/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1vCkXgpfZjFVkH0OzkfOTVjYyC6Etvrye",
+      "name": "Agachamento Cadeira no Smith",
+      "url": "https://drive.google.com/file/d/1vCkXgpfZjFVkH0OzkfOTVjYyC6Etvrye/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "14Mxf5T1Ykf0koikxrZ6dQbTLQNbzYU23",
+      "name": "Agachamento Hack no Trenó (Hack Squat)",
+      "url": "https://drive.google.com/file/d/14Mxf5T1Ykf0koikxrZ6dQbTLQNbzYU23/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1yHptkleyRGynZTO-gu4e4Khz8xDv3iXV",
+      "name": "Leg Press 45 Graus com Pés Afastados",
+      "url": "https://drive.google.com/file/d/1yHptkleyRGynZTO-gu4e4Khz8xDv3iXV/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1zXvfFVTbbd6DHip4QsK3kKvQCB59nZUH",
+      "name": "Ponte Declinada Invertida",
+      "url": "https://drive.google.com/file/d/1zXvfFVTbbd6DHip4QsK3kKvQCB59nZUH/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1bBojfqW0aXnsHNeHOTuYbBktsXgPFzA1",
+      "name": "Glúteo Coice em Pé na Máquina",
+      "url": "https://drive.google.com/file/d/1bBojfqW0aXnsHNeHOTuYbBktsXgPFzA1/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1G8RHBJQwFmT82fVCHUwsxal77gwkDSIT",
+      "name": "Extensão de Quadril em Pé na Máquina",
+      "url": "https://drive.google.com/file/d/1G8RHBJQwFmT82fVCHUwsxal77gwkDSIT/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1g5Hp6-29ET8WvbzQ1K0Uat7_gRVpv0xB",
+      "name": "Cadeira Flexora",
+      "url": "https://drive.google.com/file/d/1g5Hp6-29ET8WvbzQ1K0Uat7_gRVpv0xB/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1uta6IPOMcfkOKZ4gd8Z3QflPDySyDZyL",
+      "name": "Cadeira Adutora",
+      "url": "https://drive.google.com/file/d/1uta6IPOMcfkOKZ4gd8Z3QflPDySyDZyL/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1l2uxMVpaU-MphplYFDzQZ-VUXUGK5NXQ",
+      "name": "Cadeira Abdutora",
+      "url": "https://drive.google.com/file/d/1l2uxMVpaU-MphplYFDzQZ-VUXUGK5NXQ/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1U_hvL0eIuNJ9BrxLC-afE9X7TR-qjMVD",
+      "name": "Mesa Flexora",
+      "url": "https://drive.google.com/file/d/1U_hvL0eIuNJ9BrxLC-afE9X7TR-qjMVD/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1LVED7tJ3s6xfoGEaOMF9EVVVZ39_fjdg",
+      "name": "Cadeira Extensora",
+      "url": "https://drive.google.com/file/d/1LVED7tJ3s6xfoGEaOMF9EVVVZ39_fjdg/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "11PENIkTgmScBUzxrWniB9AVHUipx8KX5",
+      "name": "Flexão de Pernas Ajoelhado na Máquina",
+      "url": "https://drive.google.com/file/d/11PENIkTgmScBUzxrWniB9AVHUipx8KX5/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1tkPA_ERZwT315iW5kvliW85dapuih4Ib",
+      "name": "Leg Press Horizontal",
+      "url": "https://drive.google.com/file/d/1tkPA_ERZwT315iW5kvliW85dapuih4Ib/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1rOUHNGgAWOjc23HB4WuF3LULCKzLcI1s",
+      "name": "Agachamento com Halteres",
+      "url": "https://drive.google.com/file/d/1rOUHNGgAWOjc23HB4WuF3LULCKzLcI1s/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1PGTxG1vAqDrBM9ZSZqKQoT2eFThogMkW",
+      "name": "Agachamento Unilateral (Pistol) com Halteres",
+      "url": "https://drive.google.com/file/d/1PGTxG1vAqDrBM9ZSZqKQoT2eFThogMkW/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1-eIgRHSOaxGUGmqSSO8sSkw-meScpuHB",
+      "name": "Flexão de Pernas Deitado com Halter (Femoral)",
+      "url": "https://drive.google.com/file/d/1-eIgRHSOaxGUGmqSSO8sSkw-meScpuHB/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1FTZ0JBqxL-gmpStYFz2wooBxrNzSqvWs",
+      "name": "Avanço _ Passada com Halteres",
+      "url": "https://drive.google.com/file/d/1FTZ0JBqxL-gmpStYFz2wooBxrNzSqvWs/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1kOEGGKoeMmpKfS1LYYOVnM8Z_xIFQa7u",
+      "name": "Agachamento Goblet com Halter",
+      "url": "https://drive.google.com/file/d/1kOEGGKoeMmpKfS1LYYOVnM8Z_xIFQa7u/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1U4V1yA1OP3ktj7jvlciSXpqTODyk4mcZ",
+      "name": "Agachamento Frontal com Halteres",
+      "url": "https://drive.google.com/file/d/1U4V1yA1OP3ktj7jvlciSXpqTODyk4mcZ/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1hRJmWoa6QE69MQ4ERiJbsGH--zlWGSZg",
+      "name": "Agachamento Sumô com Halter",
+      "url": "https://drive.google.com/file/d/1hRJmWoa6QE69MQ4ERiJbsGH--zlWGSZg/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "15yTbbssDjgK1wTWXWvWSvBGD-VBSmWKJ",
+      "name": "Leg Press com Pés Fechados",
+      "url": "https://drive.google.com/file/d/15yTbbssDjgK1wTWXWvWSvBGD-VBSmWKJ/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1LFfGj2-SJNKsBQ1Dj6VQjlPczRvhk9o2",
+      "name": "Agachamento Clássico com Barra",
+      "url": "https://drive.google.com/file/d/1LFfGj2-SJNKsBQ1Dj6VQjlPczRvhk9o2/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1JWhB45kIpwLvY7ENnB1rd2GefUDEpxZt",
+      "name": "Passada _ Avanço com Barra",
+      "url": "https://drive.google.com/file/d/1JWhB45kIpwLvY7ENnB1rd2GefUDEpxZt/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1mtujJy9-PTghJcY5UC1IdeDPxvl9GxPN",
+      "name": "Agachamento Frontal com Barra",
+      "url": "https://drive.google.com/file/d/1mtujJy9-PTghJcY5UC1IdeDPxvl9GxPN/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1WMiZqV6t_28BdX-bWnd6hoCkXGD9Mobg",
+      "name": "Clean and Press com Barra",
+      "url": "https://drive.google.com/file/d/1WMiZqV6t_28BdX-bWnd6hoCkXGD9Mobg/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1YxP2pMvIJLTg5K3AYYso8dWgUvo3QQL6",
+      "name": "Flexão de Pernas em Pé com Elástico",
+      "url": "https://drive.google.com/file/d/1YxP2pMvIJLTg5K3AYYso8dWgUvo3QQL6/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1Om3Ktfdv1toKXe3mcfO9S3MvTqZGMM4B",
+      "name": "Extensão de Quadril em Pé com Elástico",
+      "url": "https://drive.google.com/file/d/1Om3Ktfdv1toKXe3mcfO9S3MvTqZGMM4B/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1pnUNuRfYQ2ticMWwno1CoUyQ7mRJNQ_f",
+      "name": "Extensão de Pernas Sentada com Elástico",
+      "url": "https://drive.google.com/file/d/1pnUNuRfYQ2ticMWwno1CoUyQ7mRJNQ_f/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1sAhfQ1NvGo6s1RR_yYwyZRhMvI6hw7r9",
+      "name": "Flexão de Pernas com Elástico",
+      "url": "https://drive.google.com/file/d/1sAhfQ1NvGo6s1RR_yYwyZRhMvI6hw7r9/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1unH22RUQwwiQL1JV9FI__LrAiDqTMTeD",
+      "name": "Adução de Quadril com Elástico",
+      "url": "https://drive.google.com/file/d/1unH22RUQwwiQL1JV9FI__LrAiDqTMTeD/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "11vVUgcylLYnwLvYvMYnNepHPIwZwJvhI",
+      "name": "Abdução de Quadril com Elástico",
+      "url": "https://drive.google.com/file/d/11vVUgcylLYnwLvYvMYnNepHPIwZwJvhI/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1XM6L5fwsGdwJkffM5aBwVolIvjmFjAsc",
+      "name": "Extensão de Quadril Curvada com Elástico",
+      "url": "https://drive.google.com/file/d/1XM6L5fwsGdwJkffM5aBwVolIvjmFjAsc/view?usp=drivesdk",
+      "group": "Glúteos e Quadril",
+      "gender": "Masculino"
+    },
+    {
       "id": "18AN95FbH-JSbXBFUUyKK_CuulajNaoih",
       "name": "Sissy Squat com Carga",
       "url": "https://drive.google.com/file/d/18AN95FbH-JSbXBFUUyKK_CuulajNaoih/view?usp=drivesdk",
@@ -1005,6 +1847,62 @@
       "gender": "Feminino"
     },
     {
+      "id": "1pZbLGrStUx8R6LtxUMsI5vRzcK8b9PMb",
+      "name": "Rosca Bíceps em Pé com Carga",
+      "url": "https://drive.google.com/file/d/1pZbLGrStUx8R6LtxUMsI5vRzcK8b9PMb/view?usp=drivesdk",
+      "group": "Antebraço",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1PzXsI9cKPx3zkcb99oyQMRMKyCbxWXxn",
+      "name": "Rotação Circular de Punhos",
+      "url": "https://drive.google.com/file/d/1PzXsI9cKPx3zkcb99oyQMRMKyCbxWXxn/view?usp=drivesdk",
+      "group": "Antebraço",
+      "gender": "Masculino"
+    },
+    {
+      "id": "11ATPD0xbFV2nOYT4LlRR4i4P9y643EeK",
+      "name": "Alongamento de Punho com Tração Lateral",
+      "url": "https://drive.google.com/file/d/11ATPD0xbFV2nOYT4LlRR4i4P9y643EeK/view?usp=drivesdk",
+      "group": "Antebraço",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1jLA8w2NVLjpVc58SZk1p7tPEYp1I_CEH",
+      "name": "Rosca Punho Neutra Sentado com Halteres",
+      "url": "https://drive.google.com/file/d/1jLA8w2NVLjpVc58SZk1p7tPEYp1I_CEH/view?usp=drivesdk",
+      "group": "Antebraço",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1OvDH8d6dscezbOtt5hjhxcL8KCflImNn",
+      "name": "Rosca Punho no Banco com Halteres",
+      "url": "https://drive.google.com/file/d/1OvDH8d6dscezbOtt5hjhxcL8KCflImNn/view?usp=drivesdk",
+      "group": "Antebraço",
+      "gender": "Masculino"
+    },
+    {
+      "id": "10afsTRnhNt2tlzols5UMs1Oe3HdFDxf4",
+      "name": "Rosca Punho por Trás com Halteres",
+      "url": "https://drive.google.com/file/d/10afsTRnhNt2tlzols5UMs1Oe3HdFDxf4/view?usp=drivesdk",
+      "group": "Antebraço",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1UiKsMwtsmhOJrkLOkIidNhL0aHT-kqu_",
+      "name": "Rosca Punho por Trás com Barra",
+      "url": "https://drive.google.com/file/d/1UiKsMwtsmhOJrkLOkIidNhL0aHT-kqu_/view?usp=drivesdk",
+      "group": "Antebraço",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1OD9cXEDcjA_5RzVlKdMyxg2HKFT982Wm",
+      "name": "Rosca Punho Inversa com Barra",
+      "url": "https://drive.google.com/file/d/1OD9cXEDcjA_5RzVlKdMyxg2HKFT982Wm/view?usp=drivesdk",
+      "group": "Antebraço",
+      "gender": "Masculino"
+    },
+    {
       "id": "1EqD5rb3mqLTyAbyz-LYPAJlAWagEFNdu",
       "name": "Rosca Bíceps em Pé na Máquina _ com Carga",
       "url": "https://drive.google.com/file/d/1EqD5rb3mqLTyAbyz-LYPAJlAWagEFNdu/view?usp=drivesdk",
@@ -1059,6 +1957,69 @@
       "url": "https://drive.google.com/file/d/1OZ-VHjnTV5y9hY_QR49jsQbyZJG6CYa2/view?usp=drivesdk",
       "group": "Antebraço",
       "gender": "Feminino"
+    },
+    {
+      "id": "11LTSCZ6-NC5GZO_ijea2fpykbxyDorRA",
+      "name": "Flexão de Braço com Pegada Aberta",
+      "url": "https://drive.google.com/file/d/11LTSCZ6-NC5GZO_ijea2fpykbxyDorRA/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1Zs7JR_95BQpx1yJcDBZHL4KrjccFK__9",
+      "name": "Mergulho de Tríceps nas Paralelas",
+      "url": "https://drive.google.com/file/d/1Zs7JR_95BQpx1yJcDBZHL4KrjccFK__9/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1IjIFdL9xhImU8jEtU_xKnSe3ZsgVMGo_",
+      "name": "Extensão e Alongamento com Roda Abdominal em Pé",
+      "url": "https://drive.google.com/file/d/1IjIFdL9xhImU8jEtU_xKnSe3ZsgVMGo_/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1iSedFYZiOPRtyPt2DqE9ee2jIfaIsbdV",
+      "name": "Alongamento com Elevação de Braços e Rotação de Tronco em Pé",
+      "url": "https://drive.google.com/file/d/1iSedFYZiOPRtyPt2DqE9ee2jIfaIsbdV/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1aCAiJ5FYbmtBxTZBc3EcuMcBBH-tkK7r",
+      "name": "Alongamento com Rotação de Tronco Ajoelhado",
+      "url": "https://drive.google.com/file/d/1aCAiJ5FYbmtBxTZBc3EcuMcBBH-tkK7r/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1GghQzmMucyiHUVP0zDP2WXBzz3KHmC7A",
+      "name": "Alongamento Dinâmico de Peitoral",
+      "url": "https://drive.google.com/file/d/1GghQzmMucyiHUVP0zDP2WXBzz3KHmC7A/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1qgyH4SmEqlTxdONL8AQFA35RInn-ZjU0",
+      "name": "Alongamento de Peitoral e Costas",
+      "url": "https://drive.google.com/file/d/1qgyH4SmEqlTxdONL8AQFA35RInn-ZjU0/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
+    },
+    {
+      "id": "1wcCzc6Wdv_qNKllBi4ilPSDC_HOxz6Y_",
+      "name": "Alongamento de Peitoral com Braços Elevados",
+      "url": "https://drive.google.com/file/d/1wcCzc6Wdv_qNKllBi4ilPSDC_HOxz6Y_/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
+    },
+    {
+      "id": "15lZfGS8carKMuEb2QFgwfK_w7JtmYosV",
+      "name": "Flexão de Braço Solo",
+      "url": "https://drive.google.com/file/d/15lZfGS8carKMuEb2QFgwfK_w7JtmYosV/view?usp=drivesdk",
+      "group": "Peito",
+      "gender": "Masculino"
     },
     {
       "id": "1nkgRDYPilBVHT9pFChUCfY4h_OFgzz6y",
@@ -2713,6 +3674,118 @@
       "gender": "Masculino"
     },
     {
+      "id": "1GFn9yOI2lJY9pVyi5AgIKgZr9ZNckF0n",
+      "name": "Alongamento Lateral de Tronco em Pé",
+      "url": "https://drive.google.com/file/d/1GFn9yOI2lJY9pVyi5AgIKgZr9ZNckF0n/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1h2ASnCKnZl4hiQhsNLCk256D_6hpC7js",
+      "name": "Alongamento com Rotação de Tronco em Pé",
+      "url": "https://drive.google.com/file/d/1h2ASnCKnZl4hiQhsNLCk256D_6hpC7js/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1xEe5PwRwXgB985013um4MDThb_yGdMku",
+      "name": "Alongamento da Coluna para Frente",
+      "url": "https://drive.google.com/file/d/1xEe5PwRwXgB985013um4MDThb_yGdMku/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1ayXnjqYs6EhnZJkxUzK_IpQyJE3YPG3d",
+      "name": "Alongamento da Coluna",
+      "url": "https://drive.google.com/file/d/1ayXnjqYs6EhnZJkxUzK_IpQyJE3YPG3d/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1HVer6wcktfcIQOfiwblRNKHswczkTDrD",
+      "name": "Alongamento com Inclinação Lateral de Tronco",
+      "url": "https://drive.google.com/file/d/1HVer6wcktfcIQOfiwblRNKHswczkTDrD/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1gNY5F0ci5zdT1wwBkd7F--5tQrl-RHFO",
+      "name": "Alongamento de Costas Sentado Curvado",
+      "url": "https://drive.google.com/file/d/1gNY5F0ci5zdT1wwBkd7F--5tQrl-RHFO/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1PObjf27Zi1JxDzR5RVOg---dCJ52bMyy",
+      "name": "Alongamento Sentado com Pernas Afastadas (Upavistha Konasana)",
+      "url": "https://drive.google.com/file/d/1PObjf27Zi1JxDzR5RVOg---dCJ52bMyy/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1HXh5hhEdVkhozLLQoFPL0t5sAKKMDBYT",
+      "name": "Alongamento Lombar Sentado",
+      "url": "https://drive.google.com/file/d/1HXh5hhEdVkhozLLQoFPL0t5sAKKMDBYT/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "17Yf2Z7gxyfoI9iIslHylSholQCWSqafA",
+      "name": "Alongamento para o Meio das Costas",
+      "url": "https://drive.google.com/file/d/17Yf2Z7gxyfoI9iIslHylSholQCWSqafA/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "13m4pp-rHRJuGXkoI-bz_jOqq-HjFkgBm",
+      "name": "Alongamento de Dorsais Ajoelhado",
+      "url": "https://drive.google.com/file/d/13m4pp-rHRJuGXkoI-bz_jOqq-HjFkgBm/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1zOrBH3UOlsHq3WS3GGFBQ4fjFXXxg9FQ",
+      "name": "Alongamento de Peitoral com Cotovelos para Trás",
+      "url": "https://drive.google.com/file/d/1zOrBH3UOlsHq3WS3GGFBQ4fjFXXxg9FQ/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1fr-tZXvYI-3dX1ZzpoavwR10iE-8RMfK",
+      "name": "Alongamento Dinâmico de Costas",
+      "url": "https://drive.google.com/file/d/1fr-tZXvYI-3dX1ZzpoavwR10iE-8RMfK/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1g_ApOW39-fEC8MK3D3V2gxe1sCqlnNlB",
+      "name": "Levantamento Terra no Smith",
+      "url": "https://drive.google.com/file/d/1g_ApOW39-fEC8MK3D3V2gxe1sCqlnNlB/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1nIv08yECyOw6BDlWqVSG_RNq8W01Wid4",
+      "name": "Stiff Unilateral com Halter",
+      "url": "https://drive.google.com/file/d/1nIv08yECyOw6BDlWqVSG_RNq8W01Wid4/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "15EqJt5s7YCIFpvZAn-X9w3iXsl5gEgzk",
+      "name": "Remada Alta nas Argolas",
+      "url": "https://drive.google.com/file/d/15EqJt5s7YCIFpvZAn-X9w3iXsl5gEgzk/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
+      "id": "1X1sH9Mw5guSjOBy-owH14pghjDrnnCEv",
+      "name": "Barra Fixa com Pegada Supinada",
+      "url": "https://drive.google.com/file/d/1X1sH9Mw5guSjOBy-owH14pghjDrnnCEv/view?usp=drivesdk",
+      "group": "Costas",
+      "gender": "Feminino"
+    },
+    {
       "id": "1DMxnfF5YtBMoKCFPxVwf_pq2ux0zua1b",
       "name": "Puxada Frontal Supinada na Máquina",
       "url": "https://drive.google.com/file/d/1DMxnfF5YtBMoKCFPxVwf_pq2ux0zua1b/view?usp=drivesdk",
@@ -3073,118 +4146,6 @@
       "id": "1a9UAYj4ZnS1sNpHi4y5c873UdvCtiB_-",
       "name": "Hiperextensão Lombar 45 Graus",
       "url": "https://drive.google.com/file/d/1a9UAYj4ZnS1sNpHi4y5c873UdvCtiB_-/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1GFn9yOI2lJY9pVyi5AgIKgZr9ZNckF0n",
-      "name": "Alongamento Lateral de Tronco em Pé",
-      "url": "https://drive.google.com/file/d/1GFn9yOI2lJY9pVyi5AgIKgZr9ZNckF0n/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1h2ASnCKnZl4hiQhsNLCk256D_6hpC7js",
-      "name": "Alongamento com Rotação de Tronco em Pé",
-      "url": "https://drive.google.com/file/d/1h2ASnCKnZl4hiQhsNLCk256D_6hpC7js/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1xEe5PwRwXgB985013um4MDThb_yGdMku",
-      "name": "Alongamento da Coluna para Frente",
-      "url": "https://drive.google.com/file/d/1xEe5PwRwXgB985013um4MDThb_yGdMku/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1ayXnjqYs6EhnZJkxUzK_IpQyJE3YPG3d",
-      "name": "Alongamento da Coluna",
-      "url": "https://drive.google.com/file/d/1ayXnjqYs6EhnZJkxUzK_IpQyJE3YPG3d/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1HVer6wcktfcIQOfiwblRNKHswczkTDrD",
-      "name": "Alongamento com Inclinação Lateral de Tronco",
-      "url": "https://drive.google.com/file/d/1HVer6wcktfcIQOfiwblRNKHswczkTDrD/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1gNY5F0ci5zdT1wwBkd7F--5tQrl-RHFO",
-      "name": "Alongamento de Costas Sentado Curvado",
-      "url": "https://drive.google.com/file/d/1gNY5F0ci5zdT1wwBkd7F--5tQrl-RHFO/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1PObjf27Zi1JxDzR5RVOg---dCJ52bMyy",
-      "name": "Alongamento Sentado com Pernas Afastadas (Upavistha Konasana)",
-      "url": "https://drive.google.com/file/d/1PObjf27Zi1JxDzR5RVOg---dCJ52bMyy/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1HXh5hhEdVkhozLLQoFPL0t5sAKKMDBYT",
-      "name": "Alongamento Lombar Sentado",
-      "url": "https://drive.google.com/file/d/1HXh5hhEdVkhozLLQoFPL0t5sAKKMDBYT/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "17Yf2Z7gxyfoI9iIslHylSholQCWSqafA",
-      "name": "Alongamento para o Meio das Costas",
-      "url": "https://drive.google.com/file/d/17Yf2Z7gxyfoI9iIslHylSholQCWSqafA/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "13m4pp-rHRJuGXkoI-bz_jOqq-HjFkgBm",
-      "name": "Alongamento de Dorsais Ajoelhado",
-      "url": "https://drive.google.com/file/d/13m4pp-rHRJuGXkoI-bz_jOqq-HjFkgBm/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1zOrBH3UOlsHq3WS3GGFBQ4fjFXXxg9FQ",
-      "name": "Alongamento de Peitoral com Cotovelos para Trás",
-      "url": "https://drive.google.com/file/d/1zOrBH3UOlsHq3WS3GGFBQ4fjFXXxg9FQ/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1fr-tZXvYI-3dX1ZzpoavwR10iE-8RMfK",
-      "name": "Alongamento Dinâmico de Costas",
-      "url": "https://drive.google.com/file/d/1fr-tZXvYI-3dX1ZzpoavwR10iE-8RMfK/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1g_ApOW39-fEC8MK3D3V2gxe1sCqlnNlB",
-      "name": "Levantamento Terra no Smith",
-      "url": "https://drive.google.com/file/d/1g_ApOW39-fEC8MK3D3V2gxe1sCqlnNlB/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1nIv08yECyOw6BDlWqVSG_RNq8W01Wid4",
-      "name": "Stiff Unilateral com Halter",
-      "url": "https://drive.google.com/file/d/1nIv08yECyOw6BDlWqVSG_RNq8W01Wid4/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "15EqJt5s7YCIFpvZAn-X9w3iXsl5gEgzk",
-      "name": "Remada Alta nas Argolas",
-      "url": "https://drive.google.com/file/d/15EqJt5s7YCIFpvZAn-X9w3iXsl5gEgzk/view?usp=drivesdk",
-      "group": "Costas",
-      "gender": "Feminino"
-    },
-    {
-      "id": "1X1sH9Mw5guSjOBy-owH14pghjDrnnCEv",
-      "name": "Barra Fixa com Pegada Supinada",
-      "url": "https://drive.google.com/file/d/1X1sH9Mw5guSjOBy-owH14pghjDrnnCEv/view?usp=drivesdk",
       "group": "Costas",
       "gender": "Feminino"
     },
@@ -3741,5 +4702,7 @@
       "group": "Abdômen",
       "gender": "Feminino"
     }
-  ]
+  ],
+  "originalCount": 670,
+  "exampleCount": 1
 }
