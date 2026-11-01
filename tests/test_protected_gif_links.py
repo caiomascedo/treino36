@@ -22,7 +22,7 @@ with sync_playwright() as p:
  page.evaluate('(id)=>WorkoutVideoLibrary.remove(id)',asset['id']);link.click();preview=page.locator('#movementPreview');expect(preview).to_be_visible();preview.get_by_role('button').click();page.evaluate('(id)=>WorkoutVideoLibrary.restore(id)',asset['id'])
  # Selecting the whole noneditable sample then Backspace/Paste must not delete it.
  page.evaluate('''()=>{const a=document.querySelector('.sec-a ol .exercise-video'),r=document.createRange();r.selectNode(a);const s=getSelection();s.removeAllRanges();s.addRange(r);a.closest('[contenteditable=true]').focus();}''')
- page.keyboard.press('Backspace');expect(link).to_have_count(1)
+ page.keyboard.press('Backspace');expect(link).to_have_count(1);assert page.evaluate('''()=>{const a=document.querySelector('.sec-a ol .exercise-video'),r=document.createRange();r.selectNode(a);const s=getSelection();s.removeAllRanges();s.addRange(r);return !a.parentElement.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true}));}''')
  def edit():
   page.locator('.sec-a .main-exercise-grip').first.click();page.locator('#editExerciseBtn').click();expect(page.locator('#exerciseEditDialog')).to_be_visible()
  edit()

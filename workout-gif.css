@@ -32,3 +32,5 @@
 .mobility-video-row{display:flex;align-items:stretch;gap:4px}.mobility-video-row>button:first-child{flex:1;min-width:0}.mobility-video-row>.mobility-eye{flex:0 0 36px;width:36px;padding:6px;display:flex;align-items:center;justify-content:center}#mobilityVideoBtn{display:inline-flex;align-items:center;gap:5px;font-size:12px}
 @media print{.main-exercise-eye{display:none!important}}
 a.exercise-video{display:inline-block;user-select:none;-webkit-user-select:none;cursor:pointer;font-size:.85em;white-space:nowrap}#exerciseEditDialog{width:min(94vw,560px);box-sizing:border-box;max-height:90dvh;overflow:auto;border:1px solid #cbd5e1;border-radius:12px;padding:15px}#exerciseEditDialog textarea{width:100%;box-sizing:border-box;min-height:95px}#exerciseEditDialog::backdrop{background:#0008}
+
+#workoutGifDialog[data-library=cm] video{background:#000}#workoutGifDialog[data-library=cm] video.gym-ink-on-black{background:#fff;filter:invert(1) hue-rotate(180deg)}

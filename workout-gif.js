@@ -18,7 +18,7 @@ window.GymFasterWorkout = (() => {
   function create(){
     dialog=node('dialog',{id:'workoutGifDialog','aria-labelledby':'workoutGifTitle'});
     const heading=node('h3',{id:'workoutGifTitle'}),help=node('p',{},'Monte a ficha com movimentos do corpo inteiro. O GIF repete por 5 segundos e pode ser baixado ou compartilhado.'),student=node('strong',{class:'gif-student'});
-    const library=node('select',{'aria-label':'Biblioteca dos GIFs'});library.append(node('option',{value:'cm'},'CM · fundo branco, traços pretos'),node('option',{value:'gymfaster'},'GymFaster · modelo anatômico'));
+    const library=node('select',{'aria-label':'Biblioteca dos GIFs'});library.append(node('option',{value:'cm'},'CM · fundo preto, traços claros'),node('option',{value:'gymfaster'},'GymFaster · modelo anatômico'));
     const section=node('select',{'aria-label':'Treino para o GIF'}),status=node('p',{role:'status','aria-live':'polite'}),list=node('div',{class:'gif-cards'}),result=node('div',{class:'gif-result',hidden:''});
     const accept=node('button',{type:'button',class:'gif-accept-suggestions',hidden:''},'Usar sugestões mostradas');
     const actions=node('div',{class:'gif-actions'}),generate=node('button',{type:'button',class:'gif-primary'}),share=node('button',{type:'button',hidden:''},'Compartilhar GIF'),download=node('button',{type:'button',hidden:''},'Baixar GIF'),stop=node('button',{type:'button',hidden:''},'Cancelar geração'),close=node('button',{type:'button'},'Fechar');
@@ -40,13 +40,13 @@ window.GymFasterWorkout = (() => {
     controls.accept.hidden=!suggested;controls.accept.textContent='Usar sugestões mostradas ('+suggested+')';
     controls.status.textContent=cards.length?ready+'/'+cards.length+' demonstrações prontas. '+(missing.length?'Confira as sugestões destacadas; conjugados aparecem lado a lado no mesmo bloco.':'Confira os movimentos e gere o GIF.'): 'Este treino está vazio. Adicione os exercícios na ficha.';
   }
-  function cmWhiteInk(asset){return asset.collection==='cm'&&!asset.localURL;}
+  function invertInk(asset){return !asset.localURL&&((mode==='cm')!==(asset.collection==='cm'));}
   function assetURL(asset){return asset.localURL||asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';}
   function playVisible(card){if(card.visible&&card.asset&&!job){if(!card.video.getAttribute('src'))card.video.src=assetURL(card.asset);card.video.play().catch(()=>{});}else card.video.pause();}
   function videoCaption(asset,reason){return asset.name+' · '+(asset.localURL?'Arquivo local · reenvie ao reabrir a ficha':asset.kind==='created-example'?'Exemplo criado':themes[asset.collection].name)+(asset.collection==='gymfaster'&&asset.gender&&!asset.kind?' · '+asset.gender:'')+(reason?' · '+reason:'');}
   function setVideo(card,asset,reason){
     if(card.localURL&&card.localURL!==asset?.localURL)URL.revokeObjectURL(card.localURL);
-    card.localURL=asset?.localURL||null;card.asset=asset;card.video.classList.toggle('cm-ink-on-white',!!asset&&cmWhiteInk(asset));
+    card.localURL=asset?.localURL||null;card.asset=asset;card.video.classList.toggle('cm-ink-on-white',!!asset&&invertInk(asset)&&asset.collection==='cm');card.video.classList.toggle('gym-ink-on-black',!!asset&&invertInk(asset)&&asset.collection==='gymfaster');
     card.video.pause();card.video.removeAttribute('src');card.video.load();card.video.hidden=!asset;if(card.options)card.options.open=!asset;
     card.article.classList.toggle('gif-missing',!asset);
     card.caption.textContent=asset?videoCaption(asset,reason):'Escolha a demonstração deste exercício.';
@@ -225,7 +225,7 @@ window.GymFasterWorkout = (() => {
     const width=ctx.canvas.width,height=ctx.canvas.height;
     ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,width,height);
     const scale=Math.min(width/video.videoWidth,height/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;ctx.drawImage(video,(width-w)/2,(height-h)/2,w,h);
-    if(cmWhiteInk(asset)){
+    if(invertInk(asset)){
       const frame=ctx.getImageData(0,0,width,height),pixels=frame.data;
       // Same sRGB transform as the preview's invert(1) hue-rotate(180deg).
       // Black/white swap while the muscle highlight retains its green hue.

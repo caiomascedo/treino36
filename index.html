@@ -1505,8 +1505,8 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="gymfaster-library.js?v=7"></script>
 <script src="workout-video-match.js?v=2"></script>
 <script src="video-preview.js?v=1"></script>
-<script src="workout-gif.js?v=9"></script>
-<link rel="stylesheet" href="workout-gif.css?v=7">
+<script src="workout-gif.js?v=10"></script>
+<link rel="stylesheet" href="workout-gif.css?v=8">
 <link rel="stylesheet" href="gymfaster-library.css?v=5">
 <script src="pdf-review.js?v=7"></script>
 <script src="diet-calculations.js?v=7"></script>
@@ -8400,9 +8400,9 @@ window.AvaliacaoTreinoSync = (function () {
     var selection=getSelection();if(!selection?.rangeCount)return;
     var ranges=Array.from(event.getTargetRanges?.()||[]).map(function(target){var r=document.createRange();r.setStart(target.startContainer,target.startOffset);r.setEnd(target.endContainer,target.endOffset);return r;});
     var selected=selection.getRangeAt(0);if(!selected.collapsed)ranges.push(selected);
-    if(ranges.some(function(range){return Array.from(document.querySelectorAll('.section ol .exercise-video,.exercise-text .exercise-video')).some(function(link){return range.intersectsNode(link);});}))event.preventDefault();
+    if(ranges.some(function(range){return Array.from(document.querySelectorAll('.section ol .exercise-video,.exercise-text .exercise-video')).some(function(link){return range.intersectsNode(link);});})){event.preventDefault();event.stopImmediatePropagation();}
   }
-  document.addEventListener('beforeinput',protegerAmostra,true);document.addEventListener('cut',protegerAmostra,true);
+  document.addEventListener('beforeinput',protegerAmostra,true);document.addEventListener('cut',protegerAmostra,true);document.addEventListener('paste',protegerAmostra,true);
   var exerciseEditor=criarDialogo('exerciseEditDialog','Editar exercício',
     '<label for="exerciseEditText">Nome e prescrição</label><textarea id="exerciseEditText"></textarea><p id="exerciseEditVideoStatus"></p><div class="dialog-actions"><button type="button" id="exerciseEditChoose">Escolher / trocar GIF</button><button type="button" id="exerciseEditDownload">Baixar vídeo</button><a id="exerciseEditOriginal" target="_blank" rel="noopener" hidden>Abrir original</a><button type="button" id="exerciseEditRemove">Remover GIF</button></div><p id="exerciseEditStatus" role="status"></p><div class="dialog-actions"><button type="button" id="exerciseEditSave">Salvar alterações</button><button type="button" id="exerciseEditDelete">Apagar exercício</button><button data-close>Cancelar</button></div>');
   var exerciseEditContext=null,exerciseEditURL='';

@@ -60,8 +60,8 @@ with sync_playwright() as p:
  before=page.evaluate('localStorage.getItem("treinoAlunos")')
  dialog.get_by_role('button',name='Usar sugestões mostradas (2)',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('8/8')
  assert page.evaluate('localStorage.getItem("treinoAlunos")')==before,'Choices for compound parts must not overwrite the parent workout line'
- expect(dialog.locator('.gif-card video.cm-ink-on-white')).to_have_count(8)
- assert dialog.locator('.gif-card video').first.evaluate("v=>getComputedStyle(v).filter.includes('invert(1)')&&getComputedStyle(v).filter.includes('hue-rotate(180deg)')")
+ expect(dialog.locator('.gif-card video.cm-ink-on-white')).to_have_count(0)
+ assert dialog.locator('.gif-card video').first.evaluate("v=>getComputedStyle(v).filter==='none'")
  page.wait_for_function("document.querySelector('#workoutGifDialog .gif-card video').readyState>=2")
  assert dialog.evaluate('e=>e.scrollWidth<=e.clientWidth')
  expect(dialog.locator('.gif-compound')).to_have_count(2)
@@ -82,13 +82,13 @@ with sync_playwright() as p:
  assert Image.open(output).height<2385
  assert not page.evaluate("gifDrawnText.some(text=>text.startsWith('Demonstrações')||text.includes('—'))")
  assert '_cm_' in download.value.suggested_filename
- # The actual encoded CM animation must have white illustration backgrounds,
- # dark linework and green highlights, not merely a CSS preview effect.
+ # The dark CM theme must keep black illustration backgrounds,
+ # light linework and green highlights in the actual encoded GIF.
  cm_image=Image.open(output).convert('RGB');green=0
  for row,slot in enumerate(cm_slots):
   pixels=list(cm_image.crop((slot['x'],slot['y'],slot['x']+slot['width'],slot['y']+slot['height'])).get_flattened_data())
-  assert sum(r>235 and g>235 and b>235 for r,g,b in pixels)>len(pixels)*.45,row
-  assert sum(r<80 and g<80 and b<80 for r,g,b in pixels)>100,row
+  assert sum(r<35 and g<35 and b<35 for r,g,b in pixels)>len(pixels)*.45,row
+  assert sum(r>150 and g>150 and b>150 for r,g,b in pixels)>100,row
   green+=sum(g>r+15 and g>b+8 and g>70 for r,g,b in pixels)
  assert green>300,green
  dialog.get_by_role('button',name='Compartilhar GIF').click();page.wait_for_function('shared.length===1');assert page.evaluate('shared[0].type')=='image/gif'
