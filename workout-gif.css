@@ -41,3 +41,5 @@ a.exercise-video{display:inline-block;user-select:none;-webkit-user-select:none;
 @media print{.media-visibility{display:none!important}}
 .exercise-gifs:empty{display:none!important}.media-visibility [role=menu]>button[aria-checked=true]{background:#e1ece5!important;font-weight:bold!important}
 .section-view-tools{display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;white-space:nowrap}.section-view-tools>.media-visibility>summary{font-size:9px;padding:4px;border-radius:12px}
+
+#movementPreview video{height:min(62dvh,460px)}
