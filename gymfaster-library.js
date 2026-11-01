@@ -1,7 +1,7 @@
 /* Verified Drive catalog. Selection is explicit: exercise variants are never replaced automatically. */
 window.GymFasterLibrary = (() => {
   'use strict';
-  let catalog, pending, dialog, selection, previousFocus;
+  let catalog, pending, dialog, selection, previousFocus,showDeleted=false,lastRemoved=null,notice='';
   const el = (tag, attrs = {}, text) => {
     const node = document.createElement(tag);
     Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
@@ -33,21 +33,22 @@ window.GymFasterLibrary = (() => {
     filters.append(group, gender);
     const status = el('p', {role: 'status'}), list = el('div', {class: 'gym-results'});
     const preview = el('div', {class: 'gym-preview', hidden: ''});
+    const libraryTools=el('div',{class:'gym-library-tools'}),removed=el('button',{type:'button'},'Ver apagados'),undo=el('button',{type:'button',hidden:''},'Desfazer exclusão'),libraryHint=el('small',{},'Apagar remove da sua biblioteca neste navegador, com opção de restaurar.');libraryTools.append(removed,undo,libraryHint);
     const close = el('button', {type: 'button', class: 'gym-close'}, 'Fechar');
     function clearPreview() { preview.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('src'); video.load(); }); preview.replaceChildren(); preview.hidden = true; }
     close.onclick = () => dialog.close();
-    dialog.append(heading, help, search, filters, status, preview, list, close);
+    dialog.append(heading, help, search, filters, status, libraryTools, preview, list, close);
     document.body.append(dialog);
     dialog.addEventListener('close', () => { clearPreview(); selection = null; if (previousFocus?.isConnected) previousFocus.focus(); });
     function render() {
       list.replaceChildren(); clearPreview();
       if (!catalog) return;
       const words = normalize(search.value).split(' ').filter(Boolean);
-      const available=WorkoutVideoLibrary.apply(catalog.videos);
-      const matches = available.filter(video => (!group.value || video.group === group.value) && (!gender.value || video.gender === gender.value) && words.every(word => normalize([video.name,...(video.aliases||[])].join(' ')).includes(word)));
-      status.textContent = matches.length + ' de ' + available.length + ' vídeos disponíveis. ' + (available.length<catalog.videos.length?'('+ (catalog.videos.length-available.length)+' apagados da sua lista) ':'') + (matches.length ? 'Confira o aparelho e a variação antes de escolher.' : 'Tente menos palavras ou outro grupo. Sem essa variação, mantenha o vídeo atual ou cole outro link.');
+      const all=WorkoutVideoLibrary.apply(catalog.videos,true),available=all.filter(v=>!v.removed),deleted=all.length-available.length;removed.textContent=showDeleted?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showDeleted;undo.hidden=!all.some(v=>v.id===lastRemoved&&v.removed);
+      const matches = all.filter(video => video.removed===showDeleted && (!group.value || video.group === group.value) && (!gender.value || video.gender === gender.value) && words.every(word => normalize([video.name,...(video.aliases||[])].join(' ')).includes(word)));
+      status.textContent = (notice?notice+' ':'')+matches.length + ' de ' + (showDeleted?deleted:available.length) + (showDeleted?' vídeos apagados. ':' vídeos disponíveis. ') + (available.length<catalog.videos.length?'('+ (catalog.videos.length-available.length)+' apagados da sua lista) ':'') + (matches.length ? 'Confira o aparelho e a variação antes de escolher.' : 'Tente menos palavras ou outro grupo. Sem essa variação, mantenha o vídeo atual ou cole outro link.');
       matches.forEach(video => {
-        const row = el('article', {class: 'gym-result'}), title = el('strong', {}, video.name), meta = el('small', {}, video.group + ' · ' + video.gender);
+        const row = el('article', {class: 'gym-result','data-video-id':video.id}), title = el('strong', {}, video.name), meta = el('small', {}, video.group + ' · ' + video.gender);
         const actions = el('div', {class: 'gym-actions'}), watch = el('button', {type: 'button'}, 'Ver movimento');
         const original = el('a', {href: video.url, target: '_blank', rel: 'noopener noreferrer'}, 'Abrir no Drive');
         watch.onclick = () => {
@@ -58,7 +59,8 @@ window.GymFasterLibrary = (() => {
           if (motion.tagName === 'VIDEO') { motion.muted = true; motion.play().catch(() => {}); }
         };
         actions.append(watch, original);
-        if (selection) {
+        const remove=el('button',{type:'button',class:video.removed?'gym-restore':'gym-remove'},video.removed?'Restaurar':'Apagar');remove.onclick=()=>{try{if(video.removed){notice='Vídeo restaurado.';WorkoutVideoLibrary.restore(video.id);}else{lastRemoved=video.id;notice='Vídeo apagado da sua lista.';WorkoutVideoLibrary.remove(video.id);}}catch(error){lastRemoved=null;notice=error.message;render();}};actions.append(remove);
+        if (selection&&!video.removed) {
           const use = el('button', {type: 'button', class: 'gym-use'}, 'Usar este vídeo');
           use.onclick = () => { const apply = selection.apply; apply(video); dialog.close(); };
           actions.append(use);
@@ -66,13 +68,14 @@ window.GymFasterLibrary = (() => {
         row.append(title, meta, actions); list.append(row);
       });
     }
-    search.oninput = render; group.onchange = render; gender.onchange = render;
+    removed.onclick=()=>{showDeleted=!showDeleted;search.value='';group.value='';gender.value='';notice='';render();};undo.onclick=()=>{if(!lastRemoved)return;const id=lastRemoved;lastRemoved=null;notice='Exclusão desfeita.';try{WorkoutVideoLibrary.restore(id);}catch(error){lastRemoved=id;notice=error.message;render();}};
+    function filter(){notice='';render();}search.oninput = filter; group.onchange = filter; gender.onchange = filter;
     return {help, search, group, gender, status, render};
   }
   let controls;
   async function open(options) {
     if (!controls) controls = create();
-    previousFocus = document.activeElement; selection = options || null;
+    previousFocus = document.activeElement; selection = options || null;showDeleted=false;notice='';
     controls.help.textContent = options ? 'Escolha o vídeo de “' + options.name + '”. A escolha fica salva neste exercício. ' + (options.context === 'gif' ? 'O movimento aparecerá na ficha em GIF.' : 'O PDF abre o vídeo por link.') : 'Explore a coleção. Para montar a ficha animada do aluno, use o botão GIFs ao lado do PDF e escolha CM ou GymFaster.';
     controls.search.value = options ? options.name : ''; controls.group.value = ''; controls.gender.value = '';
     controls.status.textContent = 'Carregando catálogo…';
