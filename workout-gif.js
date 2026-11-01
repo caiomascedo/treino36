@@ -2,7 +2,7 @@ window.GymFasterWorkout = (() => {
   'use strict';
   const WIDTH=800,CARD=270,HEADER=175,FRAMES=100,SLOT_W=350,SLOT_H=242;
   const themes={cm:{name:'CM',bg:'#050906',card:'#0a110d',ink:'#f3faf5',green:'#3aeb91'},gymfaster:{name:'GymFaster',bg:'#eff5f1',card:'#fff',ink:'#1b3428',green:'#176b43'}};
-  let integration,dialog,controls,videos=[],catalogPromise,workout,selected,cards=[],mode='gymfaster',file,blobURL,observer,job=null,sequence=0,layoutHeader=HEADER,focusReturn;
+  let integration,dialog,controls,videos=[],catalogPromise,workout,selected,cards=[],mode='gymfaster',file,blobURL,observer,job=null,sequence=0,layoutHeader=HEADER,layoutBlocks=[],focusReturn;
   const match=()=>window.WorkoutVideoMatch;
   const node=(tag,attrs={},text)=>{const item=document.createElement(tag);Object.entries(attrs).forEach(([key,value])=>item.setAttribute(key,value));if(text!==undefined)item.textContent=text;return item;};
   const prefKey='treinoGifChoicesV1';
@@ -36,7 +36,7 @@ window.GymFasterWorkout = (() => {
     controls.generate.disabled=!cards.length;
     controls.generate.textContent=missing.length?'Revisar '+missing.length+' exercício'+(missing.length>1?'s':''):'Gerar GIF '+themes[mode].name;
     controls.accept.hidden=!suggested;controls.accept.textContent='Usar sugestões mostradas ('+suggested+')';
-    controls.status.textContent=cards.length?ready+'/'+cards.length+' demonstrações prontas. '+(missing.length?'Confira as sugestões destacadas; combinações foram separadas mantendo os blocos do treino.':'Confira os movimentos e gere o GIF.'): 'Este treino está vazio. Adicione os exercícios na ficha.';
+    controls.status.textContent=cards.length?ready+'/'+cards.length+' demonstrações prontas. '+(missing.length?'Confira as sugestões destacadas; conjugados aparecem lado a lado no mesmo bloco.':'Confira os movimentos e gere o GIF.'): 'Este treino está vazio. Adicione os exercícios na ficha.';
   }
   function cmWhiteInk(asset){return asset.collection==='cm'&&!asset.localURL;}
   function assetURL(asset){return asset.localURL||asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';}
@@ -54,23 +54,31 @@ window.GymFasterWorkout = (() => {
     if(!card.row.compound){integration.save(card.row.source,asset.url,workout.student);card.row.video=asset.url;}
     setVideo(card,asset,'Escolhido por você');readiness();
   }
-  function expandedRows(){return selected.rows.flatMap((row,index)=>{const parts=match().parts(row.nome),reps=row.detalhes.replace(/^[\s—–-]+/,'').match(/^(\s*\d+\s*[x×])\s*([\d\s–-]+)\+([\d\s–-]+)$/i);return parts.map((name,part)=>({...row,nome:name,video:parts.length===1?row.video:'',compound:parts.length>1?row.nome:null,label:String(index+1)+(parts.length>1?String.fromCharCode(97+part):''),detalhes:parts.length===2&&reps?reps[1]+' '+reps[part+2].trim():row.detalhes}));});}
+  function expandedRows(){return selected.rows.flatMap((row,index)=>{const parts=match().parts(row.nome),reps=row.detalhes.replace(/^[\s—–-]+/,'').match(/^(\s*\d+\s*[x×])\s*([\d\s–-]+)\+([\d\s–-]+)$/i);return parts.map((name,part)=>({...row,nome:name,video:parts.length===1?row.video:'',compound:parts.length>1?row.nome:null,sourceIndex:index,partIndex:part,partCount:parts.length,label:String(index+1)+(parts.length>1?String.fromCharCode(97+part):''),detalhes:parts.length===2&&reps?reps[1]+' '+reps[part+2].trim():row.detalhes}));});}
   function render(){
     if(job)return;
     clearResult();disposeCards();controls.list.replaceChildren();dialog.dataset.library=mode;controls.library.value=mode;controls.heading.textContent='Treino em GIF · '+themes[mode].name;controls.student.textContent=workout.student+' · '+(selected?.title||'Treino');
     if(!selected){readiness();return;}
     observer=new IntersectionObserver(entries=>entries.forEach(entry=>{const card=cards.find(c=>c.article===entry.target);if(card){card.visible=entry.isIntersecting;playVisible(card);}}),{root:dialog,rootMargin:'30px'});
-    const prefs=preferences();
+    const prefs=preferences(),compoundHosts=new Map();
     expandedRows().forEach(row=>{
       const article=node('article',{class:'gif-card'}),text=node('div',{class:'gif-card-text'}),name=node('strong',{},row.label+'. '+row.nome),details=node('p',{},row.detalhes),caption=node('small'),suggestionBox=node('div',{class:'gif-suggestions'}),choose=node('button',{type:'button'},'Escolher outro vídeo'),upload=node('button',{type:'button'},'Vídeo do aparelho'),input=node('input',{type:'file',accept:'video/*',hidden:'','aria-label':'Arquivo de vídeo de '+row.nome});
       const video=node('video',{muted:'',playsinline:'',loop:'',preload:'none','aria-label':'Demonstração de '+row.nome});video.muted=true;
       const resolution=match().resolve(row,videos,mode,prefs[choiceKey(row.nome)]),card={row,article,video,caption,choose,upload,suggestionBox,suggestions:resolution.suggestions,asset:null,localURL:null,visible:false};
-      if(row.compound)text.append(node('small',{class:'gif-block'},'Bloco '+row.label.replace(/[a-z]$/,'')+' · '+row.compound));
+      let host=controls.list;
+      if(row.compound){
+        if(!compoundHosts.has(row.sourceIndex)){
+          const block=node('section',{class:'gif-compound','aria-label':'Conjugado '+(row.sourceIndex+1)+': '+row.compound});
+          const heading=node('h4',{},(row.sourceIndex+1)+'. Conjugado'),grid=node('div',{class:'gif-compound-grid','data-size':String(row.partCount)});
+          block.append(heading,grid);controls.list.append(block);compoundHosts.set(row.sourceIndex,grid);
+        }
+        host=compoundHosts.get(row.sourceIndex);article.classList.add('gif-compound-card');
+      }
       resolution.suggestions.forEach(asset=>{const button=node('button',{type:'button'},'Usar '+themes[asset.collection].name+': '+asset.name);button.onclick=()=>selectAsset(card,asset);suggestionBox.append(button);});
       choose.onclick=()=>openPicker(card);
       upload.onclick=()=>input.click();input.onchange=()=>{const chosen=input.files?.[0];if(!chosen||job)return;if((!chosen.type.startsWith('video/')&&!/\.(mp4|m4v|mov|webm)$/i.test(chosen.name))||chosen.size>100*1048576){controls.status.textContent='Escolha um vídeo de até 100 MB.';return;}setVideo(card,{name:chosen.name,collection:mode,localURL:URL.createObjectURL(chosen)},'Usado somente neste GIF');readiness();};
       video.onerror=()=>{if(card.asset&&!job)card.caption.textContent='A prévia não carregou. Você pode tentar Gerar GIF para carregar a demonstração novamente.';};
-      text.append(name,details,caption,suggestionBox,choose,upload,input);article.append(text,video);controls.list.append(article);cards.push(card);setVideo(card,resolution.video,resolution.reason);observer.observe(article);
+      text.append(name,details,caption,suggestionBox,choose,upload,input);article.append(text,video);host.append(article);cards.push(card);setVideo(card,resolution.video,resolution.reason);observer.observe(article);
     });readiness();
   }
   function openPicker(card){
@@ -108,8 +116,52 @@ window.GymFasterWorkout = (() => {
   function send(active,data,transfers=[]){return new Promise((resolve,reject)=>{let settled=false;const target=active.worker,timeout=setTimeout(()=>finish(Error('A geração demorou demais. Tente um treino menor.')),120000),poll=setInterval(()=>{try{check(active);}catch(error){finish(error);}},100);const response=event=>{if(event.data.type==='progress'){controls.status.textContent='Finalizando GIF: '+event.data.percent+'%';return;}event.data.type==='error'?finish(Error(event.data.message)):finish(null,event.data);},failed=()=>finish(Error('Não foi possível iniciar o gerador. Recarregue o treino36 e tente novamente.'));function finish(error,value){if(settled)return;settled=true;clearTimeout(timeout);clearInterval(poll);target.removeEventListener('message',response);target.removeEventListener('error',failed);error?reject(error):resolve(value);}target.addEventListener('message',response);target.addEventListener('error',failed);target.postMessage(data,transfers);});}
   function wrap(ctx,text,x,y,width,step){let line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){ctx.fillText(line,x,y);y+=step;line=word;}else line=next;}if(line)ctx.fillText(line,x,y);return y+step;}
   function lineCount(ctx,text,width){let n=1,line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){n++;line=word;}else line=next;}return n;}
-  function layout(ctx){ctx.font='bold 29px Arial';layoutHeader=Math.max(HEADER,88+lineCount(ctx,selected.title,744)*32+55);let top=layoutHeader;cards.forEach(c=>{ctx.font='bold 23px Arial';const names=lineCount(ctx,c.row.label+'. '+c.row.nome,358);ctx.font='20px Arial';c.top=top;c.height=Math.max(CARD,Math.max(38+names*28+13,120)+lineCount(ctx,c.row.detalhes,358)*26+25);top+=c.height;});return top+50;}
-  function paint(ctx,canvas){const t=themes[mode];ctx.fillStyle=t.bg;ctx.fillRect(0,0,WIDTH,canvas.height);ctx.fillStyle=t.green;ctx.fillRect(0,0,WIDTH,7);ctx.font='bold 23px Arial';ctx.fillText('CAIO MACÊDO · PERSONAL TRAINER',28,43);ctx.fillStyle=t.ink;ctx.font='bold 29px Arial';wrap(ctx,selected.title,28,88,744,32);ctx.font='19px Arial';ctx.fillText(workout.student.slice(0,65),28,layoutHeader-29);cards.forEach(c=>{ctx.fillStyle=t.card;ctx.fillRect(20,c.top,760,c.height-12);ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';const y=wrap(ctx,c.row.label+'. '+c.row.nome,36,c.top+38,358,28);ctx.fillStyle=t.green;ctx.font='20px Arial';wrap(ctx,c.row.detalhes,36,Math.max(y+13,c.top+120),358,26);});ctx.fillStyle=t.green;ctx.font='17px Arial';const sources=new Set(cards.map(c=>c.asset.localURL?'arquivo local':c.asset.kind==='created-example'?'exemplo criado':themes[c.asset.collection].name));ctx.fillText('Demonstrações '+[...sources].join(' + ')+' · Treino '+selected.id,28,canvas.height-20);}
+  function layout(ctx){
+    ctx.font='bold 29px Arial';layoutHeader=Math.max(HEADER,88+lineCount(ctx,selected.title,744)*32+55);
+    let top=layoutHeader;layoutBlocks=[];
+    for(const card of cards){
+      let block=layoutBlocks[layoutBlocks.length-1];
+      if(!block||block.sourceIndex!==card.row.sourceIndex){block={sourceIndex:card.row.sourceIndex,compound:!!card.row.compound,members:[],pairs:[]};layoutBlocks.push(block);}
+      block.members.push(card);
+    }
+    for(const block of layoutBlocks){
+      block.top=top;
+      if(!block.compound){
+        const c=block.members[0];ctx.font='bold 23px Arial';const names=lineCount(ctx,c.row.label+'. '+c.row.nome,358);ctx.font='20px Arial';
+        c.top=top;c.height=Math.max(CARD,Math.max(38+names*28+13,120)+lineCount(ctx,c.row.detalhes,358)*26+25);c.slotX=410;c.slotY=top+5;block.height=c.height;
+      }else{
+        let cursor=top+42;
+        for(let index=0;index<block.members.length;index+=2){
+          const pair=block.members.slice(index,index+2);ctx.font='bold 23px Arial';
+          const names=Math.max(...pair.map(c=>lineCount(ctx,c.row.label+'. '+c.row.nome,SLOT_W)))*26;
+          ctx.font='20px Arial';const details=Math.max(...pair.map(c=>lineCount(ctx,c.row.detalhes,SLOT_W)))*24;
+          const nameY=cursor+26,detailsY=nameY+names+8,slotY=detailsY+details+12;
+          pair.forEach((c,column)=>{c.top=top;c.nameX=column?414:36;c.nameY=nameY;c.detailsY=detailsY;c.slotX=c.nameX;c.slotY=slotY;});
+          block.pairs.push(pair);cursor=slotY+SLOT_H+18;
+        }
+        block.height=cursor-top+10;
+      }
+      top+=block.height;
+    }
+    cards.forEach(c=>{c.article.dataset.gifSlot=JSON.stringify({x:c.slotX,y:c.slotY,width:SLOT_W,height:SLOT_H,block:c.row.sourceIndex});});
+    return top+8;
+  }
+  function paint(ctx,canvas){
+    const t=themes[mode];ctx.fillStyle=t.bg;ctx.fillRect(0,0,WIDTH,canvas.height);ctx.fillStyle=t.green;ctx.fillRect(0,0,WIDTH,7);
+    ctx.font='bold 23px Arial';ctx.fillText('CAIO MACÊDO · PERSONAL TRAINER',28,43);ctx.fillStyle=t.ink;ctx.font='bold 29px Arial';wrap(ctx,selected.title,28,88,744,32);ctx.font='19px Arial';ctx.fillText(workout.student.slice(0,65),28,layoutHeader-29);
+    for(const block of layoutBlocks){
+      ctx.fillStyle=t.card;ctx.fillRect(20,block.top,760,block.height-12);
+      if(block.compound){
+        ctx.fillStyle=t.green;ctx.font='bold 18px Arial';ctx.fillText((block.sourceIndex+1)+'. CONJUGADO',36,block.top+28);
+        for(const pair of block.pairs){
+          pair.forEach(c=>{ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';wrap(ctx,c.row.label+'. '+c.row.nome,c.nameX,c.nameY,SLOT_W,26);ctx.fillStyle=t.green;ctx.font='20px Arial';wrap(ctx,c.row.detalhes,c.nameX,c.detailsY,SLOT_W,24);});
+          if(pair.length===2){ctx.fillStyle=t.green;ctx.font='bold 28px Arial';ctx.textAlign='center';ctx.fillText('+',400,pair[0].slotY+SLOT_H/2+10);ctx.textAlign='start';}
+        }
+      }else{
+        const c=block.members[0];ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';const y=wrap(ctx,c.row.label+'. '+c.row.nome,36,c.top+38,358,28);ctx.fillStyle=t.green;ctx.font='20px Arial';wrap(ctx,c.row.detalhes,36,Math.max(y+13,c.top+120),358,26);
+      }
+    }
+  }
   function drawSlot(ctx,video,asset){
     ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,SLOT_W,SLOT_H);
     const scale=Math.min(SLOT_W/video.videoWidth,SLOT_H/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;ctx.drawImage(video,(SLOT_W-w)/2,(SLOT_H-h)/2,w,h);
@@ -131,9 +183,9 @@ window.GymFasterWorkout = (() => {
       for(const item of unique.values()){
         check(active);controls.status.textContent='Carregando movimento '+(++index)+'/'+unique.size+'…';
         const timer=setTimeout(()=>active.abort.abort(),60000);let response;try{response=await fetch(item.key,{signal:active.abort.signal,cache:'force-cache'});if(!response.ok)throw Error('Não foi possível carregar '+item.asset.name+'. Tente novamente.');const blob=await response.blob();item.url=URL.createObjectURL(blob);active.urls.push(item.url);}finally{clearTimeout(timer);}
-        active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);await seek(video,0.001,active);drawSlot(sc,video,item.asset);cards.filter(c=>c.key===item.key).forEach(c=>ctx.drawImage(slot,410,c.top+5));
+        active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);await seek(video,0.001,active);drawSlot(sc,video,item.asset);cards.filter(c=>c.key===item.key).forEach(c=>ctx.drawImage(slot,c.slotX,c.slotY));
       }
-      check(active);const sample=ctx.getImageData(0,0,WIDTH,height).data.buffer;active.worker=new Worker('workout-gif-worker.js?v=2');await send(active,{type:'init',width:WIDTH,height,count:FRAMES,base,sample,slots:cards.map(c=>({key:c.key,x:410,y:c.top+5,width:SLOT_W,height:SLOT_H}))},[base,sample]);
+      check(active);const sample=ctx.getImageData(0,0,WIDTH,height).data.buffer;active.worker=new Worker('workout-gif-worker.js?v=2');await send(active,{type:'init',width:WIDTH,height,count:FRAMES,base,sample,slots:cards.map(c=>({key:c.key,x:c.slotX,y:c.slotY,width:SLOT_W,height:SLOT_H}))},[base,sample]);
       index=0;
       for(const item of unique.values()){
         active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);

@@ -19,7 +19,8 @@ window.WorkoutVideoMatch = (() => {
   }
   function parts(name) {
     const pieces = String(name).split(/\s*\+\s*/).map(p=>p.trim()).filter(Boolean);
-    return pieces.length>1 && pieces.every(p=>/[a-zá-ú]{2}/i.test(p)) ? pieces : [String(name).trim()];
+    const qualifier=/^(?:com )?(?:halter(?:es)?|barra(?: w)?|elastico|anilha|caneleira|banco|step|polia|isometria|pausa|curtinhas|unilateral|alternado|carga|peso)$/;
+    return pieces.length>1 && pieces.every(p=>/[a-zá-ú]{2}/i.test(p)&&!qualifier.test(clean(p))) ? pieces : [String(name).trim()];
   }
   function driveID(value) {
     try { const url=new URL(value); if(url.hostname==='caio.tail953b6e.ts.net')return driveID(url.searchParams.get('url')||''); return url.hostname==='drive.google.com' ? url.pathname.match(/\/file\/d\/([^/]+)/)?.[1] || url.searchParams.get('id') : null; } catch(error){return null;}
