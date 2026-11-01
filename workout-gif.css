@@ -9,12 +9,17 @@
 
 #workoutGifDialog video.cm-ink-on-white{background:#000;filter:invert(1) hue-rotate(180deg)}
 
-#workoutGifDialog .gif-compound{--compound-video-height:200px;margin:10px 0;padding:10px;border:1px solid #d5e4da;border-radius:10px;background:white}
+#workoutGifDialog .gif-compound{margin:10px 0;padding:10px;border:1px solid #d5e4da;border-radius:10px;background:white}
 #workoutGifDialog .gif-compound>h4{margin:0 0 8px;font-size:13px;color:#176b43}
-#workoutGifDialog .gif-compound-grid{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-#workoutGifDialog .gif-compound-grid>.gif-card{display:flex;flex-direction:column;align-items:stretch;min-width:0;margin:0;padding:6px;border:1px solid transparent}
-#workoutGifDialog .gif-compound-grid>.gif-card.gif-missing{border:2px solid #b8860b}
-#workoutGifDialog .gif-compound-card video{margin-top:auto;width:100%;height:var(--compound-video-height);max-height:none;object-fit:contain}
-#workoutGifDialog .gif-compound-grid[data-size="2"]::after{content:'+';position:absolute;left:50%;bottom:calc(var(--compound-video-height)/2 - 7px);transform:translateX(-50%);width:20px;text-align:center;font-size:24px;font-weight:bold;color:#176b43;pointer-events:none}
-#workoutGifDialog[data-library=cm] .gif-compound{background:#0a110d;border-color:#264232}#workoutGifDialog[data-library=cm] .gif-compound>h4,#workoutGifDialog[data-library=cm] .gif-compound-grid::after{color:#8dffb9}
-@media(min-width:650px){#workoutGifDialog .gif-compound{--compound-video-height:240px}}
+#workoutGifDialog .gif-compound-grid{position:relative;display:grid;grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr));gap:8px;align-items:center}
+#workoutGifDialog .gif-compound-grid>.gif-card{display:contents}
+#workoutGifDialog .gif-compound-card .gif-card-text{min-width:0;padding:4px 0}
+#workoutGifDialog .gif-compound-card.gif-missing .gif-card-text{outline:2px solid #b8860b;border-radius:5px;padding:4px}
+#workoutGifDialog .gif-compound-card video{width:100%;height:145px;max-height:none;object-fit:contain;align-self:center}
+#workoutGifDialog .gif-compound-grid[data-size="2"]::after{content:'+';position:absolute;left:75%;top:50%;transform:translate(-50%,-50%);width:12px;text-align:center;font-size:18px;font-weight:bold;color:#176b43;pointer-events:none}
+#workoutGifDialog .gif-card-options{font-size:11px;margin-top:4px}#workoutGifDialog .gif-card-options>summary{cursor:pointer;color:#176b43}#workoutGifDialog .gif-card-options button{font-size:11px;padding:7px}
+#workoutGifDialog[data-library=cm] .gif-compound{background:#0a110d;border-color:#264232}#workoutGifDialog[data-library=cm] .gif-compound>h4,#workoutGifDialog[data-library=cm] .gif-compound-grid::after,#workoutGifDialog[data-library=cm] .gif-card-options>summary{color:#8dffb9}
+@media(min-width:650px){#workoutGifDialog .gif-compound-card video{height:190px}}
+
+.gif-video-picker .gif-library-tools{padding:8px;border:1px solid #dce4ea;border-radius:7px;background:#f8fafc}.gif-video-picker .gif-library-tools small{display:block;line-height:1.4}
+.gif-video-picker .gif-library-row{border:1px solid #dce4ea;border-radius:8px;padding:7px;margin:7px 0}.gif-video-picker .gif-library-row>button{margin:0}.gif-video-picker .gif-library-row>small{display:block;font-size:11px;color:#64748b;margin:5px 0;overflow-wrap:anywhere}.gif-video-picker .gif-library-row-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.gif-video-picker .gif-library-row-tools button{width:auto;margin:0;padding:7px;font-size:12px}.gif-video-picker .gif-library-remove{color:#b22222;background:#fff2f2}.gif-video-picker .gif-library-rename{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.gif-video-picker .gif-library-rename input{width:100%;min-width:0}.gif-video-picker .gif-library-rename button{width:auto;font-size:12px}.gif-video-picker button:disabled{opacity:.55;cursor:default}

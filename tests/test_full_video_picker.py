@@ -21,12 +21,12 @@ with sync_playwright() as p:
  ctx.route('**/*',route);page=ctx.new_page();page.goto('http://full.test/');page.evaluate('TreinoStorage.ready')
  page.evaluate('''()=>localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'full-library',nome:'Teste biblioteca',treino:{A:['Cadeira Extensora — 3x12']},titulos:{A:'A. Pernas'}}]))''');page.reload();page.locator('#workoutGifsBtn').click()
  main=page.locator('#workoutGifDialog');expect(main.locator('.gif-card')).to_have_count(1);main.get_by_role('button',name='Escolher outro vídeo',exact=True).click();picker=page.locator('.gif-video-picker')
- picker.get_by_role('button',name='Ver todos os vídeos',exact=True).click();expect(picker.locator('.gif-picker-results button')).to_have_count(671)
- actual=set(picker.locator('.gif-picker-results button').evaluate_all('items=>items.map(i=>i.dataset.videoId)'));assert actual=={v['id'] for v in videos}
+ picker.get_by_role('button',name='Ver todos os vídeos',exact=True).click();expect(picker.locator('.gif-picker-results button[data-video-id]')).to_have_count(671)
+ actual=set(picker.locator('.gif-picker-results button[data-video-id]').evaluate_all('items=>items.map(i=>i.dataset.videoId)'));assert actual=={v['id'] for v in videos}
  expect(picker.locator('.gif-picker-count')).to_contain_text('671 resultados')
- picker.get_by_role('combobox',name='Versão da demonstração').select_option('Masculino');assert picker.locator('.gif-picker-results button').count()==sum(v['gender']=='Masculino' for v in videos)
- picker.get_by_role('combobox',name='Grupo muscular da demonstração').select_option('Glúteos e Quadril');assert picker.locator('.gif-picker-results button').count()==sum(v['gender']=='Masculino' and v['group']=='Glúteos e Quadril' for v in videos)
- picker.get_by_role('searchbox',name='Buscar demonstração').fill('extensora');expect(picker.locator('.gif-picker-results button')).to_have_count(1)
+ picker.get_by_role('combobox',name='Versão da demonstração').select_option('Masculino');assert picker.locator('.gif-picker-results button[data-video-id]').count()==sum(v['gender']=='Masculino' for v in videos)
+ picker.get_by_role('combobox',name='Grupo muscular da demonstração').select_option('Glúteos e Quadril');assert picker.locator('.gif-picker-results button[data-video-id]').count()==sum(v['gender']=='Masculino' and v['group']=='Glúteos e Quadril' for v in videos)
+ picker.get_by_role('searchbox',name='Buscar demonstração').fill('extensora');expect(picker.locator('.gif-picker-results button[data-video-id]')).to_have_count(1)
  picker.locator('[data-video-id="'+male['id']+'"]').click();expect(picker).not_to_be_visible();expect(main.locator('.gif-card small').last).to_contain_text('Masculino')
  main.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();page.wait_for_function("/GIF pronto|Não foi possível|não pôde|demorou demais/.test(document.querySelector('#workoutGifDialog [role=status]').textContent)",timeout=120000);expect(main.locator('[role=status]')).to_contain_text('GIF pronto')
  with page.expect_download() as download:main.get_by_role('button',name='Baixar GIF',exact=True).click()
@@ -35,6 +35,6 @@ with sync_playwright() as p:
   im.seek(n);duration+=im.info['duration']
   if n in [0,25,50,75]:frames.append(im.convert('RGB').copy())
  assert duration==5000;assert max(sum(ImageStat.Stat(ImageChops.difference(frames[0],f)).mean) for f in frames[1:])>0.8
- main.get_by_role('button',name='Escolher outro vídeo',exact=True).click();picker.get_by_role('combobox',name='Biblioteca da demonstração').select_option('cm');picker.get_by_role('button',name='Ver todos os vídeos',exact=True).click();expect(picker.locator('.gif-picker-results button')).to_have_count(321)
+ main.get_by_role('button',name='Escolher outro vídeo',exact=True).click();picker.get_by_role('combobox',name='Biblioteca da demonstração').select_option('cm');picker.get_by_role('button',name='Ver todos os vídeos',exact=True).click();expect(picker.locator('.gif-picker-results button[data-video-id]')).to_have_count(321)
  assert picker.evaluate('e=>e.scrollWidth<=e.clientWidth');b.close()
 print('PASS',ENGINE,': every one of 671 Gym/example and 321 CM items reachable, no 80-item cutoff, group/version filters, newly added male clip exported as moving 5-second GIF')

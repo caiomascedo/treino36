@@ -66,8 +66,10 @@ with sync_playwright() as p:
  assert dialog.evaluate('e=>e.scrollWidth<=e.clientWidth')
  expect(dialog.locator('.gif-compound')).to_have_count(2)
  for pair in dialog.locator('.gif-compound-grid').all():
-  boxes=pair.locator('.gif-card').evaluate_all('items=>items.map(i=>({x:i.getBoundingClientRect().x,y:i.getBoundingClientRect().y}))')
+  boxes=pair.locator('video').evaluate_all('items=>items.map(i=>({x:i.getBoundingClientRect().x,y:i.getBoundingClientRect().y}))')
   assert len(boxes)==2 and boxes[0]['x']<boxes[1]['x'] and abs(boxes[0]['y']-boxes[1]['y'])<2,boxes
+  texts=pair.locator('.gif-card-text').evaluate_all('items=>items.map(i=>i.getBoundingClientRect().y)')
+  assert texts[0]<texts[1],texts
  page.screenshot(path='/tmp/two-gif-'+ENGINE+'-preview.png')
  dialog.get_by_role('button',name='Gerar GIF CM',exact=True).click();expect(dialog.get_by_role('button',name='Cancelar geração',exact=True)).to_be_visible()
  page.wait_for_function("/GIF pronto|Não foi possível|não pôde|demorou demais|não foi reconhecida/.test(document.querySelector('#workoutGifDialog [role=status]').textContent)",timeout=240000)
@@ -78,7 +80,7 @@ with sync_playwright() as p:
  assert cm_slots[5]['y']==cm_slots[6]['y'] and cm_slots[5]['x']<cm_slots[6]['x']
  assert cm_slots[0]['y']<cm_slots[1]['y']<cm_slots[3]['y']
  assert Image.open(output).height<2385
- assert not page.evaluate("gifDrawnText.some(text=>text.startsWith('Demonstrações'))")
+ assert not page.evaluate("gifDrawnText.some(text=>text.startsWith('Demonstrações')||text.includes('—'))")
  assert '_cm_' in download.value.suggested_filename
  # The actual encoded CM animation must have white illustration backgrounds,
  # dark linework and green highlights, not merely a CSS preview effect.

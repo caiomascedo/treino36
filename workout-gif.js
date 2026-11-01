@@ -2,8 +2,10 @@ window.GymFasterWorkout = (() => {
   'use strict';
   const WIDTH=800,CARD=270,HEADER=175,FRAMES=100,SLOT_W=350,SLOT_H=242;
   const themes={cm:{name:'CM',bg:'#050906',card:'#0a110d',ink:'#f3faf5',green:'#3aeb91'},gymfaster:{name:'GymFaster',bg:'#eff5f1',card:'#fff',ink:'#1b3428',green:'#176b43'}};
-  let integration,dialog,controls,videos=[],catalogPromise,workout,selected,cards=[],mode='gymfaster',file,blobURL,observer,job=null,sequence=0,layoutHeader=HEADER,layoutBlocks=[],focusReturn;
+  let integration,dialog,controls,videos=[],catalogPromise,workout,selected,cards=[],mode='gymfaster',file,blobURL,observer,job=null,sequence=0,layoutHeader=HEADER,layoutBlocks=[],focusReturn,libraryDirty=false;
   const match=()=>window.WorkoutVideoMatch;
+  const library=()=>window.WorkoutVideoLibrary;
+  const availableVideos=()=>library().apply(videos);
   const node=(tag,attrs={},text)=>{const item=document.createElement(tag);Object.entries(attrs).forEach(([key,value])=>item.setAttribute(key,value));if(text!==undefined)item.textContent=text;return item;};
   const prefKey='treinoGifChoicesV1';
   function preferences(){try{return JSON.parse(localStorage.getItem(prefKey)||'{}')||{};}catch(error){return {};}}
@@ -41,12 +43,13 @@ window.GymFasterWorkout = (() => {
   function cmWhiteInk(asset){return asset.collection==='cm'&&!asset.localURL;}
   function assetURL(asset){return asset.localURL||asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';}
   function playVisible(card){if(card.visible&&card.asset&&!job){if(!card.video.getAttribute('src'))card.video.src=assetURL(card.asset);card.video.play().catch(()=>{});}else card.video.pause();}
+  function videoCaption(asset,reason){return asset.name+' · '+(asset.localURL?'Arquivo local · reenvie ao reabrir a ficha':asset.kind==='created-example'?'Exemplo criado':themes[asset.collection].name)+(asset.collection==='gymfaster'&&asset.gender&&!asset.kind?' · '+asset.gender:'')+(reason?' · '+reason:'');}
   function setVideo(card,asset,reason){
     if(card.localURL&&card.localURL!==asset?.localURL)URL.revokeObjectURL(card.localURL);
     card.localURL=asset?.localURL||null;card.asset=asset;card.video.classList.toggle('cm-ink-on-white',!!asset&&cmWhiteInk(asset));
-    card.video.pause();card.video.removeAttribute('src');card.video.load();card.video.hidden=!asset;
+    card.video.pause();card.video.removeAttribute('src');card.video.load();card.video.hidden=!asset;if(card.options)card.options.open=!asset;
     card.article.classList.toggle('gif-missing',!asset);
-    card.caption.textContent=asset?asset.name+' · '+(asset.localURL?'Arquivo local · reenvie ao reabrir a ficha':asset.kind==='created-example'?'Exemplo criado':themes[asset.collection].name)+(asset.collection==='gymfaster'&&asset.gender&&!asset.kind?' · '+asset.gender:'')+(reason?' · '+reason:''):'Escolha a demonstração deste exercício.';
+    card.caption.textContent=asset?videoCaption(asset,reason):'Escolha a demonstração deste exercício.';
     card.suggestionBox.hidden=!!asset;playVisible(card);clearResult();
   }
   function selectAsset(card,asset){
@@ -59,12 +62,12 @@ window.GymFasterWorkout = (() => {
     if(job)return;
     clearResult();disposeCards();controls.list.replaceChildren();dialog.dataset.library=mode;controls.library.value=mode;controls.heading.textContent='Treino em GIF · '+themes[mode].name;controls.student.textContent=workout.student+' · '+(selected?.title||'Treino');
     if(!selected){readiness();return;}
-    observer=new IntersectionObserver(entries=>entries.forEach(entry=>{const card=cards.find(c=>c.article===entry.target);if(card){card.visible=entry.isIntersecting;playVisible(card);}}),{root:dialog,rootMargin:'30px'});
+    observer=new IntersectionObserver(entries=>entries.forEach(entry=>{const card=cards.find(c=>c.observeTarget===entry.target);if(card){card.visible=entry.isIntersecting;playVisible(card);}}),{root:dialog,rootMargin:'30px'});
     const prefs=preferences(),compoundHosts=new Map();
     expandedRows().forEach(row=>{
       const article=node('article',{class:'gif-card'}),text=node('div',{class:'gif-card-text'}),name=node('strong',{},row.label+'. '+row.nome),details=node('p',{},row.detalhes),caption=node('small'),suggestionBox=node('div',{class:'gif-suggestions'}),choose=node('button',{type:'button'},'Escolher outro vídeo'),upload=node('button',{type:'button'},'Vídeo do aparelho'),input=node('input',{type:'file',accept:'video/*',hidden:'','aria-label':'Arquivo de vídeo de '+row.nome});
       const video=node('video',{muted:'',playsinline:'',loop:'',preload:'none','aria-label':'Demonstração de '+row.nome});video.muted=true;
-      const resolution=match().resolve(row,videos,mode,prefs[choiceKey(row.nome)]),card={row,article,video,caption,choose,upload,suggestionBox,suggestions:resolution.suggestions,asset:null,localURL:null,visible:false};
+      const resolution=match().resolve(row,availableVideos(),mode,prefs[choiceKey(row.nome)]),card={row,article,video,caption,choose,upload,suggestionBox,suggestions:resolution.suggestions,asset:null,localURL:null,visible:false};
       let host=controls.list;
       if(row.compound){
         if(!compoundHosts.has(row.sourceIndex)){
@@ -78,32 +81,84 @@ window.GymFasterWorkout = (() => {
       choose.onclick=()=>openPicker(card);
       upload.onclick=()=>input.click();input.onchange=()=>{const chosen=input.files?.[0];if(!chosen||job)return;if((!chosen.type.startsWith('video/')&&!/\.(mp4|m4v|mov|webm)$/i.test(chosen.name))||chosen.size>100*1048576){controls.status.textContent='Escolha um vídeo de até 100 MB.';return;}setVideo(card,{name:chosen.name,collection:mode,localURL:URL.createObjectURL(chosen)},'Usado somente neste GIF');readiness();};
       video.onerror=()=>{if(card.asset&&!job)card.caption.textContent='A prévia não carregou. Você pode tentar Gerar GIF para carregar a demonstração novamente.';};
-      text.append(name,details,caption,suggestionBox,choose,upload,input);article.append(text,video);host.append(article);cards.push(card);setVideo(card,resolution.video,resolution.reason);observer.observe(article);
+      if(row.compound){
+        const options=node('details',{class:'gif-card-options'}),summary=node('summary',{},'Vídeo / editar');options.append(summary,caption,choose,upload,input);card.options=options;
+        text.append(name,details,suggestionBox,options);text.style.gridColumn='1';text.style.gridRow=String(row.partIndex+1);
+        video.style.gridColumn=String(row.partIndex%2+2);video.style.gridRow=(Math.floor(row.partIndex/2)*2+1)+' / span '+Math.min(2,row.partCount-Math.floor(row.partIndex/2)*2);
+      }else text.append(name,details,caption,suggestionBox,choose,upload,input);
+      article.append(text,video);host.append(article);cards.push(card);card.observeTarget=row.compound?video:article;setVideo(card,resolution.video,resolution.reason);observer.observe(card.observeTarget);
     });readiness();
+  }
+  function refreshLibraryState(){
+    if(job)return;
+    const active=availableVideos(),prefs=preferences();
+    for(const card of cards){
+      if(card.asset?.localURL)continue;
+      if(card.asset){
+        const updated=library().decorate(card.asset);
+        if(!updated.removed){
+          if(updated.name!==card.asset.name){card.asset=updated;card.caption.textContent=videoCaption(updated,'Nome da sua biblioteca');}
+          continue;
+        }
+        setVideo(card,null,'');
+      }
+      const resolution=match().resolve(card.row,active,mode,prefs[choiceKey(card.row.nome)]);
+      card.suggestions=resolution.suggestions;card.suggestionBox.replaceChildren();
+      resolution.suggestions.forEach(asset=>{const button=node('button',{type:'button'},'Usar '+themes[asset.collection].name+': '+asset.name);button.onclick=()=>selectAsset(card,asset);card.suggestionBox.append(button);});
+      if(resolution.video)setVideo(card,resolution.video,resolution.reason);
+    }
+    if(!file)readiness();
   }
   function openPicker(card){
     const picker=node('dialog',{class:'gif-video-picker','aria-label':'Escolher vídeo para '+card.row.nome});
     const title=node('h3',{},card.row.nome),search=node('input',{type:'search','aria-label':'Buscar demonstração',placeholder:'Nome, aparelho ou abreviação'});
-    const library=node('select',{'aria-label':'Biblioteca da demonstração'}),group=node('select',{'aria-label':'Grupo muscular da demonstração'}),gender=node('select',{'aria-label':'Versão da demonstração'});
+    const source=node('select',{'aria-label':'Biblioteca da demonstração'}),group=node('select',{'aria-label':'Grupo muscular da demonstração'}),gender=node('select',{'aria-label':'Versão da demonstração'});
     const filters=node('div',{class:'gif-picker-filters'}),status=node('p',{class:'gif-picker-count',role:'status'}),all=node('button',{type:'button'},'Ver todos os vídeos'),list=node('div',{class:'gif-picker-results'}),close=node('button',{type:'button'},'Fechar');
-    library.append(node('option',{value:mode},themes[mode].name),node('option',{value:mode==='cm'?'gymfaster':'cm'},themes[mode==='cm'?'gymfaster':'cm'].name));search.value=card.row.nome;
+    const manage=node('button',{type:'button','aria-pressed':'false'},'Editar biblioteca'),tools=node('div',{class:'gif-library-tools',hidden:''}),help=node('small',{},'As alterações ficam salvas neste navegador. Apagar remove o vídeo da sua lista, com opção de restaurar.'),removed=node('button',{type:'button'},'Ver apagados'),undo=node('button',{type:'button',hidden:''},'Desfazer exclusão');
+    let editing=false,showRemoved=false,lastRemoved=null,notice='';
+    source.append(node('option',{value:mode},themes[mode].name),node('option',{value:mode==='cm'?'gymfaster':'cm'},themes[mode==='cm'?'gymfaster':'cm'].name));search.value=card.row.nome;
     function refreshFilters(){
-      const pool=videos.filter(v=>v.collection===library.value);group.replaceChildren(node('option',{value:''},'Todos os grupos'));gender.replaceChildren(node('option',{value:''},'Todas as versões'));
+      const pool=videos.filter(v=>v.collection===source.value);group.replaceChildren(node('option',{value:''},'Todos os grupos'));gender.replaceChildren(node('option',{value:''},'Todas as versões'));
       [...new Set(pool.map(v=>v.group))].sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(value=>group.append(node('option',{value},value)));
-      [...new Set(pool.map(v=>v.gender))].sort().forEach(value=>gender.append(node('option',{value},value)));gender.hidden=library.value==='cm';update();
+      [...new Set(pool.map(v=>v.gender))].sort().forEach(value=>gender.append(node('option',{value},value)));gender.hidden=source.value==='cm';showRemoved=false;update();
+    }
+    function act(action){try{action();}catch(error){notice=error.message;}update();}
+    function renameForm(row,asset){
+      row.querySelector('.gif-library-row-tools').hidden=true;
+      const form=node('form',{class:'gif-library-rename'}),input=node('input',{type:'text',value:asset.name,maxlength:'160','aria-label':'Novo nome do vídeo'}),save=node('button',{type:'submit'},'Salvar nome'),cancel=node('button',{type:'button'},'Cancelar');
+      form.append(input,save,cancel);row.append(form);input.focus();input.select();
+      form.onsubmit=event=>{event.preventDefault();act(()=>{library().rename(asset.id,input.value);notice='Nome atualizado na sua biblioteca.';});};
+      cancel.onclick=()=>update();input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();update();}};
     }
     function update(){
-      list.replaceChildren();const libraryPool=videos.filter(v=>v.collection===library.value),pool=libraryPool.filter(v=>(!group.value||v.group===group.value)&&(!gender.value||v.gender===gender.value));
-      const query=search.value.trim(),ranked=query?match().rank(query,pool,library.value).map(r=>r.video):pool;
-      const tokens=match().canonical(query).split(' ').filter(Boolean),remaining=query?pool.filter(v=>tokens.every(word=>match().canonical(v.name).includes(word))):[];
+      const scroll=list.scrollTop;list.replaceChildren();
+      const raw=videos.filter(v=>v.collection===source.value),decorated=library().apply(raw,true),deleted=decorated.filter(v=>v.removed).length,available=decorated.length-deleted;
+      const pool=decorated.filter(v=>v.removed===showRemoved&&(!group.value||v.group===group.value)&&(!gender.value||v.gender===gender.value));
+      const query=search.value.trim(),ranked=query?match().rank(query,pool,source.value).map(r=>r.video):pool;
+      const tokens=match().canonical(query).split(' ').filter(Boolean),remaining=query?pool.filter(v=>tokens.every(word=>match().canonical([v.name,...v.aliases].join(' ')).includes(word))):[];
       const seen=new Set(),found=[...ranked,...remaining].filter(v=>{if(seen.has(v.id))return false;seen.add(v.id);return true;});
-      status.textContent=found.length+' resultados · '+libraryPool.length+' vídeos na biblioteca';
-      if(!found.length)list.append(node('p',{},'Tente menos palavras, escolha outro grupo ou toque em Ver todos os vídeos.'));
-      found.forEach(asset=>{const button=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+(asset.gender==='CM'?'CM':asset.gender));button.onclick=()=>{selectAsset(card,asset);picker.close();};list.append(button);});
+      status.textContent=(notice?notice+' ':'')+found.length+(showRemoved?' apagados encontrados':' resultados')+' · '+available+' disponíveis de '+raw.length+' vídeos';notice='';
+      removed.textContent=showRemoved?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showRemoved;undo.hidden=!lastRemoved;
+      if(!found.length)list.append(node('p',{},showRemoved?'Nenhum vídeo apagado nesta biblioteca.':'Tente menos palavras, outro grupo ou Ver todos os vídeos.'));
+      found.forEach(asset=>{
+        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+(asset.gender==='CM'?'CM':asset.gender));choose.disabled=asset.removed;choose.onclick=()=>{selectAsset(card,asset);picker.close();};row.append(choose);
+        if(asset.name!==asset.originalName)row.append(node('small',{},'Nome original: '+asset.originalName));
+        const actions=node('div',{class:'gif-library-row-tools'});actions.hidden=!editing;
+        if(asset.removed){const restore=node('button',{type:'button'},'Restaurar');restore.onclick=()=>act(()=>{library().restore(asset.id);notice='Vídeo restaurado.';});actions.append(restore);}
+        else{
+          const rename=node('button',{type:'button'},'Renomear'),erase=node('button',{type:'button',class:'gif-library-remove'},'Apagar');rename.onclick=()=>renameForm(row,asset);erase.onclick=()=>act(()=>{library().remove(asset.id);lastRemoved=asset.id;notice='Vídeo apagado da sua lista.';});actions.append(rename,erase);
+          if(asset.name!==asset.originalName){const reset=node('button',{type:'button'},'Restaurar nome');reset.onclick=()=>act(()=>{library().resetName(asset.id);notice='Nome original restaurado.';});actions.append(reset);}
+        }
+        row.append(actions);list.append(row);
+      });list.scrollTop=scroll;
     }
-    all.onclick=()=>{search.value='';group.value='';gender.value='';update();};search.oninput=update;library.onchange=refreshFilters;group.onchange=update;gender.onchange=update;close.onclick=()=>picker.close();
-    filters.append(group,gender);picker.append(title,search,library,filters,status,all,list,close);document.body.append(picker);picker.onclose=()=>picker.remove();refreshFilters();picker.showModal();
+    manage.onclick=()=>{editing=!editing;tools.hidden=!editing;manage.textContent=editing?'Concluir edição':'Editar biblioteca';manage.setAttribute('aria-pressed',String(editing));if(!editing)showRemoved=false;update();};
+    removed.onclick=()=>{showRemoved=!showRemoved;search.value='';group.value='';gender.value='';update();};
+    undo.onclick=()=>act(()=>{if(lastRemoved){library().restore(lastRemoved);lastRemoved=null;notice='Exclusão desfeita.';}});
+    all.onclick=()=>{showRemoved=false;search.value='';group.value='';gender.value='';update();};search.oninput=update;source.onchange=refreshFilters;group.onchange=update;gender.onchange=update;close.onclick=()=>picker.close();
+    tools.append(help,removed,undo);filters.append(group,gender);picker.append(title,search,source,filters,status,all,manage,tools,list,close);document.body.append(picker);picker.onclose=()=>{picker.remove();refreshLibraryState();};refreshFilters();picker.showModal();
   }
+
   async function loadCatalogs(){if(!catalogPromise)catalogPromise=Promise.all(['cmfit-catalog.json?v=1','gymfaster-catalog.json?v=2'].map(async url=>{const response=await fetch(url);if(!response.ok)throw Error('Catálogo indisponível');return response.json();})).then(([cm,gym])=>videos=[...cm.videos.map(v=>({...v,collection:'cm'})),...gym.videos.map(v=>({...v,collection:'gymfaster'}))]).catch(error=>{catalogPromise=null;throw error;});return catalogPromise;}
   async function open(library=mode){
     if(!integration||job)return;if(!dialog)create();const token=++sequence;focusReturn=document.activeElement;mode=themes[library]?library:'gymfaster';workout=integration.read();controls.section.replaceChildren();workout.sections.forEach(s=>controls.section.append(node('option',{value:s.id},s.title)));selected=workout.sections.find(s=>s.id==='A')||workout.sections[0];controls.section.value=selected?.id||'';controls.generate.disabled=true;if(!dialog.open)dialog.showModal();controls.status.textContent='Carregando as bibliotecas CM e GymFaster…';
@@ -114,8 +169,9 @@ window.GymFasterWorkout = (() => {
   async function loadDecoder(url,active){const video=active.decoder;await mediaEvent(video,'loadeddata',active,()=>{video.src=url;video.preload='auto';video.load();});if(!Number.isFinite(video.duration)||video.duration<=0)throw Error('A duração de um vídeo não foi reconhecida. Escolha outro arquivo.');return video;}
   async function seek(video,time,active){check(active);if(Math.abs(video.currentTime-time)>0.0001||video.readyState<2)await mediaEvent(video,'seeked',active,()=>{video.currentTime=time;});check(active);if(Math.abs(video.currentTime-time)>0.08)throw Error('Não foi possível avançar o movimento. Tente novamente.');await new Promise(resolve=>requestAnimationFrame(resolve));check(active);}
   function send(active,data,transfers=[]){return new Promise((resolve,reject)=>{let settled=false;const target=active.worker,timeout=setTimeout(()=>finish(Error('A geração demorou demais. Tente um treino menor.')),120000),poll=setInterval(()=>{try{check(active);}catch(error){finish(error);}},100);const response=event=>{if(event.data.type==='progress'){controls.status.textContent='Finalizando GIF: '+event.data.percent+'%';return;}event.data.type==='error'?finish(Error(event.data.message)):finish(null,event.data);},failed=()=>finish(Error('Não foi possível iniciar o gerador. Recarregue o treino36 e tente novamente.'));function finish(error,value){if(settled)return;settled=true;clearTimeout(timeout);clearInterval(poll);target.removeEventListener('message',response);target.removeEventListener('error',failed);error?reject(error):resolve(value);}target.addEventListener('message',response);target.addEventListener('error',failed);target.postMessage(data,transfers);});}
-  function wrap(ctx,text,x,y,width,step){let line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){ctx.fillText(line,x,y);y+=step;line=word;}else line=next;}if(line)ctx.fillText(line,x,y);return y+step;}
-  function lineCount(ctx,text,width){let n=1,line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){n++;line=word;}else line=next;}return n;}
+  function gifText(text){return String(text).replace(/(\d)\s*—\s*(?=\d)/g,'$1-').replace(/—/g,' ').replace(/\s+/g,' ').trim();}
+  function wrap(ctx,text,x,y,width,step){text=gifText(text);let line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){ctx.fillText(line,x,y);y+=step;line=word;}else line=next;}if(line)ctx.fillText(line,x,y);return y+step;}
+  function lineCount(ctx,text,width){text=gifText(text);let n=1,line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){n++;line=word;}else line=next;}return n;}
   function layout(ctx){
     ctx.font='bold 29px Arial';layoutHeader=Math.max(HEADER,88+lineCount(ctx,selected.title,744)*32+55);
     let top=layoutHeader;layoutBlocks=[];
@@ -128,34 +184,37 @@ window.GymFasterWorkout = (() => {
       block.top=top;
       if(!block.compound){
         const c=block.members[0];ctx.font='bold 23px Arial';const names=lineCount(ctx,c.row.label+'. '+c.row.nome,358);ctx.font='20px Arial';
-        c.top=top;c.height=Math.max(CARD,Math.max(38+names*28+13,120)+lineCount(ctx,c.row.detalhes,358)*26+25);c.slotX=410;c.slotY=top+5;block.height=c.height;
+        c.top=top;c.height=Math.max(CARD,Math.max(38+names*28+13,120)+lineCount(ctx,c.row.detalhes,358)*26+25);c.slotX=410;c.slotY=top+5;c.slotWidth=SLOT_W;c.slotHeight=SLOT_H;block.height=c.height;
       }else{
-        let cursor=top+42;
+        let cursor=top+36;
         for(let index=0;index<block.members.length;index+=2){
-          const pair=block.members.slice(index,index+2);ctx.font='bold 23px Arial';
-          const names=Math.max(...pair.map(c=>lineCount(ctx,c.row.label+'. '+c.row.nome,SLOT_W)))*26;
-          ctx.font='20px Arial';const details=Math.max(...pair.map(c=>lineCount(ctx,c.row.detalhes,SLOT_W)))*24;
-          const nameY=cursor+26,detailsY=nameY+names+8,slotY=detailsY+details+12;
-          pair.forEach((c,column)=>{c.top=top;c.nameX=column?414:36;c.nameY=nameY;c.detailsY=detailsY;c.slotX=c.nameX;c.slotY=slotY;});
-          block.pairs.push(pair);cursor=slotY+SLOT_H+18;
+          const pair=block.members.slice(index,index+2),pairTop=cursor;
+          for(const c of pair){
+            ctx.font='bold 23px Arial';const names=lineCount(ctx,c.row.label+'. '+c.row.nome,358)*26;
+            ctx.font='20px Arial';const details=lineCount(ctx,c.row.detalhes,358)*24;
+            c.top=top;c.nameX=36;c.nameY=cursor+22;c.detailsY=c.nameY+names+6;cursor=c.detailsY+details+12;
+          }
+          const pairHeight=Math.max(212,cursor-pairTop),slotY=pairTop+(pairHeight-212)/2;
+          pair.forEach((c,column)=>{c.slotX=column?594:410;c.slotY=Math.round(slotY);c.slotWidth=166;c.slotHeight=212;});
+          block.pairs.push(pair);cursor=pairTop+pairHeight+12;
         }
-        block.height=cursor-top+10;
+        block.height=Math.max(CARD,cursor-top+10);
       }
       top+=block.height;
     }
-    cards.forEach(c=>{c.article.dataset.gifSlot=JSON.stringify({x:c.slotX,y:c.slotY,width:SLOT_W,height:SLOT_H,block:c.row.sourceIndex});});
+    cards.forEach(c=>{c.article.dataset.gifSlot=JSON.stringify({x:c.slotX,y:c.slotY,width:c.slotWidth,height:c.slotHeight,block:c.row.sourceIndex});});
     return top+8;
   }
   function paint(ctx,canvas){
     const t=themes[mode];ctx.fillStyle=t.bg;ctx.fillRect(0,0,WIDTH,canvas.height);ctx.fillStyle=t.green;ctx.fillRect(0,0,WIDTH,7);
-    ctx.font='bold 23px Arial';ctx.fillText('CAIO MACÊDO · PERSONAL TRAINER',28,43);ctx.fillStyle=t.ink;ctx.font='bold 29px Arial';wrap(ctx,selected.title,28,88,744,32);ctx.font='19px Arial';ctx.fillText(workout.student.slice(0,65),28,layoutHeader-29);
+    ctx.font='bold 23px Arial';ctx.fillText('CAIO MACÊDO · PERSONAL TRAINER',28,43);ctx.fillStyle=t.ink;ctx.font='bold 29px Arial';wrap(ctx,selected.title,28,88,744,32);ctx.font='19px Arial';ctx.fillText(gifText(workout.student).slice(0,65),28,layoutHeader-29);
     for(const block of layoutBlocks){
       ctx.fillStyle=t.card;ctx.fillRect(20,block.top,760,block.height-12);
       if(block.compound){
         ctx.fillStyle=t.green;ctx.font='bold 18px Arial';ctx.fillText((block.sourceIndex+1)+'. CONJUGADO',36,block.top+28);
         for(const pair of block.pairs){
-          pair.forEach(c=>{ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';wrap(ctx,c.row.label+'. '+c.row.nome,c.nameX,c.nameY,SLOT_W,26);ctx.fillStyle=t.green;ctx.font='20px Arial';wrap(ctx,c.row.detalhes,c.nameX,c.detailsY,SLOT_W,24);});
-          if(pair.length===2){ctx.fillStyle=t.green;ctx.font='bold 28px Arial';ctx.textAlign='center';ctx.fillText('+',400,pair[0].slotY+SLOT_H/2+10);ctx.textAlign='start';}
+          pair.forEach(c=>{ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';wrap(ctx,c.row.label+'. '+c.row.nome,c.nameX,c.nameY,358,26);ctx.fillStyle=t.green;ctx.font='20px Arial';wrap(ctx,c.row.detalhes,c.nameX,c.detailsY,358,24);});
+          if(pair.length===2){ctx.fillStyle=t.green;ctx.font='bold 28px Arial';ctx.textAlign='center';ctx.fillText('+',585,pair[0].slotY+pair[0].slotHeight/2+8);ctx.textAlign='start';}
         }
       }else{
         const c=block.members[0];ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';const y=wrap(ctx,c.row.label+'. '+c.row.nome,36,c.top+38,358,28);ctx.fillStyle=t.green;ctx.font='20px Arial';wrap(ctx,c.row.detalhes,36,Math.max(y+13,c.top+120),358,26);
@@ -163,10 +222,11 @@ window.GymFasterWorkout = (() => {
     }
   }
   function drawSlot(ctx,video,asset){
-    ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,SLOT_W,SLOT_H);
-    const scale=Math.min(SLOT_W/video.videoWidth,SLOT_H/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;ctx.drawImage(video,(SLOT_W-w)/2,(SLOT_H-h)/2,w,h);
+    const width=ctx.canvas.width,height=ctx.canvas.height;
+    ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,width,height);
+    const scale=Math.min(width/video.videoWidth,height/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;ctx.drawImage(video,(width-w)/2,(height-h)/2,w,h);
     if(cmWhiteInk(asset)){
-      const frame=ctx.getImageData(0,0,SLOT_W,SLOT_H),pixels=frame.data;
+      const frame=ctx.getImageData(0,0,width,height),pixels=frame.data;
       // Same sRGB transform as the preview's invert(1) hue-rotate(180deg).
       // Black/white swap while the muscle highlight retains its green hue.
       for(let i=0;i<pixels.length;i+=4){const r=pixels[i],g=pixels[i+1],b=pixels[i+2],shift=255-2*(.213*r+.715*g+.072*b);pixels[i]=r+shift;pixels[i+1]=g+shift;pixels[i+2]=b+shift;}
@@ -178,25 +238,26 @@ window.GymFasterWorkout = (() => {
     clearResult();const active={cancelled:false,abort:new AbortController(),worker:null,decoder:node('video',{muted:'',playsinline:'',preload:'auto','aria-hidden':'true',class:'gif-decoder'}),urls:[]};active.decoder.muted=true;job=active;dialog.append(active.decoder);setBusy(true);cards.forEach(c=>{c.video.pause();c.video.removeAttribute('src');c.video.load();});
     try{
       const canvas=document.createElement('canvas');canvas.width=WIDTH;const ctx=canvas.getContext('2d',{willReadFrequently:true}),height=layout(ctx);if(height>12000)throw Error('A ficha ficou muito longa. Divida o treino para gerar o GIF.');canvas.height=height;paint(ctx,canvas);const base=ctx.getImageData(0,0,WIDTH,height).data.buffer;
-      const slot=document.createElement('canvas');slot.width=SLOT_W;slot.height=SLOT_H;const sc=slot.getContext('2d',{willReadFrequently:true});const unique=new Map();cards.forEach(c=>{c.key=assetURL(c.asset);if(!unique.has(c.key))unique.set(c.key,{asset:c.asset,key:c.key,url:null});});
+      const slot=document.createElement('canvas');slot.width=SLOT_W;slot.height=SLOT_H;const sc=slot.getContext('2d',{willReadFrequently:true});const unique=new Map();cards.forEach(c=>{const source=assetURL(c.asset);c.key=source+'|'+c.slotWidth+'x'+c.slotHeight;if(!unique.has(c.key))unique.set(c.key,{asset:c.asset,key:c.key,source,width:c.slotWidth,height:c.slotHeight,url:null});});
       let index=0;
       for(const item of unique.values()){
         check(active);controls.status.textContent='Carregando movimento '+(++index)+'/'+unique.size+'…';
-        const timer=setTimeout(()=>active.abort.abort(),60000);let response;try{response=await fetch(item.key,{signal:active.abort.signal,cache:'force-cache'});if(!response.ok)throw Error('Não foi possível carregar '+item.asset.name+'. Tente novamente.');const blob=await response.blob();item.url=URL.createObjectURL(blob);active.urls.push(item.url);}finally{clearTimeout(timer);}
-        active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);await seek(video,0.001,active);drawSlot(sc,video,item.asset);cards.filter(c=>c.key===item.key).forEach(c=>ctx.drawImage(slot,c.slotX,c.slotY));
+        const timer=setTimeout(()=>active.abort.abort(),60000);let response;try{response=await fetch(item.source,{signal:active.abort.signal,cache:'force-cache'});if(!response.ok)throw Error('Não foi possível carregar '+item.asset.name+'. Tente novamente.');const blob=await response.blob();item.url=URL.createObjectURL(blob);active.urls.push(item.url);}finally{clearTimeout(timer);}
+        slot.width=item.width;slot.height=item.height;active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);await seek(video,0.001,active);drawSlot(sc,video,item.asset);cards.filter(c=>c.key===item.key).forEach(c=>ctx.drawImage(slot,c.slotX,c.slotY));
       }
-      check(active);const sample=ctx.getImageData(0,0,WIDTH,height).data.buffer;active.worker=new Worker('workout-gif-worker.js?v=2');await send(active,{type:'init',width:WIDTH,height,count:FRAMES,base,sample,slots:cards.map(c=>({key:c.key,x:c.slotX,y:c.slotY,width:SLOT_W,height:SLOT_H}))},[base,sample]);
+      check(active);const sample=ctx.getImageData(0,0,WIDTH,height).data.buffer;active.worker=new Worker('workout-gif-worker.js?v=2');await send(active,{type:'init',width:WIDTH,height,count:FRAMES,base,sample,slots:cards.map(c=>({key:c.key,x:c.slotX,y:c.slotY,width:c.slotWidth,height:c.slotHeight}))},[base,sample]);
       index=0;
       for(const item of unique.values()){
-        active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);
+        slot.width=item.width;slot.height=item.height;active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);
         for(let frame=0;frame<FRAMES;frame++){
-          await seek(video,Math.max(0.001,frame/FRAMES*video.duration),active);const converted=drawSlot(sc,video,item.asset);const pixels=(converted||sc.getImageData(0,0,SLOT_W,SLOT_H)).data.buffer;await send(active,{type:'cache',key:item.key,frame,pixels},[pixels]);controls.status.textContent='Preparando movimento '+(index+1)+'/'+unique.size+' · '+Math.round((index*FRAMES+frame+1)/(unique.size*FRAMES)*85)+'%';
+          await seek(video,Math.max(0.001,frame/FRAMES*video.duration),active);const converted=drawSlot(sc,video,item.asset);const pixels=(converted||sc.getImageData(0,0,item.width,item.height)).data.buffer;await send(active,{type:'cache',key:item.key,frame,pixels},[pixels]);controls.status.textContent='Preparando movimento '+(index+1)+'/'+unique.size+' · '+Math.round((index*FRAMES+frame+1)/(unique.size*FRAMES)*85)+'%';
         }index++;
       }
       controls.status.textContent='Finalizando GIF…';const result=await send(active,{type:'finish'});check(active);
       file=new File([result.bytes],'treino_'+selected.id+'_'+mode+'_'+workout.student.slice(0,80).replace(/[^a-z0-9áéíóúâêôãõç_-]+/gi,'_')+'.gif',{type:'image/gif'});blobURL=URL.createObjectURL(file);controls.result.replaceChildren(node('img',{src:blobURL,alt:'Treino '+selected.id+' · '+themes[mode].name+' em movimento'}));controls.result.hidden=false;controls.share.hidden=false;controls.download.hidden=false;controls.status.textContent='GIF pronto · '+themes[mode].name+' · 5 segundos · '+(file.size/1048576).toFixed(1)+' MB. Confira e compartilhe.';controls.result.scrollIntoView({block:'start'});
     }catch(error){if(dialog.open&&job===active)controls.status.textContent=active.cancelled?'Geração cancelada. Você pode tentar novamente.':error.name==='AbortError'?'O carregamento demorou demais. Verifique a conexão e tente novamente.':error.message||'Não foi possível gerar o GIF. Tente novamente.';}
-    finally{active.worker?.terminate();active.decoder.pause();active.decoder.removeAttribute('src');active.decoder.load();active.decoder.remove();active.urls.forEach(url=>URL.revokeObjectURL(url));if(job===active){job=null;setBusy(false);if(dialog.open)cards.forEach(playVisible);}}
+    finally{active.worker?.terminate();active.decoder.pause();active.decoder.removeAttribute('src');active.decoder.load();active.decoder.remove();active.urls.forEach(url=>URL.revokeObjectURL(url));if(job===active){job=null;setBusy(false);if(dialog.open){cards.forEach(playVisible);if(libraryDirty){libraryDirty=false;refreshLibraryState();}}}}
   }
+  window.addEventListener('workout-video-library-change',()=>{if(dialog?.open){if(job)libraryDirty=true;else if(!document.querySelector('.gif-video-picker[open]'))refreshLibraryState();}});
   return {configure,open};
 })();
