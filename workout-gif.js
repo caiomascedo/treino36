@@ -271,5 +271,11 @@ window.GymFasterWorkout = (() => {
       picker.addEventListener('close',()=>{if(button?.isConnected)button.focus();},{once:true});
     }catch(error){window.alert('Não foi possível abrir a biblioteca de vídeos. Tente novamente.');}
   }
-  return {configure,open,pick};
+  async function downloadVideo(url,name){
+    await loadCatalogs();const id=match().driveID(url),asset=videos.find(v=>v.id===id);
+    if(!asset)throw Error('Este vídeo é de um link externo. Abra o link original para baixar, se disponível.');
+    const response=await fetch(assetURL(asset),{cache:'force-cache'});if(!response.ok)throw Error('Não foi possível baixar o vídeo. Tente novamente.');
+    const blob=await response.blob(),objectURL=URL.createObjectURL(blob),link=node('a',{href:objectURL,download:String(name||asset.name).replace(/[\\/:*?"<>|]/g,'_').slice(0,140)+'.mp4'});document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(objectURL),60000);
+  }
+  return {configure,open,pick,downloadVideo};
 })();

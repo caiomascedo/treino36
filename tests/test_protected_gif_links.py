@@ -25,7 +25,10 @@ with sync_playwright() as p:
  page.keyboard.press('Backspace');expect(link).to_have_count(1)
  def edit():
   page.locator('.sec-a .main-exercise-grip').first.click();page.locator('#editExerciseBtn').click();expect(page.locator('#exerciseEditDialog')).to_be_visible()
- edit();page.locator('#exerciseEditText').fill('Agachamento No Smith — 4x10');page.locator('#exerciseEditSave').click();expect(link).to_have_count(1);expect(page.locator('.sec-a ol')).to_contain_text('4x10')
+ edit()
+ with page.expect_download() as dl:page.locator('#exerciseEditDownload').click()
+ out=Path('/tmp/sample-download-'+ENGINE+'.mp4');dl.value.save_as(str(out));assert out.read_bytes()==(ROOT/'cmfit-media'/(asset['id']+'.mp4')).read_bytes();assert dl.value.suggested_filename.endswith('.mp4')
+ page.locator('#exerciseEditText').fill('Agachamento No Smith — 4x10');page.locator('#exerciseEditSave').click();expect(link).to_have_count(1);expect(page.locator('.sec-a ol')).to_contain_text('4x10')
  page.reload();expect(link).to_have_count(1);expect(page.locator('.sec-a ol')).to_contain_text('4x10')
  # Cancel a removal: the saved attachment remains untouched.
  edit();page.locator('#exerciseEditRemove').click();page.locator('#exerciseEditDialog').get_by_role('button',name='Cancelar',exact=True).click();expect(link).to_have_count(1)
