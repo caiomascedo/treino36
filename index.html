@@ -1504,8 +1504,9 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="video-library-preferences.js?v=1"></script>
 <script src="gymfaster-library.js?v=7"></script>
 <script src="workout-video-match.js?v=2"></script>
-<script src="workout-gif.js?v=7"></script>
-<link rel="stylesheet" href="workout-gif.css?v=6">
+<script src="video-preview.js?v=1"></script>
+<script src="workout-gif.js?v=8"></script>
+<link rel="stylesheet" href="workout-gif.css?v=7">
 <link rel="stylesheet" href="gymfaster-library.css?v=5">
 <script src="pdf-review.js?v=7"></script>
 <script src="diet-calculations.js?v=7"></script>
@@ -1762,8 +1763,9 @@ window.AvaliacaoTreinoSync = (function () {
 <dialog id="exerciseActionsDialog" aria-labelledby="exerciseActionsTitle">
   <h3 id="exerciseActionsTitle">Exercício</h3>
   <p id="exerciseActionsText"></p>
+  <button type="button" id="editExerciseBtn">✎ Editar</button>
   <button type="button" id="duplicateExerciseBtn">⧉ Duplicar exercício</button>
-  <div class="exercise-extra-actions"><button type="button" id="copyExerciseBtn">📋 Copiar exercício</button><button type="button" id="pasteExerciseBtn">📋 Colar exercício</button><button type="button" id="deleteExerciseBtn">🗑️ Apagar exercício</button></div>
+  <div class="exercise-extra-actions"><button type="button" id="copyExerciseBtn">📋 Copiar exercício</button><button type="button" id="pasteExerciseBtn">📋 Colar exercício</button><button type="button" id="deleteExerciseBtn" hidden>🗑️ Apagar exercício</button></div>
   <p id="exerciseCopyStatus" role="status" hidden></p>
   <p class="move-label">Mover para a seção:</p>
   <div id="exerciseDestinations"></div>
@@ -5560,7 +5562,8 @@ window.AvaliacaoTreinoSync = (function () {
   }
   function textoDoExercicio(row,comLink) {
     var clone=row.cloneNode(true),url=videoDoExercicio(row);
-    clone.querySelectorAll('a').forEach(function(link){if(/^\(?v[ií]deo\)?$|^youtube$/i.test(link.textContent.trim()))link.remove();else link.replaceWith(document.createTextNode(link.textContent));});
+    clone.querySelectorAll('.exercise-video').forEach(function(link){link.remove();});
+    clone.querySelectorAll('a').forEach(function(link){if(/^\(?(?:v[ií]deo|gifs?)\)?$|^youtube$/i.test(link.textContent.trim()))link.remove();else link.replaceWith(document.createTextNode(link.textContent));});
     var text=clone.textContent.trim();return text+(comLink&&url?' [Vídeo: '+url+']':'');
   }
   function separarLinkExercicio(raw) {
@@ -5572,8 +5575,8 @@ window.AvaliacaoTreinoSync = (function () {
     return {text:text.trim(),url:url};
   }
   function atribuirVideoExercicio(row,url){
-    row.querySelectorAll('a[href]').forEach(function(link){if(/^\(?v[ií]deo\)?$|^youtube$/i.test(link.textContent.trim()))link.remove();else link.replaceWith(document.createTextNode(link.textContent));});
-    if(url){var link=document.createElement('a');link.className='exercise-video';link.href=url;link.target='_blank';link.rel='noopener';link.textContent='(Vídeo)';row.append(document.createTextNode(' '),link);}
+    row.querySelectorAll('a[href]').forEach(function(link){if(/^\(?(?:v[ií]deo|gifs?)\)?$|^youtube$/i.test(link.textContent.trim()))link.remove();else link.replaceWith(document.createTextNode(link.textContent));});
+    if(url){var link=document.createElement('a');link.className='exercise-video';link.href=url;link.target='_blank';link.rel='noopener';link.textContent='(GIFs)';link.contentEditable='false';link.draggable=false;row.append(document.createTextNode(' '),link);}
   }
   function formatExerciseLine(line) {
     if (!line || line.trim() === '') return null;
@@ -5582,7 +5585,7 @@ window.AvaliacaoTreinoSync = (function () {
     if (!clean) return null;
     var ex = separarExercicio(clean);
     return '<li><span class="bold">' + escHtml(ex.nome) + '</span>'
-      + escHtml(ex.separador + ex.detalhes) + (linked.url?' <a class="exercise-video" href="'+escAttr(linked.url)+'" target="_blank" rel="noopener">(Vídeo)</a>':'') + '</li>';
+      + escHtml(ex.separador + ex.detalhes) + (linked.url?' <a class="exercise-video" href="'+escAttr(linked.url)+'" target="_blank" rel="noopener" contenteditable="false" draggable="false">(GIFs)</a>':'') + '</li>';
   }
 
   /* ===== NORMALIZAÇÃO DE TEXTO COLADO ===== */
@@ -7877,11 +7880,14 @@ window.AvaliacaoTreinoSync = (function () {
       if(!group.getClientRects().length)return;
       var gr=group.getBoundingClientRect();
       itensDaLista(list).forEach(function(row,i){
+        row.querySelectorAll('.exercise-video').forEach(function(link){if(link.textContent!=='(GIFs)')link.textContent='(GIFs)';link.contentEditable='false';link.draggable=false;});
         var rect=row.getBoundingClientRect(), grip=document.createElement('button');
         grip.type='button';grip.className='main-exercise-grip';grip.textContent='⋮⋮';grip._exerciseRow=row;
         grip.style.top=(rect.top-gr.top-1)+'px';grip.style.height=Math.max(22,rect.height)+'px';
         grip.setAttribute('aria-label','Mover exercício '+(i+1)+' da seção '+sec);
         grip.title='Clique para copiar, duplicar, apagar ou mover. Segure para arrastar entre A–F. Use ↑/↓ pelo teclado.';layer.appendChild(grip);
+        var eye=document.createElement('button');eye.type='button';eye.className='main-exercise-eye';eye.innerHTML=WorkoutVideoPreview.eye;eye.style.top=(rect.top-gr.top)+'px';eye.setAttribute('aria-label','Ver movimento do exercício '+(i+1)+' da seção '+sec);eye.title='Ver e escolher demonstração';
+        eye.onclick=function(){GymFasterWorkout.pick({name:separarExercicio(separarLinkExercicio(textoDoExercicio(row,false)).text).nome,trigger:eye,video:videoDoExercicio(row),previewOnly:true,onSelect:function(asset){if(!row.isConnected||WorkoutVideoMatch.parts(separarExercicio(textoDoExercicio(row,false)).nome).length>1)return;pushState();atribuirVideoExercicio(row,asset.url);pushState();concluirAutoSave();}});};if(!videoDoExercicio(row))layer.appendChild(eye);
       });
     });
     if(activeRow&&activeRow.isConnected){var activeGrip=Array.from(document.querySelectorAll('.main-exercise-grip')).find(function(b){return b._exerciseRow===activeRow;});if(activeGrip)activeGrip.focus({preventScroll:true});}
@@ -8387,6 +8393,32 @@ window.AvaliacaoTreinoSync = (function () {
     }
     fecharAcoesExercicio();
   }
+  // Protected preview links travel in the exercise's portable [Vídeo: URL] metadata.
+  document.addEventListener('click',function(event){var link=event.target.closest('a.exercise-video');if(!link||!link.closest('.section,.exercise-text'))return;event.preventDefault();event.stopPropagation();GymFasterWorkout.pick({name:textoDoExercicio(link.parentElement,false),video:link.href,previewOnly:true});},true);
+  function protegerAmostra(event){
+    if(!event.target.closest?.('.section,.exercise-text'))return;
+    var selection=getSelection();if(!selection?.rangeCount)return;
+    var ranges=Array.from(event.getTargetRanges?.()||[]).map(function(target){var r=document.createRange();r.setStart(target.startContainer,target.startOffset);r.setEnd(target.endContainer,target.endOffset);return r;});
+    var selected=selection.getRangeAt(0);if(!selected.collapsed)ranges.push(selected);
+    if(ranges.some(function(range){return Array.from(document.querySelectorAll('.section ol .exercise-video,.exercise-text .exercise-video')).some(function(link){return range.intersectsNode(link);});}))event.preventDefault();
+  }
+  document.addEventListener('beforeinput',protegerAmostra,true);document.addEventListener('cut',protegerAmostra,true);
+  var exerciseEditor=criarDialogo('exerciseEditDialog','Editar exercício',
+    '<label for="exerciseEditText">Nome e prescrição</label><textarea id="exerciseEditText"></textarea><p id="exerciseEditVideoStatus"></p><div class="dialog-actions"><button type="button" id="exerciseEditChoose">Escolher / trocar GIF</button><button type="button" id="exerciseEditRemove">Remover GIF</button></div><p id="exerciseEditStatus" role="status"></p><div class="dialog-actions"><button type="button" id="exerciseEditSave">Salvar alterações</button><button type="button" id="exerciseEditDelete">Apagar exercício</button><button data-close>Cancelar</button></div>');
+  var exerciseEditContext=null,exerciseEditURL='';
+  function atualizarGIFEditor(){document.getElementById('exerciseEditVideoStatus').textContent=exerciseEditURL?'(GIFs) · demonstração associada':'Sem demonstração associada';document.getElementById('exerciseEditRemove').disabled=!exerciseEditURL;}
+  document.getElementById('editExerciseBtn').onclick=function(){
+    if(!menuContext?.row.isConnected)return;exerciseEditContext=menuContext;var holder=menuContext.config.main?menuContext.row:menuContext.row.querySelector('.exercise-text');exerciseEditURL=videoDoExercicio(holder);document.getElementById('exerciseEditText').value=textoDoExercicio(holder,false);document.getElementById('exerciseEditStatus').textContent='';atualizarGIFEditor();exerciseMenu.close();exerciseEditor.showModal();
+  };
+  document.getElementById('exerciseEditChoose').onclick=function(){GymFasterWorkout.pick({name:document.getElementById('exerciseEditText').value,onSelect:function(asset){exerciseEditURL=asset.url;atualizarGIFEditor();}});};
+  document.getElementById('exerciseEditRemove').onclick=function(){exerciseEditURL='';atualizarGIFEditor();};
+  document.getElementById('exerciseEditSave').onclick=function(){
+    var ctx=exerciseEditContext,text=document.getElementById('exerciseEditText').value.trim();if(!ctx?.row.isConnected)return;
+    if(!text){document.getElementById('exerciseEditStatus').textContent='Preencha o nome do exercício.';return;}
+    var holder=document.createElement('div');holder.innerHTML=formatExerciseLine(text+(exerciseEditURL?' [Vídeo: '+exerciseEditURL+']':''));var row=holder.querySelector('li');if(!row)return;
+    if(ctx.config.main||zoomMode!=='paste')pushState();var target=ctx.config.main?ctx.row:ctx.row.querySelector('.exercise-text');target.innerHTML=row.innerHTML;ctx.config.commit([ctx.config.sec(ctx.row.parentElement)]);concluirAutoSave();exerciseEditor.close();
+  };
+  document.getElementById('exerciseEditDelete').onclick=function(){if(!exerciseEditContext?.row.isConnected)return;menuContext=exerciseEditContext;executarAcaoExercicio('delete');concluirAutoSave();exerciseEditor.close();};
   var ultimoExercicioCopiado = '';
   document.getElementById('deleteExerciseBtn').addEventListener('click',function(){executarAcaoExercicio('delete');});
   document.getElementById('copyExerciseBtn').addEventListener('click',async function(){
@@ -9235,7 +9267,7 @@ window.AvaliacaoTreinoSync = (function () {
     '<button id="newMobilityBtn">＋ Cadastrar mobilidade</button><label for="mobilityName">Nome</label><input id="mobilityName">'+
     '<label for="mobilityText">Mobilidade completa — uma instrução por linha</label><textarea id="mobilityText" placeholder="Cadastre aqui seu conteúdo de mobilidade."></textarea>'+
     '<p id="mobilityStatus" role="status"></p><div class="dialog-actions"><button id="saveMobilityBtn">Salvar na biblioteca</button><button id="copyMobilityBtn">Copiar completa</button><button id="insertMobilityBtn" class="primary">Inserir no treino</button><button data-close>Fechar</button></div>');
-  function listarMobilidades(){var host=document.getElementById('mobilityLibrary'),q=normalizarNome(document.getElementById('mobilitySearch').value);host.replaceChildren();mobilidades.filter(function(m){return q.split(/\s+/).filter(Boolean).every(function(part){return normalizarNome(m.nome+' '+m.texto).includes(part);});}).forEach(function(m){var b=document.createElement('button');b.textContent=m.nome;b.setAttribute('aria-pressed',String(m.id===mobilityId));b.onclick=function(){mobilityId=m.id;document.getElementById('mobilityName').value=m.nome;document.getElementById('mobilityText').value=m.texto;document.getElementById('mobilityPreview').textContent=m.texto;document.getElementById('mobilityRegistration').open=false;listarMobilidades();};host.appendChild(b);});if(!host.children.length)host.textContent='Nenhuma mobilidade cadastrada para esta busca.';}
+  function listarMobilidades(){var host=document.getElementById('mobilityLibrary'),q=normalizarNome(document.getElementById('mobilitySearch').value);host.replaceChildren();mobilidades.filter(function(m){return q.split(/\s+/).filter(Boolean).every(function(part){return normalizarNome(m.nome+' '+m.texto).includes(part);});}).forEach(function(m){var b=document.createElement('button');b.textContent=m.nome;b.setAttribute('aria-pressed',String(m.id===mobilityId));b.onclick=function(){mobilityId=m.id;document.getElementById('mobilityName').value=m.nome;document.getElementById('mobilityText').value=m.texto;document.getElementById('mobilityPreview').textContent=m.texto;document.getElementById('mobilityRegistration').open=false;listarMobilidades();};var item=document.createElement('div');item.className='mobility-video-row';var eye=document.createElement('button');eye.type='button';eye.className='mobility-eye';eye.innerHTML=WorkoutVideoPreview.eye;eye.setAttribute('aria-label','Ver movimentos de '+m.nome);eye.title='Ver movimentos antes de inserir';eye.onclick=function(){GymFasterWorkout.pick({name:m.texto||m.nome,trigger:eye,previewOnly:true});};item.append(b,eye);host.appendChild(item);});if(!host.children.length)host.textContent='Nenhuma mobilidade cadastrada para esta busca.';}
   function abrirMobilidades(sec){mobilitySection=sec;mobilityId=null;document.getElementById('mobilityName').value='';document.getElementById('mobilityText').value='';document.getElementById('mobilitySearch').value='';document.getElementById('mobilityStatus').textContent='';document.getElementById('mobilityDestination').textContent='Escolha uma mobilidade e a seção de destino.';listarMobilidades();inicializarDestinoMobilidade(sec);mobilityDialog.showModal();}
   document.getElementById('mobilitySearch').oninput=listarMobilidades;
   document.getElementById('newMobilityBtn').onclick=function(){mobilityId=null;document.getElementById('mobilityName').value='';document.getElementById('mobilityText').value='';listarMobilidades();document.getElementById('mobilityName').focus();};
@@ -11219,6 +11251,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('mobilityDestination').after(mobilityDestination);
   var editor=document.createElement('details');editor.id='mobilityRegistration';var summary=document.createElement('summary');summary.textContent='Cadastrar ou editar mobilidade';editor.appendChild(summary);
   ['mobilityName','mobilityText'].forEach(function(id){var field=document.getElementById(id),label=mobilityDialog.querySelector('label[for="'+id+'"]');editor.append(label,field);});
+  var mobilityVideo=document.createElement('button');mobilityVideo.type='button';mobilityVideo.id='mobilityVideoBtn';mobilityVideo.innerHTML=WorkoutVideoPreview.eye+' Escolher vídeo';mobilityVideo.onclick=function(){var field=document.getElementById('mobilityText');GymFasterWorkout.pick({name:field.value||document.getElementById('mobilityName').value,onSelect:function(asset,name){var lines=field.value.split(/\r?\n/),index=lines.findIndex(function(line){return WorkoutVideoMatch.canonical(line).includes(WorkoutVideoMatch.canonical(name));});if(index<0)index=0;lines[index]=(lines[index]||name).replace(/\[v[ií]deo:[^\]]+\]/gi,'').trim()+' [Vídeo: '+asset.url+']';field.value=lines.join('\n');field.dispatchEvent(new Event('input'));}});};editor.appendChild(mobilityVideo);
   editor.appendChild(document.getElementById('saveMobilityBtn'));document.getElementById('newMobilityBtn').after(editor);
   var mobilityPreview=document.createElement('pre');mobilityPreview.id='mobilityPreview';mobilityPreview.className='version-content';mobilityPreview.textContent='Selecione uma mobilidade para ver o conteúdo completo.';editor.before(mobilityPreview);
   document.getElementById('mobilityTarget').onchange=function(){mobilitySection=this.value;};
