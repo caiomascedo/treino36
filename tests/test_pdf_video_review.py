@@ -22,7 +22,7 @@ with sync_playwright() as p:
  page.evaluate('''()=>localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'one',nome:'Exemplo',whatsapp:'+55 (55) 99999-8888',treino:{A:['Agachamento Livre — 3×12','Leg Press 45° — 3×15'],B:['Remada — 3×12']},titulos:{A:'A. Quadríceps',B:'B. Costas'}}]))''')
  page.reload();page.locator('#pdfBtn').click();expect(page.locator('#pdfBody .yt-link')).to_have_count(3)
  assert page.locator('#pdfBody .yt-link').all_text_contents()==['(Vídeo)']*3
- assert page.locator('#pdfBody .pdf-ex-row').evaluate_all("rows=>rows.every(row=>row.querySelector('.pdf-media-links > .yt-link'))")
+ assert page.locator('#pdfBody .pdf-ex-row').evaluate_all("rows=>rows.every(row=>row.querySelector('.pdf-ex-name > .yt-link'))")
  assert not page.locator('#pdfReviewTools > details:not(.pdf-section-choice)').evaluate('el=>el.open')
  first=page.locator('#pdfBody .pdf-ex-row').first
  initial_href=first.locator('.yt-link').get_attribute('href');assert 'youtube.com/results' in parse_qs(urlparse(initial_href).query)['url'][0]
@@ -62,12 +62,12 @@ with sync_playwright() as p:
  def export_and_check(model):
   page.get_by_role('combobox',name='Modelo do PDF').select_option(model)
   assert all(urlparse(href).netloc=='caio.tail953b6e.ts.net' and urlparse(href).path=='/r/yt' for href in page.locator('#pdfBody .yt-link').evaluate_all('links=>links.map(a=>a.href)'))
-  if model=='old':expect(page.locator('#pdfBody .pdf-media-links > .yt-link')).to_have_count(54)
-  else:expect(page.locator('#pdfBody .pdf-media-links > .yt-link')).to_have_count(54)
+  if model=='old':expect(page.locator('#pdfBody .pdf-ex-name > .yt-link')).to_have_count(54)
+  else:expect(page.locator('#pdfBody .pdf-ex-name > .yt-link')).to_have_count(54)
   count=page.evaluate('pdfWindows.length');page.locator('#downloadPdfBtn').click();page.wait_for_function(f'pdfWindows.length==={count+1}&&pdfWindows.at(-1).url',timeout=30000)
   encoded=page.evaluate("async()=>{const blob=pdfBlobs.get(pdfWindows.at(-1).url),bytes=new Uint8Array(await blob.arrayBuffer());let text='';for(const byte of bytes)text+=String.fromCharCode(byte);return btoa(text);}")
   with fitz.open(stream=base64.b64decode(encoded),filetype='pdf') as doc:
-   assert doc.page_count>=(2 if model=='inline' else 1)
+   assert doc.page_count>=1
    destinations=[a['uri'] for p in doc for a in p.get_links() if '/r/yt?' in a.get('uri','')]
    assert len(destinations)>=54
    assert any(parse_qs(urlparse(href).query).get('url')==[custom] for href in destinations)

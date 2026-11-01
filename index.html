@@ -1502,14 +1502,15 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=5"></script>
 <script src="video-library-preferences.js?v=1"></script>
-<script src="gymfaster-library.js?v=8"></script>
+<script src="gymfaster-library.js?v=9"></script>
 <script src="workout-video-match.js?v=2"></script>
 <script src="video-preview.js?v=1"></script>
-<script src="workout-gif.js?v=12"></script>
-<script src="media-visibility.js?v=1"></script>
-<link rel="stylesheet" href="workout-gif.css?v=10">
+<script src="workout-gif.js?v=14"></script>
+<script src="workout-media-text.js?v=1"></script>
+<script src="media-visibility.js?v=2"></script>
+<link rel="stylesheet" href="workout-gif.css?v=11">
 <link rel="stylesheet" href="gymfaster-library.css?v=5">
-<script src="pdf-review.js?v=10"></script>
+<script src="pdf-review.js?v=11"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -1521,7 +1522,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=12">
+<link rel="stylesheet" href="pdf-review.css?v=13">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -1764,7 +1765,7 @@ window.AvaliacaoTreinoSync = (function () {
 <dialog id="exerciseActionsDialog" aria-labelledby="exerciseActionsTitle">
   <h3 id="exerciseActionsTitle">Exercício</h3>
   <p id="exerciseActionsText"></p>
-  <button type="button" id="editExerciseBtn">✎ Editar</button>
+  <div class="exercise-edit-actions"><button type="button" id="editExerciseBtn">✎ Editar exercício / vídeo</button><span id="exerciseSampleActions"></span></div>
   <button type="button" id="duplicateExerciseBtn">⧉ Duplicar exercício</button>
   <div class="exercise-extra-actions"><button type="button" id="copyExerciseBtn">📋 Copiar exercício</button><button type="button" id="pasteExerciseBtn">📋 Colar exercício</button><button type="button" id="deleteExerciseBtn" hidden>🗑️ Apagar exercício</button></div>
   <p id="exerciseCopyStatus" role="status" hidden></p>
@@ -5076,7 +5077,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
     const exs = aluno.treino[secId];
     const preview = exs.slice(0, 3).map(ex => {
-      const clean = ex.replace(/<[^>]*>/g, '').substring(0, 35);
+      const clean = WorkoutMediaText.strip(ex.replace(/<[^>]*>/g, '')).substring(0, 35);
       return clean + (clean.length >= 35 ? '...' : '');
     }).join(' • ');
     return preview + (exs.length > 3 ? ` +${exs.length - 3} outros` : '');
@@ -5147,7 +5148,7 @@ window.AvaliacaoTreinoSync = (function () {
       html += '<div class="pdf-sec ' + SEC_COLORS[sec] + '" data-pdf-section="'+sec+'">';
       html += '<div class="pdf-sec-title ' + SEC_COLORS[sec] + '" data-pdf-editable>' + escHtml(titulo) + '</div>';
       for (let ex of exs) {
-        const url = ytSearchUrl(ex.nome, nomeAluno, titulo,ex.video),visibility=WorkoutMediaVisibility.forSection(sec),registered=ex.registeredGifs||[];
+        const url = ytSearchUrl(ex.nome, nomeAluno, titulo,ex.video),visibility={video:true,gifs:true},registered=ex.registeredGifs||[];
         html += '<div class="pdf-ex-row" data-section-title="'+escAttr(titulo)+'" data-video-url="'+escAttr(ex.video||'')+'" data-allow-video="'+visibility.video+'" data-allow-gifs="'+visibility.gifs+'" data-pdf-source="'+(sourceRows.push(ex.source)-1)+'">'
           + '<div class="pdf-ex-name"><span class="pdf-ex-title" data-pdf-editable>' + escHtml(ex.nome) + '</span> <span class="pdf-ex-details" data-pdf-editable>' + escHtml(ex.detalhes) + '</span></div><div class="pdf-media-links">'
           + '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" class="yt-link" contenteditable="false">(Vídeo)</a>'
@@ -5574,10 +5575,10 @@ window.AvaliacaoTreinoSync = (function () {
     if(url&&WorkoutVideoMatch.driveID(url)){if(!gifs.length)gifs=[url];url='';}
     return {text:text.trim(),url:url,gifs:gifs};
   }
-  function htmlAmostras(nome,gifs,registered=gifs){if(!gifs?.length)return '';var names=WorkoutVideoMatch.parts(nome);return '<span class="exercise-gifs" data-gifs="'+escAttr(JSON.stringify(gifs))+'" data-registered="'+escAttr(JSON.stringify(registered))+'">'+gifs.map(function(url,i){return url?'<span class="gif-sample-item">'+(names.length>1?escHtml(names[i]||'Demonstração '+(i+1))+' ':'')+'<a class="gif-sample" contenteditable="false" draggable="false" href="'+escAttr(url)+'" title="Ver demonstração de '+escAttr(names[i]||nome)+'">(GIFs)</a></span>':'';}).join('')+'</span>';}
+  function htmlAmostras(nome,gifs,registered=gifs){if(!gifs?.length)return '';var names=WorkoutVideoMatch.parts(nome);return '<span class="exercise-gifs" data-gifs="'+escAttr(JSON.stringify(gifs))+'" data-registered="'+escAttr(JSON.stringify(registered))+'">'+gifs.map(function(url,i){return url?'<span class="gif-sample-item">'+'<a class="gif-sample" contenteditable="true" href="'+escAttr(url)+'" title="Ver demonstração de '+escAttr(names[i]||nome)+'">(GIFs'+(gifs.length>1?' '+(i+1):'')+')</a></span>':'';}).join('')+'</span>';}
   function atribuirGIFExercicio(row,gifs,registered=gifs){row.querySelectorAll('.exercise-gifs').forEach(function(n){n.remove();});var nome=separarExercicio(textoDoExercicio(row,false)).nome;row.insertAdjacentHTML('beforeend',htmlAmostras(nome,gifs,registered));}
-  function atribuirVideoExercicio(row,url){row.querySelectorAll('a.exercise-video').forEach(function(n){n.remove();});if(url){var a=document.createElement('a');a.className='exercise-video';a.href=url;a.target='_blank';a.rel='noopener';a.contentEditable='false';a.textContent='(Vídeo)';var gifs=row.querySelector('.exercise-gifs');row.insertBefore(a,gifs||null);}}
-  function formatExerciseLine(line){if(!line?.trim())return null;var linked=separarLinkExercicio(line),clean=cleanLine(linked.text).replace(/\*\*/g,'');if(!clean)return null;var ex=separarExercicio(clean);return '<li><span class="bold">'+escHtml(ex.nome)+'</span>'+escHtml(ex.separador+ex.detalhes)+(linked.url?' <a class="exercise-video" href="'+escAttr(linked.url)+'" target="_blank" rel="noopener" contenteditable="false">(Vídeo)</a>':'')+htmlAmostras(ex.nome,linked.gifs)+'</li>';}
+  function atribuirVideoExercicio(row,url){row.querySelectorAll('a.exercise-video').forEach(function(n){n.remove();});if(url){var a=document.createElement('a');a.className='exercise-video';a.href=url;a.target='_blank';a.rel='noopener';a.contentEditable='true';a.textContent='(Vídeo)';var gifs=row.querySelector('.exercise-gifs');row.insertBefore(a,gifs||null);}}
+  function formatExerciseLine(line){if(!line?.trim())return null;var linked=separarLinkExercicio(line),clean=cleanLine(linked.text).replace(/\*\*/g,'');if(!clean)return null;var ex=separarExercicio(clean);return '<li><span class="bold">'+escHtml(ex.nome)+'</span>'+escHtml(ex.separador+ex.detalhes)+(linked.url?' <a class="exercise-video" href="'+escAttr(linked.url)+'" target="_blank" rel="noopener" contenteditable="true">(Vídeo)</a>':'')+htmlAmostras(ex.nome,linked.gifs)+'</li>';}
 
   /* ===== NORMALIZAÇÃO DE TEXTO COLADO ===== */
   // Detecta uma linha de título de seção, ex: "Treino A – Glúteos (Foco Pesado) + Quadríceps",
@@ -7816,7 +7817,7 @@ window.AvaliacaoTreinoSync = (function () {
   function prepararPreviaCola() {
     var raw=document.getElementById('pasteTextarea').value.trim();
     if(!raw){document.getElementById('pasteTextarea').focus();return;}
-    zoomDraft=dadosDoEditor(); draftTouched=[];
+    var originalDraft=dadosDoEditor();zoomDraft=dadosDoEditor(); draftTouched=[];
     var current=modalMode==='section'?modalSection:null;
     function tocar(sec,title) {
       if(!draftTouched.includes(sec)){draftTouched.push(sec);zoomDraft[sec].itens=[];}
@@ -7832,6 +7833,7 @@ window.AvaliacaoTreinoSync = (function () {
       var formatted=formatExerciseLine(line.replace(/^\d+[.)]\s*/,'').replace(/^[•\-*]\s*/,''));
       if(formatted){var ol=document.createElement('ol');ol.innerHTML=formatted;zoomDraft[current].itens.push(ol.firstElementChild.innerHTML);}
     });
+    if(pasteEditingExisting)draftTouched.forEach(function(sec){function plain(html){var holder=document.createElement('div');holder.innerHTML=html;return textoDoExercicio(holder,true);}var restored=WorkoutMediaText.restore(zoomDraft[sec].itens.map(plain),originalDraft[sec].itens.map(plain));zoomDraft[sec].itens=restored.map(function(line){var holder=document.createElement('div');holder.innerHTML=formatExerciseLine(line);return holder.firstElementChild.innerHTML;});});
     draftHistory=[snapshotRascunho()];draftIndex=0;
     return true;
   }
@@ -7877,6 +7879,7 @@ window.AvaliacaoTreinoSync = (function () {
         grip.style.top=(rect.top-gr.top-1)+'px';grip.style.height=Math.max(22,rect.height)+'px';
         grip.setAttribute('aria-label','Mover exercício '+(i+1)+' da seção '+sec);
         grip.title='Clique para copiar, duplicar, apagar ou mover. Segure para arrastar entre A–F. Use ↑/↓ pelo teclado.';layer.appendChild(grip);
+        if(gifsDoExercicio(row).some(Boolean)){var eye=document.createElement('button');eye.type='button';eye.className='exercise-preview-eye';eye.innerHTML=WorkoutVideoPreview.eye;eye.style.top=(rect.top-gr.top)+'px';eye.setAttribute('aria-label','Ver demonstração do exercício '+(i+1)+' da seção '+sec);eye.onclick=function(){var urls=gifsDoExercicio(row).filter(Boolean);if(urls.length===1)GymFasterWorkout.pick({name:sampleName,video:urls[0],previewOnly:true});else abrirAcoesExercicio(row,configMovimento(true));};layer.append(eye);}
 
       });
     });
@@ -8230,7 +8233,7 @@ window.AvaliacaoTreinoSync = (function () {
     var ids=sec==='all'?SECOES.slice():[sec];
     openPasteModal(sec==='all'?'full':'section',sec==='all'?null:sec);
     var texto=ids.map(function(id){
-      var linhas=itensDaLista(sections[id]).map(function(li,i){return (i+1)+'. '+textoDoExercicio(li,true);});
+      var linhas=itensDaLista(sections[id]).map(function(li,i){return (i+1)+'. '+textoDoExercicio(li,false);});
       return getTituloSecao(id)+'\n'+linhas.join('\n');
     }).join('\n\n');
     document.getElementById('pasteTextarea').value=texto;
@@ -8346,6 +8349,7 @@ window.AvaliacaoTreinoSync = (function () {
     fecharAcoesExercicio();
     var list = row.parentElement, sec = config.sec(list);
     menuContext = { row: row, config: config };
+    var sampleActions=document.getElementById('exerciseSampleActions');sampleActions.replaceChildren();var holder=config.main?row:row.querySelector('.exercise-text'),names=WorkoutVideoMatch.parts(separarExercicio(textoDoExercicio(holder,false)).nome);var videoURL=videoDoExercicio(holder);if(videoURL){var original=document.createElement('a');original.href=videoURL;original.target='_blank';original.rel='noopener';original.textContent='(Vídeo)';sampleActions.append(original);}gifsDoExercicio(holder).forEach(function(url,i){if(!url)return;var b=document.createElement('button');b.type='button';b.textContent='(GIFs'+(names.length>1?' '+(i+1):'')+')';b.title=names[i]||'Ver GIF';b.onclick=function(){GymFasterWorkout.pick({name:names[i]||'',video:url,previewOnly:true});};sampleActions.append(b);});
     menuBackdropPressed = false;
     document.getElementById('exerciseCopyStatus').hidden=true;
     exerciseMenu.querySelectorAll('.exercise-copy-fallback').forEach(function(el){el.remove();});
@@ -8383,7 +8387,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
     fecharAcoesExercicio();
   }
-  document.addEventListener('click',function(event){var link=event.target.closest('a.gif-sample');if(!link)return;event.preventDefault();event.stopPropagation();GymFasterWorkout.pick({name:link.title.replace(/^Ver demonstração de /,''),video:link.href,previewOnly:true});},true);
+  document.addEventListener('click',function(event){var link=event.target.closest('a.gif-sample');if(!link)return;if(link.isContentEditable&&!event.ctrlKey&&!event.metaKey)return;if(getSelection()?.toString())return;event.preventDefault();event.stopPropagation();GymFasterWorkout.pick({name:link.title.replace(/^Ver demonstração de /,''),video:link.href,previewOnly:true});},true);
   function partesAmostra(text){return String(text).split(/\r?\n/).flatMap(function(line,index){var data=separarLinkExercicio(line),names=WorkoutVideoMatch.parts(separarExercicio(data.text).nome);return names.filter(Boolean).map(function(nome,part){return {nome:nome,line:index,part:part,url:data.gifs[part]||''};});});}
   function renderAmostrasEditor(host,text,onChange){host.replaceChildren();partesAmostra(text).forEach(function(part){var row=document.createElement('div');row.className='sample-edit-row';var name=document.createElement('strong');name.textContent=part.nome;row.append(name);function button(label,fn){var b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;row.append(b);return b;}button('Escolher GIF',function(){GymFasterWorkout.pick({name:part.nome,persistChoice:false,onSelect:function(asset){onChange(part,asset.url);}});});if(part.url){button('Ver GIF',function(){GymFasterWorkout.pick({name:part.nome,video:part.url,previewOnly:true});});button('Baixar vídeo',async function(){try{await GymFasterWorkout.downloadVideo(part.url,part.nome);}catch(e){alert(e.message);}});button('Remover GIF',function(){onChange(part,'');});}host.append(row);});}
   function mudarAmostraTexto(text,part,url){var lines=text.split(/\r?\n/),data=separarLinkExercicio(lines[part.line]||part.nome);while(data.gifs.length<=part.part)data.gifs.push('');data.gifs[part.part]=url;lines[part.line]=data.text+vinculosTexto(data);return lines.join('\n');}
@@ -8809,8 +8813,8 @@ window.AvaliacaoTreinoSync = (function () {
     carregarTreinoAluno(a);fecharSugestoes();atualizarStatusSalvo('✅ Salvo');if(callback)callback();return true;
   }
 
-  function textoTreino(dados,scope) {
-    return (scope?[scope]:['A','B','C','D','E'].concat(dados.secaoFAtiva?['F']:[])).map(function(s){return ((dados.titulos||{})[s]||s+'. TREINO')+'\n'+((dados.treino||{})[s]||[]).map(function(x,i){return(i+1)+'. '+x;}).join('\n');}).join('\n\n');
+  function textoTreino(dados,scope,portable=false) {
+    return (scope?[scope]:['A','B','C','D','E'].concat(dados.secaoFAtiva?['F']:[])).map(function(s){return ((dados.titulos||{})[s]||s+'. TREINO')+'\n'+((dados.treino||{})[s]||[]).map(function(x,i){return(i+1)+'. '+(portable?x:WorkoutMediaText.strip(x));}).join('\n');}).join('\n\n');
   }
   function rotuloVersao(v,index){return WorkoutHistoryTools.versionLabel(v,index);}
   var historyScope=null,historyStudent=null;
@@ -9192,7 +9196,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
   });
   var compareDialog=criarDialogo('compareWorkoutsDialog','Comparar treinos','<p id="compareLabels"></p><div id="compareBody"></div><div class="dialog-actions"><button data-close>Fechar</button></div>');
-  function nomeExercicio(line){return normalizarNome(line).split(/\b\d+\s*(?:x|×|séries|series)\b|\b\d+\s*[x×]\s*\d/)[0].replace(/[\s:–-]+$/,'');}
+  function nomeExercicio(line){return normalizarNome(WorkoutMediaText.strip(line)).split(/\b\d+\s*(?:x|×|séries|series)\b|\b\d+\s*[x×]\s*\d/)[0].replace(/[\s:–-]+$/,'');}
   function abrirComparacao(current,previous,scope,leftLabel,rightLabel,refresh) {
     if(!refresh)iniciarEditorComparacao(current,previous,scope,leftLabel,rightLabel);
     var student = (current && current.student_id ? alunos.find(function(x){ return x.student_id === current.student_id; }) : null) ||
@@ -9221,7 +9225,7 @@ window.AvaliacaoTreinoSync = (function () {
         var t=document.createElement('h4');t.textContent='Exercício '+(Number(el.dataset.position)+1)+' · '+title;
         var cols=document.createElement('div');cols.className='comparison-columns';
         var a=document.createElement('div'),b=document.createElement('div');
-        a.textContent=Number.isInteger(index)?now[index]:'—';b.textContent=Number.isInteger(oldIndex)?old[oldIndex]:'—';
+        a.textContent=Number.isInteger(index)?WorkoutMediaText.strip(now[index]):'—';b.textContent=Number.isInteger(oldIndex)?WorkoutMediaText.strip(old[oldIndex]):'—';
         cols.append(b,a);el.append(t,cols);
         prepararEdicaoLinhaComparacao(el,a,s,index,'current');prepararEdicaoLinhaComparacao(el,b,s,oldIndex,'previous');host.appendChild(el);
       }
@@ -9229,26 +9233,27 @@ window.AvaliacaoTreinoSync = (function () {
       for(var i=0;i<Math.max(now.length,old.length);i++){
         if(i>=now.length){row('removed','Só no anterior',null,i);continue;}
         if(i>=old.length){row('added','Só no atual',i,null);continue;}
-        var same=normalizarNome(old[i])===normalizarNome(now[i]);
+        var same=normalizarNome(WorkoutMediaText.strip(old[i]))===normalizarNome(WorkoutMediaText.strip(now[i]));
         row(same?'same':'changed',same?'Mantido':(nomeExercicio(old[i])===nomeExercicio(now[i])?'Séries, repetições ou técnica alteradas':'Exercícios diferentes'),i,i);
       }
     });
     if(!compareDialog.open)compareDialog.showModal();
   }
 
-  var mobilitySection=null,mobilityId=null;
+  var mobilitySection=null,mobilityId=null,mobilityDraftRaw='';
+  function textoMobilidadePortatil(){return WorkoutMediaText.restore(document.getElementById('mobilityText').value.split(/\r?\n/),mobilityDraftRaw.split(/\r?\n/)).join('\n');}
   var mobilityDialog=criarDialogo('mobilityDialog','Biblioteca de mobilidades',
     '<p id="mobilityDestination"></p><input id="mobilitySearch" placeholder="Buscar mobilidade" aria-label="Buscar mobilidade"><div id="mobilityLibrary" class="mobility-library"></div>'+
     '<button id="newMobilityBtn">＋ Cadastrar mobilidade</button><label for="mobilityName">Nome</label><input id="mobilityName">'+
     '<label for="mobilityText">Mobilidade completa — uma instrução por linha</label><textarea id="mobilityText" placeholder="Cadastre aqui seu conteúdo de mobilidade."></textarea>'+
     '<p id="mobilityStatus" role="status"></p><div class="dialog-actions"><button id="saveMobilityBtn">Salvar na biblioteca</button><button id="copyMobilityBtn">Copiar completa</button><button id="insertMobilityBtn" class="primary">Inserir no treino</button><button data-close>Fechar</button></div>');
-  function listarMobilidades(){var host=document.getElementById('mobilityLibrary'),q=normalizarNome(document.getElementById('mobilitySearch').value);host.replaceChildren();mobilidades.filter(function(m){return q.split(/\s+/).filter(Boolean).every(function(part){return normalizarNome(m.nome+' '+m.texto).includes(part);});}).forEach(function(m){var b=document.createElement('button');b.textContent=m.nome;b.setAttribute('aria-pressed',String(m.id===mobilityId));b.onclick=function(){mobilityId=m.id;document.getElementById('mobilityName').value=m.nome;document.getElementById('mobilityText').value=m.texto;document.getElementById('mobilityPreview').textContent=m.texto;document.getElementById('mobilityRegistration').open=false;renderMobilidadeGIFs();listarMobilidades();};var item=document.createElement('div');item.className='mobility-video-row';item.append(b);m.texto.split(/\r?\n/).forEach(function(line){var data=separarLinkExercicio(line);item.insertAdjacentHTML('beforeend',htmlAmostras(separarExercicio(data.text).nome,data.gifs));});host.appendChild(item);});if(!host.children.length)host.textContent='Nenhuma mobilidade cadastrada para esta busca.';}
-  function abrirMobilidades(sec){mobilitySection=sec;mobilityId=null;document.getElementById('mobilityName').value='';document.getElementById('mobilityText').value='';document.getElementById('mobilitySearch').value='';document.getElementById('mobilityStatus').textContent='';document.getElementById('mobilityDestination').textContent='Escolha uma mobilidade e a seção de destino.';listarMobilidades();inicializarDestinoMobilidade(sec);mobilityDialog.showModal();}
+  function listarMobilidades(){var host=document.getElementById('mobilityLibrary'),q=normalizarNome(document.getElementById('mobilitySearch').value);host.replaceChildren();mobilidades.filter(function(m){return q.split(/\s+/).filter(Boolean).every(function(part){return normalizarNome(m.nome+' '+m.texto).includes(part);});}).forEach(function(m){var b=document.createElement('button');b.textContent=m.nome;b.setAttribute('aria-pressed',String(m.id===mobilityId));b.onclick=function(){mobilityId=m.id;document.getElementById('mobilityName').value=m.nome;mobilityDraftRaw=m.texto;document.getElementById('mobilityText').value=WorkoutMediaText.strip(m.texto);document.getElementById('mobilityPreview').textContent=WorkoutMediaText.strip(m.texto);document.getElementById('mobilityRegistration').open=false;renderMobilidadeGIFs();listarMobilidades();};var item=document.createElement('div');item.className='mobility-video-row';item.append(b);m.texto.split(/\r?\n/).forEach(function(line){var data=separarLinkExercicio(line);item.insertAdjacentHTML('beforeend',htmlAmostras(separarExercicio(data.text).nome,data.gifs));});host.appendChild(item);});if(!host.children.length)host.textContent='Nenhuma mobilidade cadastrada para esta busca.';}
+  function abrirMobilidades(sec){mobilitySection=sec;mobilityId=null;mobilityDraftRaw='';document.getElementById('mobilityName').value='';document.getElementById('mobilityText').value='';document.getElementById('mobilitySearch').value='';document.getElementById('mobilityStatus').textContent='';document.getElementById('mobilityDestination').textContent='Escolha uma mobilidade e a seção de destino.';listarMobilidades();inicializarDestinoMobilidade(sec);mobilityDialog.showModal();}
   document.getElementById('mobilitySearch').oninput=listarMobilidades;
-  document.getElementById('newMobilityBtn').onclick=function(){mobilityId=null;document.getElementById('mobilityName').value='';document.getElementById('mobilityText').value='';listarMobilidades();document.getElementById('mobilityName').focus();};
-  document.getElementById('saveMobilityBtn').onclick=function(){var nome=document.getElementById('mobilityName').value.trim(),texto=document.getElementById('mobilityText').value.trim(),status=document.getElementById('mobilityStatus');if(!nome||!texto){status.textContent='Preencha o nome e o conteúdo.';return;}var next=cloneData(mobilidades),item=next.find(function(m){return m.id===mobilityId;});if(item){item.nome=nome;item.texto=texto;}else{item={id:novoId('mobilidade'),nome:nome,texto:texto};next.push(item);}try{localStorage.setItem('treinoMobilidades',JSON.stringify(next));mobilidades=next;mobilityId=item.id;listarMobilidades();status.textContent='Mobilidade salva na biblioteca.';}catch(e){status.textContent='Não foi possível salvar a biblioteca.';}};
-  document.getElementById('copyMobilityBtn').onclick=async function(){var area=document.getElementById('mobilityText');if(!area.value.trim())return;try{await navigator.clipboard.writeText(area.value);document.getElementById('mobilityStatus').textContent='Mobilidade completa copiada.';}catch(e){area.focus();area.select();document.getElementById('mobilityStatus').textContent='Texto selecionado: use Copiar ou Ctrl+C.';}};
-  document.getElementById('insertMobilityBtn').onclick=function(){var text=document.getElementById('mobilityText').value.trim();if(!text)return;pushState();var list=sections[mobilitySection];Array.from(list.children).filter(function(li){return !exercicioValido(li);}).forEach(function(li){li.remove();});text.split(/\r?\n/).map(function(t){return t.trim().replace(/^\d+[.)]\s*/,'');}).filter(Boolean).forEach(function(line){var html=formatExerciseLine(line);if(html)list.insertAdjacentHTML('beforeend',html);});pushState();mobilityDialog.close();};
+  document.getElementById('newMobilityBtn').onclick=function(){mobilityId=null;mobilityDraftRaw='';document.getElementById('mobilityName').value='';document.getElementById('mobilityText').value='';listarMobilidades();document.getElementById('mobilityName').focus();};
+  document.getElementById('saveMobilityBtn').onclick=function(){var nome=document.getElementById('mobilityName').value.trim(),texto=textoMobilidadePortatil().trim(),status=document.getElementById('mobilityStatus');if(!nome||!texto){status.textContent='Preencha o nome e o conteúdo.';return;}var next=cloneData(mobilidades),item=next.find(function(m){return m.id===mobilityId;});if(item){item.nome=nome;item.texto=texto;}else{item={id:novoId('mobilidade'),nome:nome,texto:texto};next.push(item);}try{localStorage.setItem('treinoMobilidades',JSON.stringify(next));mobilidades=next;mobilityId=item.id;listarMobilidades();status.textContent='Mobilidade salva na biblioteca.';}catch(e){status.textContent='Não foi possível salvar a biblioteca.';}};
+  document.getElementById('copyMobilityBtn').onclick=async function(){var area=document.getElementById('mobilityText');if(!area.value.trim())return;try{await navigator.clipboard.writeText(textoMobilidadePortatil());document.getElementById('mobilityStatus').textContent='Mobilidade completa copiada.';}catch(e){area.focus();area.select();document.getElementById('mobilityStatus').textContent='Texto selecionado: use Copiar ou Ctrl+C.';}};
+  document.getElementById('insertMobilityBtn').onclick=function(){var text=textoMobilidadePortatil().trim();if(!text)return;pushState();var list=sections[mobilitySection];Array.from(list.children).filter(function(li){return !exercicioValido(li);}).forEach(function(li){li.remove();});text.split(/\r?\n/).map(function(t){return t.trim().replace(/^\d+[.)]\s*/,'');}).filter(Boolean).forEach(function(line){var html=formatExerciseLine(line);if(html)list.insertAdjacentHTML('beforeend',html);});pushState();mobilityDialog.close();};
 
   /* Escolher um treino salvo e um destinatário cria apenas uma cópia editável. */
   var generatorScope=null,generatorOriginal=null,generatorPrepared=null,generatorSources=[],generatorTargetId=null;
@@ -9299,7 +9304,7 @@ window.AvaliacaoTreinoSync = (function () {
     if(!text)throw Error('Preencha o treino da prévia.');
     if(sec){data.treino[sec]=[];seen.add(sec);}else{data.treino={A:[],B:[],C:[],D:[],E:[],F:[]};data.secaoFAtiva=false;}
     text.split(/\r?\n/).forEach(function(line){line=line.trim();if(!line)return;var m=line.match(/^(?:Treino\s*)?([A-F])[.\-–:]\s*(.*)$/i);if(m){sec=m[1].toUpperCase();if(generatorScope&&sec!==generatorScope)throw Error('Use apenas a seção '+generatorScope+' nesta prévia.');if(!seen.has(sec)){data.treino[sec]=[];seen.add(sec);}data.titulos[sec]=sec+'. '+m[2];}else{if(!sec)throw Error('Identifique as seções com A., B. e assim por diante.');data.treino[sec].push(line.replace(/^\d+[.)]\s*/,''));}});
-    if(seen.has('F'))data.secaoFAtiva=true;
+    for(var id of seen)data.treino[id]=WorkoutMediaText.restore(data.treino[id],generatorPrepared.treino[id]);if(seen.has('F'))data.secaoFAtiva=true;
     if(!Object.values(data.treino).some(function(lines){return lines.length;}))throw Error('Inclua pelo menos um exercício.');
     return data;
   }
@@ -10969,7 +10974,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('compareUndo').onclick=function(){historicoComparacao(-1);};document.getElementById('compareRedo').onclick=function(){historicoComparacao(1);};
   function atualizarLadoEditavel(){
     document.getElementById('compareEditingSwitch').setAttribute('aria-checked',String(compareEditing));
-    compareDialog.querySelectorAll('.comparison-editable-line').forEach(function(line){var side=line.dataset.side;var enabled=compareEditing&&(compareSide==='both'||compareSide===side);line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);if(!line.textContent.trim())line.textContent=compareContext[side].treino[line.dataset.section][Number(line.dataset.index)];});
+    compareDialog.querySelectorAll('.comparison-editable-line').forEach(function(line){var side=line.dataset.side;var enabled=compareEditing&&(compareSide==='both'||compareSide===side);line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);if(!line.textContent.trim())line.textContent=WorkoutMediaText.strip(compareContext[side].treino[line.dataset.section][Number(line.dataset.index)]);});
   }
   document.getElementById('compareEditingSwitch').onclick=function(){compareEditing=!compareEditing;atualizarLadoEditavel();};
   document.getElementById('compareEditSide').onchange=function(){compareSide=this.value;atualizarLadoEditavel();};
@@ -11080,10 +11085,10 @@ window.AvaliacaoTreinoSync = (function () {
     if(side==='current'){row.dataset.section=sec;row.dataset.exerciseIndex=index;}
     cell.className='comparison-'+side;
     var line=document.createElement('div');line.className='comparison-editable-line comparison-'+side+'-line';line.dataset.side=side;line.dataset.section=sec;line.dataset.index=index;
-    line.textContent=compareContext[side].treino[sec][index];cell.replaceChildren(line);
+    line.textContent=WorkoutMediaText.strip(compareContext[side].treino[sec][index]);cell.replaceChildren(line);
     var enabled=compareEditing&&(compareSide==='both'||compareSide===side);line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);line.spellcheck=false;
     line.setAttribute('aria-label',(side==='previous'?'Anterior':'Atual')+' · Exercício '+(index+1)+' da seção '+sec);
-    line.oninput=function(){var value=line.innerText.replace(/\r?\n/g,' ').trim();if(value){compareContext[side].treino[sec][index]=value;registrarComparacao();row.querySelector('h4').textContent='Exercício '+(Number(row.dataset.position)+1)+' · Editado ('+(side==='previous'?'Anterior':'Atual')+')';}};
+    line.oninput=function(){var value=line.innerText.replace(/\r?\n/g,' ').trim();if(value){compareContext[side].treino[sec][index]=WorkoutMediaText.merge(value,compareContext[side].treino[sec][index]);registrarComparacao();row.querySelector('h4').textContent='Exercício '+(Number(row.dataset.position)+1)+' · Editado ('+(side==='previous'?'Anterior':'Atual')+')';}};
     line.addEventListener('paste',function(e){if(!e.clipboardData)return;e.preventDefault();insertPlainText(e.clipboardData.getData('text/plain').replace(/\r?\n/g,' '));line.dispatchEvent(new Event('input',{bubbles:true}));});
     line.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();line.blur();}});
   }
@@ -11140,14 +11145,14 @@ window.AvaliacaoTreinoSync = (function () {
   };
   function linhaPortatilAnterior(line){var holder=document.createElement('template');holder.innerHTML=/<\/?(?:span|a|b|strong)\b/i.test(line)?line:escHtml(line);return textoDoExercicio(holder.content,true);}
   function tituloPortatilAnterior(data,sec){var title=(data.titulos||{})[sec]||sec+'. TREINO';return new RegExp('^'+sec+'[.\\-:\\s)]','i').test(title)?title:sec+'. '+title;}
-  function serializarAnterior(data,scope){return (scope?[scope]:todasSecoes).map(function(sec){return tituloPortatilAnterior(data,sec)+'\n'+((data.treino||{})[sec]||[]).map(function(line,i){return (i+1)+'. '+linhaPortatilAnterior(line);}).join('\n');}).join('\n\n');}
+  function serializarAnterior(data,scope){return (scope?[scope]:todasSecoes).map(function(sec){return tituloPortatilAnterior(data,sec)+'\n'+((data.treino||{})[sec]||[]).map(function(line,i){return (i+1)+'. '+WorkoutMediaText.strip(linhaPortatilAnterior(line));}).join('\n');}).join('\n\n');}
   function interpretarAnterior(text,base,scope){
     if(!String(text).trim()&&!scope)throw Error('Digite ou cole o conteúdo do anterior antes de salvar.');
     var result={treino:cloneData(base.treino||{}),titulos:cloneData(base.titulos||{}),secaoFAtiva:!!base.secaoFAtiva},parts={},current=scope||null;
     function touch(sec,title){if(!parts[sec])parts[sec]={title:tituloPortatilAnterior(base,sec),lines:[]};if(title)parts[sec].title=sec+'. '+title;}
     if(scope)touch(scope);
     preprocessPastedText(text).split(/\r?\n/).forEach(function(line){line=line.trim();if(!line||/^[=ニ]+$/.test(line))return;var title=parseTitleLine(line);if(title){current=scope||title.sec;touch(current,title.titulo);return;}if(!current)current='A';touch(current);parts[current].lines.push(line.replace(/^\d+[.)]\s*/,'').replace(/^[•●*\-]\s*/,''));});
-    Object.keys(parts).forEach(function(sec){var part=parts[sec],original=(base.treino||{})[sec]||[],portable=original.map(linhaPortatilAnterior);if(part.lines.length||original.length||Object.prototype.hasOwnProperty.call(base.treino||{},sec))result.treino[sec]=part.lines.map(function(line){var index=portable.indexOf(line);if(index>=0)return original[index];var holder=document.createElement('ol');holder.innerHTML=formatExerciseLine(line)||'';return holder.firstElementChild?textoDoExercicio(holder.firstElementChild,true):'';}).filter(Boolean);if(part.title!==tituloPortatilAnterior(base,sec))result.titulos[sec]=part.title;});
+    Object.keys(parts).forEach(function(sec){var part=parts[sec],original=(base.treino||{})[sec]||[],portable=original.map(linhaPortatilAnterior).map(WorkoutMediaText.strip);if(part.lines.length||original.length||Object.prototype.hasOwnProperty.call(base.treino||{},sec))result.treino[sec]=part.lines.map(function(line,position){var index=portable.indexOf(line);if(index>=0)return original[index];var holder=document.createElement('ol');holder.innerHTML=formatExerciseLine(WorkoutMediaText.merge(line,original[part.lines.length===original.length?position:-1]||''))||'';return holder.firstElementChild?textoDoExercicio(holder.firstElementChild,true):'';}).filter(Boolean);if(part.title!==tituloPortatilAnterior(base,sec))result.titulos[sec]=part.title;});
     return result;
   }
   var archiveEditor=ArchiveWorkoutEditor.mount({serialize:serializarAnterior,parse:interpretarAnterior});
@@ -11213,7 +11218,7 @@ window.AvaliacaoTreinoSync = (function () {
     preencherDestinos(document.getElementById('workoutLibraryDestination'));atualizarBibliotecaTreinos();prepararPreviaBiblioteca();workoutLibrary.showModal();
   }
   document.getElementById('workoutLibrarySearch').oninput=atualizarBibliotecaTreinos;document.getElementById('workoutLibraryScope').onchange=atualizarPreviaBiblioteca;
-  document.getElementById('copyLibraryWorkout').onclick=async function(){var area=document.getElementById('workoutLibraryPreview');try{await navigator.clipboard.writeText(area.value);document.getElementById('workoutLibraryStatus').textContent='Conteúdo completo copiado.';}catch(e){area.focus();area.select();document.getElementById('workoutLibraryStatus').textContent='Texto selecionado: use Copiar ou Ctrl+C.';}};
+  document.getElementById('copyLibraryWorkout').onclick=async function(){var area=document.getElementById('workoutLibraryPreview');try{await navigator.clipboard.writeText(textoTreino(librarySelected.data,document.getElementById('workoutLibraryScope').value==='all'?null:document.getElementById('workoutLibraryScope').value,true));document.getElementById('workoutLibraryStatus').textContent='Conteúdo completo copiado.';}catch(e){area.focus();area.select();document.getElementById('workoutLibraryStatus').textContent='Texto selecionado: use Copiar ou Ctrl+C.';}};
   document.getElementById('useLibraryWorkout').onclick=function(){
     if(!librarySelected)return;var source=document.getElementById('workoutLibraryScope').value,data=cloneData(librarySelected.data);
     if(source==='all'){aplicarDadosNaTela(data);}else{var dest=document.getElementById('workoutLibraryDestination').value;var target=capturarTreinoAtual()||{treino:{},titulos:{},secaoFAtiva:secaoFAtiva};target.treino[dest]=cloneData(data.treino[source]||[]);target.titulos[dest]=dest+'. '+(data.titulos[source]||'TREINO').replace(/^[A-F][.\-:]\s*/i,'');if(dest==='F')target.secaoFAtiva=true;aplicarDadosNaTela(target,dest);}
@@ -11226,7 +11231,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('mobilityDestination').after(mobilityDestination);
   var editor=document.createElement('details');editor.id='mobilityRegistration';var summary=document.createElement('summary');summary.textContent='Cadastrar ou editar mobilidade';editor.appendChild(summary);
   ['mobilityName','mobilityText'].forEach(function(id){var field=document.getElementById(id),label=mobilityDialog.querySelector('label[for="'+id+'"]');editor.append(label,field);});
-  var mobilityGifParts=document.createElement('div');mobilityGifParts.id='mobilityGifParts';editor.append(mobilityGifParts);function renderMobilidadeGIFs(){renderAmostrasEditor(mobilityGifParts,document.getElementById('mobilityText').value,function(part,url){var field=document.getElementById('mobilityText');field.value=mudarAmostraTexto(field.value,part,url);field.dispatchEvent(new Event('input'));});}editor.querySelector('#mobilityText').addEventListener('input',renderMobilidadeGIFs);editor.addEventListener('toggle',function(){if(editor.open)renderMobilidadeGIFs();});
+  var mobilityGifParts=document.createElement('div');mobilityGifParts.id='mobilityGifParts';editor.append(mobilityGifParts);function renderMobilidadeGIFs(){mobilityDraftRaw=textoMobilidadePortatil();var field=document.getElementById('mobilityText');if(/\[(?:gifs?|v[ií]deo):/i.test(field.value))field.value=WorkoutMediaText.strip(field.value);renderAmostrasEditor(mobilityGifParts,mobilityDraftRaw,function(part,url){mobilityDraftRaw=mudarAmostraTexto(mobilityDraftRaw,part,url);field.value=WorkoutMediaText.strip(mobilityDraftRaw);field.dispatchEvent(new Event('input'));});}editor.querySelector('#mobilityText').addEventListener('input',renderMobilidadeGIFs);editor.addEventListener('toggle',function(){if(editor.open)renderMobilidadeGIFs();});
   editor.appendChild(document.getElementById('saveMobilityBtn'));document.getElementById('newMobilityBtn').after(editor);
   var mobilityPreview=document.createElement('pre');mobilityPreview.id='mobilityPreview';mobilityPreview.className='version-content';mobilityPreview.textContent='Selecione uma mobilidade para ver o conteúdo completo.';editor.before(mobilityPreview);
   document.getElementById('mobilityTarget').onchange=function(){mobilitySection=this.value;};
