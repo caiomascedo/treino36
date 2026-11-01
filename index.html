@@ -1505,8 +1505,8 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="gymfaster-library.js?v=7"></script>
 <script src="workout-video-match.js?v=2"></script>
 <script src="video-preview.js?v=1"></script>
-<script src="workout-gif.js?v=8"></script>
-<link rel="stylesheet" href="workout-gif.css?v=7">
+<script src="workout-gif.js?v=10"></script>
+<link rel="stylesheet" href="workout-gif.css?v=8">
 <link rel="stylesheet" href="gymfaster-library.css?v=5">
 <script src="pdf-review.js?v=7"></script>
 <script src="diet-calculations.js?v=7"></script>
@@ -8400,17 +8400,18 @@ window.AvaliacaoTreinoSync = (function () {
     var selection=getSelection();if(!selection?.rangeCount)return;
     var ranges=Array.from(event.getTargetRanges?.()||[]).map(function(target){var r=document.createRange();r.setStart(target.startContainer,target.startOffset);r.setEnd(target.endContainer,target.endOffset);return r;});
     var selected=selection.getRangeAt(0);if(!selected.collapsed)ranges.push(selected);
-    if(ranges.some(function(range){return Array.from(document.querySelectorAll('.section ol .exercise-video,.exercise-text .exercise-video')).some(function(link){return range.intersectsNode(link);});}))event.preventDefault();
+    if(ranges.some(function(range){return Array.from(document.querySelectorAll('.section ol .exercise-video,.exercise-text .exercise-video')).some(function(link){return range.intersectsNode(link);});})){event.preventDefault();event.stopImmediatePropagation();}
   }
-  document.addEventListener('beforeinput',protegerAmostra,true);document.addEventListener('cut',protegerAmostra,true);
+  document.addEventListener('beforeinput',protegerAmostra,true);document.addEventListener('cut',protegerAmostra,true);document.addEventListener('paste',protegerAmostra,true);
   var exerciseEditor=criarDialogo('exerciseEditDialog','Editar exercício',
-    '<label for="exerciseEditText">Nome e prescrição</label><textarea id="exerciseEditText"></textarea><p id="exerciseEditVideoStatus"></p><div class="dialog-actions"><button type="button" id="exerciseEditChoose">Escolher / trocar GIF</button><button type="button" id="exerciseEditRemove">Remover GIF</button></div><p id="exerciseEditStatus" role="status"></p><div class="dialog-actions"><button type="button" id="exerciseEditSave">Salvar alterações</button><button type="button" id="exerciseEditDelete">Apagar exercício</button><button data-close>Cancelar</button></div>');
+    '<label for="exerciseEditText">Nome e prescrição</label><textarea id="exerciseEditText"></textarea><p id="exerciseEditVideoStatus"></p><div class="dialog-actions"><button type="button" id="exerciseEditChoose">Escolher / trocar GIF</button><button type="button" id="exerciseEditDownload">Baixar vídeo</button><a id="exerciseEditOriginal" target="_blank" rel="noopener" hidden>Abrir original</a><button type="button" id="exerciseEditRemove">Remover GIF</button></div><p id="exerciseEditStatus" role="status"></p><div class="dialog-actions"><button type="button" id="exerciseEditSave">Salvar alterações</button><button type="button" id="exerciseEditDelete">Apagar exercício</button><button data-close>Cancelar</button></div>');
   var exerciseEditContext=null,exerciseEditURL='';
-  function atualizarGIFEditor(){document.getElementById('exerciseEditVideoStatus').textContent=exerciseEditURL?'(GIFs) · demonstração associada':'Sem demonstração associada';document.getElementById('exerciseEditRemove').disabled=!exerciseEditURL;}
+  function atualizarGIFEditor(){document.getElementById('exerciseEditVideoStatus').textContent=exerciseEditURL?'(GIFs) · demonstração associada':'Sem demonstração associada';document.getElementById('exerciseEditRemove').disabled=!exerciseEditURL;document.getElementById('exerciseEditDownload').disabled=!exerciseEditURL;var original=document.getElementById('exerciseEditOriginal');original.hidden=!exerciseEditURL;if(exerciseEditURL)original.href=exerciseEditURL;else original.removeAttribute('href');}
   document.getElementById('editExerciseBtn').onclick=function(){
     if(!menuContext?.row.isConnected)return;exerciseEditContext=menuContext;var holder=menuContext.config.main?menuContext.row:menuContext.row.querySelector('.exercise-text');exerciseEditURL=videoDoExercicio(holder);document.getElementById('exerciseEditText').value=textoDoExercicio(holder,false);document.getElementById('exerciseEditStatus').textContent='';atualizarGIFEditor();exerciseMenu.close();exerciseEditor.showModal();
   };
   document.getElementById('exerciseEditChoose').onclick=function(){GymFasterWorkout.pick({name:document.getElementById('exerciseEditText').value,onSelect:function(asset){exerciseEditURL=asset.url;atualizarGIFEditor();}});};
+  document.getElementById('exerciseEditDownload').onclick=async function(){var button=this,status=document.getElementById('exerciseEditStatus');button.disabled=true;button.textContent='Baixando…';status.textContent='';try{await GymFasterWorkout.downloadVideo(exerciseEditURL,separarExercicio(document.getElementById('exerciseEditText').value).nome);status.textContent='Download do vídeo iniciado.';}catch(error){status.textContent=error.message;}finally{button.textContent='Baixar vídeo';button.disabled=!exerciseEditURL;}};
   document.getElementById('exerciseEditRemove').onclick=function(){exerciseEditURL='';atualizarGIFEditor();};
   document.getElementById('exerciseEditSave').onclick=function(){
     var ctx=exerciseEditContext,text=document.getElementById('exerciseEditText').value.trim();if(!ctx?.row.isConnected)return;
