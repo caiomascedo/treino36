@@ -19,3 +19,6 @@ for(const term of ['Crucifixo inverso na polia','Rosca direta alternada','Agacha
  const result=get(term);if(result.video){if(/inverso/.test(term))assert(/inverso/.test(result.video.name));if(/alternada/.test(term))assert(/alternad/.test(result.video.name));}
 }
 console.log('PASS: abbreviations, synonyms, combinations, remembered choices, independent libraries, explicit equipment/angle variants and cable-vs-machine safety');
+
+assert.deepStrictEqual(m.parts('Agachamento No\nSmith + Agachamento Sumô\nCom Halteres'),['Agachamento No\nSmith','Agachamento Sumô\nCom Halteres']);
+for(const line of ['Cadeira Extensora 3x8+10','Supino + elástico','Cadeira Extensora + curtinhas'])assert.deepStrictEqual(m.parts(line),[line]);

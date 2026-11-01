@@ -18,8 +18,9 @@ def inspect(path,rows):
   image.seek(n);duration+=image.info['duration']
   if n in [0,25,50,75]:frames.append(image.convert('RGB').copy())
  assert duration==5000,duration;assert image.info.get('loop')==0
- for row in range(rows):
-  region=(410,175+270*row,760,175+270*row+242)
+ slots=rows if isinstance(rows,list) else [{'x':410,'y':175+270*row,'width':350,'height':242} for row in range(rows)]
+ for row,slot in enumerate(slots):
+  region=(slot['x'],slot['y'],slot['x']+slot['width'],slot['y']+slot['height'])
   motion=max(sum(ImageStat.Stat(ImageChops.difference(frames[0].crop(region),f.crop(region))).mean) for f in frames[1:])
   assert motion>0.8,(row,motion)
  return path.stat().st_size
@@ -30,7 +31,7 @@ with sync_playwright() as p:
   browser=p.webkit.launch(**opts)
  else:browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
  ctx=browser.new_context(viewport={'width':390,'height':844},accept_downloads=True)
- ctx.add_init_script("window.shared=[];Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{shared.push({name:data.files[0].name,type:data.files[0].type,size:data.files[0].size});throw new DOMException('Cancel','AbortError');}})")
+ ctx.add_init_script("window.gifDrawnText=[];const oldFill=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(text,...args){gifDrawnText.push(String(text));return oldFill.call(this,text,...args)};window.shared=[];Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{shared.push({name:data.files[0].name,type:data.files[0].type,size:data.files[0].size});throw new DOMException('Cancel','AbortError');}})")
  fail_media=False;network=[]
  def route(r):
   u=urlparse(r.request.url)
@@ -59,14 +60,37 @@ with sync_playwright() as p:
  before=page.evaluate('localStorage.getItem("treinoAlunos")')
  dialog.get_by_role('button',name='Usar sugestões mostradas (2)',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('8/8')
  assert page.evaluate('localStorage.getItem("treinoAlunos")')==before,'Choices for compound parts must not overwrite the parent workout line'
+ expect(dialog.locator('.gif-card video.cm-ink-on-white')).to_have_count(8)
+ assert dialog.locator('.gif-card video').first.evaluate("v=>getComputedStyle(v).filter.includes('invert(1)')&&getComputedStyle(v).filter.includes('hue-rotate(180deg)')")
+ page.wait_for_function("document.querySelector('#workoutGifDialog .gif-card video').readyState>=2")
  assert dialog.evaluate('e=>e.scrollWidth<=e.clientWidth')
+ expect(dialog.locator('.gif-compound')).to_have_count(2)
+ for pair in dialog.locator('.gif-compound-grid').all():
+  boxes=pair.locator('video').evaluate_all('items=>items.map(i=>({x:i.getBoundingClientRect().x,y:i.getBoundingClientRect().y}))')
+  assert len(boxes)==2 and boxes[0]['x']<boxes[1]['x'] and abs(boxes[0]['y']-boxes[1]['y'])<2,boxes
+  texts=pair.locator('.gif-card-text').evaluate_all('items=>items.map(i=>i.getBoundingClientRect().y)')
+  assert texts[0]<texts[1],texts
  page.screenshot(path='/tmp/two-gif-'+ENGINE+'-preview.png')
  dialog.get_by_role('button',name='Gerar GIF CM',exact=True).click();expect(dialog.get_by_role('button',name='Cancelar geração',exact=True)).to_be_visible()
  page.wait_for_function("/GIF pronto|Não foi possível|não pôde|demorou demais|não foi reconhecida/.test(document.querySelector('#workoutGifDialog [role=status]').textContent)",timeout=240000)
  expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=1000)
  with page.expect_download() as download:dialog.get_by_role('button',name='Baixar GIF',exact=True).click()
- output=Path('/tmp/treino-a-cm-'+ENGINE+'.gif');download.value.save_as(str(output));cm_bytes=inspect(output,8)
+ output=Path('/tmp/treino-a-cm-'+ENGINE+'.gif');download.value.save_as(str(output));cm_slots=dialog.locator('.gif-card').evaluate_all('items=>items.map(i=>JSON.parse(i.dataset.gifSlot))');cm_bytes=inspect(output,cm_slots)
+ assert cm_slots[1]['y']==cm_slots[2]['y'] and cm_slots[1]['x']<cm_slots[2]['x']
+ assert cm_slots[5]['y']==cm_slots[6]['y'] and cm_slots[5]['x']<cm_slots[6]['x']
+ assert cm_slots[0]['y']<cm_slots[1]['y']<cm_slots[3]['y']
+ assert Image.open(output).height<2385
+ assert not page.evaluate("gifDrawnText.some(text=>text.startsWith('Demonstrações')||text.includes('—'))")
  assert '_cm_' in download.value.suggested_filename
+ # The actual encoded CM animation must have white illustration backgrounds,
+ # dark linework and green highlights, not merely a CSS preview effect.
+ cm_image=Image.open(output).convert('RGB');green=0
+ for row,slot in enumerate(cm_slots):
+  pixels=list(cm_image.crop((slot['x'],slot['y'],slot['x']+slot['width'],slot['y']+slot['height'])).get_flattened_data())
+  assert sum(r>235 and g>235 and b>235 for r,g,b in pixels)>len(pixels)*.45,row
+  assert sum(r<80 and g<80 and b<80 for r,g,b in pixels)>100,row
+  green+=sum(g>r+15 and g>b+8 and g>70 for r,g,b in pixels)
+ assert green>300,green
  dialog.get_by_role('button',name='Compartilhar GIF').click();page.wait_for_function('shared.length===1');assert page.evaluate('shared[0].type')=='image/gif'
  expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto')
  dialog.get_by_role('button',name='Fechar',exact=True).click();page.locator('#workoutGifsBtn').click();expect(dialog.locator('[role=status]')).to_contain_text('8/8');dialog.get_by_role('button',name='Fechar',exact=True).click()
@@ -77,7 +101,7 @@ with sync_playwright() as p:
  sources=[next(v for v in gym if v['id']==id) for id in ids]
  data[0]['treino']['A']=[v['name']+' — 4x9 [Vídeo: '+v['url']+']' for v in sources]
  page.evaluate('(people)=>localStorage.setItem("treinoAlunos",JSON.stringify(people))',data);page.reload();page.locator('#workoutGifsBtn').click();page.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('gymfaster')
- expect(dialog).to_have_attribute('data-library','gymfaster');expect(dialog.locator('[role=status]')).to_contain_text(str(len(ids))+'/'+str(len(ids)))
+ expect(dialog).to_have_attribute('data-library','gymfaster');expect(dialog.locator('.gif-card video.cm-ink-on-white')).to_have_count(0);expect(dialog.locator('[role=status]')).to_contain_text(str(len(ids))+'/'+str(len(ids)))
  before=page.evaluate('localStorage.getItem("treinoAlunos")')
  dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=240000)
  with page.expect_download() as dl:dialog.get_by_role('button',name='Baixar GIF',exact=True).click()
