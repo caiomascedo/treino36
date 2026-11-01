@@ -59,6 +59,9 @@ with sync_playwright() as p:
  before=page.evaluate('localStorage.getItem("treinoAlunos")')
  dialog.get_by_role('button',name='Usar sugestões mostradas (2)',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('8/8')
  assert page.evaluate('localStorage.getItem("treinoAlunos")')==before,'Choices for compound parts must not overwrite the parent workout line'
+ expect(dialog.locator('.gif-card video.cm-ink-on-white')).to_have_count(8)
+ assert dialog.locator('.gif-card video').first.evaluate("v=>getComputedStyle(v).filter.includes('invert(1)')&&getComputedStyle(v).filter.includes('hue-rotate(180deg)')")
+ page.wait_for_function("document.querySelector('#workoutGifDialog .gif-card video').readyState>=2")
  assert dialog.evaluate('e=>e.scrollWidth<=e.clientWidth')
  page.screenshot(path='/tmp/two-gif-'+ENGINE+'-preview.png')
  dialog.get_by_role('button',name='Gerar GIF CM',exact=True).click();expect(dialog.get_by_role('button',name='Cancelar geração',exact=True)).to_be_visible()
@@ -67,6 +70,15 @@ with sync_playwright() as p:
  with page.expect_download() as download:dialog.get_by_role('button',name='Baixar GIF',exact=True).click()
  output=Path('/tmp/treino-a-cm-'+ENGINE+'.gif');download.value.save_as(str(output));cm_bytes=inspect(output,8)
  assert '_cm_' in download.value.suggested_filename
+ # The actual encoded CM animation must have white illustration backgrounds,
+ # dark linework and green highlights, not merely a CSS preview effect.
+ cm_image=Image.open(output).convert('RGB');green=0
+ for row in range(8):
+  pixels=list(cm_image.crop((410,175+270*row,760,175+270*row+242)).getdata())
+  assert sum(r>235 and g>235 and b>235 for r,g,b in pixels)>len(pixels)*.45,row
+  assert sum(r<80 and g<80 and b<80 for r,g,b in pixels)>100,row
+  green+=sum(g>r+15 and g>b+8 and g>70 for r,g,b in pixels)
+ assert green>300,green
  dialog.get_by_role('button',name='Compartilhar GIF').click();page.wait_for_function('shared.length===1');assert page.evaluate('shared[0].type')=='image/gif'
  expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto')
  dialog.get_by_role('button',name='Fechar',exact=True).click();page.locator('#workoutGifsBtn').click();expect(dialog.locator('[role=status]')).to_contain_text('8/8');dialog.get_by_role('button',name='Fechar',exact=True).click()
@@ -77,7 +89,7 @@ with sync_playwright() as p:
  sources=[next(v for v in gym if v['id']==id) for id in ids]
  data[0]['treino']['A']=[v['name']+' — 4x9 [Vídeo: '+v['url']+']' for v in sources]
  page.evaluate('(people)=>localStorage.setItem("treinoAlunos",JSON.stringify(people))',data);page.reload();page.locator('#workoutGifsBtn').click();page.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('gymfaster')
- expect(dialog).to_have_attribute('data-library','gymfaster');expect(dialog.locator('[role=status]')).to_contain_text(str(len(ids))+'/'+str(len(ids)))
+ expect(dialog).to_have_attribute('data-library','gymfaster');expect(dialog.locator('.gif-card video.cm-ink-on-white')).to_have_count(0);expect(dialog.locator('[role=status]')).to_contain_text(str(len(ids))+'/'+str(len(ids)))
  before=page.evaluate('localStorage.getItem("treinoAlunos")')
  dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=240000)
  with page.expect_download() as dl:dialog.get_by_role('button',name='Baixar GIF',exact=True).click()

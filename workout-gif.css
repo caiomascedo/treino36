@@ -6,3 +6,5 @@
 .gif-video-picker{box-sizing:border-box;width:min(94vw,620px);max-height:90dvh;border:1px solid #cbd5e1;border-radius:12px;padding:14px;color:#29465a;background:white;font:14px Arial}.gif-video-picker::backdrop{background:#0008}.gif-video-picker[open]{display:flex;flex-direction:column;gap:10px}.gif-video-picker h3{margin:0}.gif-video-picker input,.gif-video-picker select{box-sizing:border-box;max-width:100%;padding:9px;font:16px Arial;border:1px solid #cbd5e1;border-radius:7px}.gif-video-picker .gif-picker-results{overflow:auto;min-height:40px}.gif-video-picker button{display:block;box-sizing:border-box;width:100%;text-align:left;padding:10px;margin:5px 0;border:1px solid #dce4ea;border-radius:7px;background:#f1f7f3;color:#29465a}
 
 .gif-video-picker .gif-picker-filters{display:flex;flex-wrap:wrap;gap:8px}.gif-video-picker .gif-picker-filters select{flex:1;min-width:0}.gif-video-picker .gif-picker-count{margin:0;font-size:12px;color:#64748b}.gif-video-picker [hidden]{display:none!important}
+
+#workoutGifDialog video.cm-ink-on-white{background:#000;filter:invert(1) hue-rotate(180deg)}

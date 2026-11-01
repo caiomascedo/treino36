@@ -16,7 +16,7 @@ window.GymFasterWorkout = (() => {
   function create(){
     dialog=node('dialog',{id:'workoutGifDialog','aria-labelledby':'workoutGifTitle'});
     const heading=node('h3',{id:'workoutGifTitle'}),help=node('p',{},'Monte a ficha com movimentos do corpo inteiro. O GIF repete por 5 segundos e pode ser baixado ou compartilhado.'),student=node('strong',{class:'gif-student'});
-    const library=node('select',{'aria-label':'Biblioteca dos GIFs'});library.append(node('option',{value:'cm'},'CM · traços brancos e músculos verdes'),node('option',{value:'gymfaster'},'GymFaster · modelo anatômico'));
+    const library=node('select',{'aria-label':'Biblioteca dos GIFs'});library.append(node('option',{value:'cm'},'CM · fundo branco, traços pretos'),node('option',{value:'gymfaster'},'GymFaster · modelo anatômico'));
     const section=node('select',{'aria-label':'Treino para o GIF'}),status=node('p',{role:'status','aria-live':'polite'}),list=node('div',{class:'gif-cards'}),result=node('div',{class:'gif-result',hidden:''});
     const accept=node('button',{type:'button',class:'gif-accept-suggestions',hidden:''},'Usar sugestões mostradas');
     const actions=node('div',{class:'gif-actions'}),generate=node('button',{type:'button',class:'gif-primary'}),share=node('button',{type:'button',hidden:''},'Compartilhar GIF'),download=node('button',{type:'button',hidden:''},'Baixar GIF'),stop=node('button',{type:'button',hidden:''},'Cancelar geração'),close=node('button',{type:'button'},'Fechar');
@@ -38,11 +38,12 @@ window.GymFasterWorkout = (() => {
     controls.accept.hidden=!suggested;controls.accept.textContent='Usar sugestões mostradas ('+suggested+')';
     controls.status.textContent=cards.length?ready+'/'+cards.length+' demonstrações prontas. '+(missing.length?'Confira as sugestões destacadas; combinações foram separadas mantendo os blocos do treino.':'Confira os movimentos e gere o GIF.'): 'Este treino está vazio. Adicione os exercícios na ficha.';
   }
+  function cmWhiteInk(asset){return asset.collection==='cm'&&!asset.localURL;}
   function assetURL(asset){return asset.localURL||asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';}
   function playVisible(card){if(card.visible&&card.asset&&!job){if(!card.video.getAttribute('src'))card.video.src=assetURL(card.asset);card.video.play().catch(()=>{});}else card.video.pause();}
   function setVideo(card,asset,reason){
     if(card.localURL&&card.localURL!==asset?.localURL)URL.revokeObjectURL(card.localURL);
-    card.localURL=asset?.localURL||null;card.asset=asset;
+    card.localURL=asset?.localURL||null;card.asset=asset;card.video.classList.toggle('cm-ink-on-white',!!asset&&cmWhiteInk(asset));
     card.video.pause();card.video.removeAttribute('src');card.video.load();card.video.hidden=!asset;
     card.article.classList.toggle('gif-missing',!asset);
     card.caption.textContent=asset?asset.name+' · '+(asset.localURL?'Arquivo local · reenvie ao reabrir a ficha':asset.kind==='created-example'?'Exemplo criado':themes[asset.collection].name)+(asset.collection==='gymfaster'&&asset.gender&&!asset.kind?' · '+asset.gender:'')+(reason?' · '+reason:''):'Escolha a demonstração deste exercício.';
@@ -109,7 +110,17 @@ window.GymFasterWorkout = (() => {
   function lineCount(ctx,text,width){let n=1,line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){n++;line=word;}else line=next;}return n;}
   function layout(ctx){ctx.font='bold 29px Arial';layoutHeader=Math.max(HEADER,88+lineCount(ctx,selected.title,744)*32+55);let top=layoutHeader;cards.forEach(c=>{ctx.font='bold 23px Arial';const names=lineCount(ctx,c.row.label+'. '+c.row.nome,358);ctx.font='20px Arial';c.top=top;c.height=Math.max(CARD,Math.max(38+names*28+13,120)+lineCount(ctx,c.row.detalhes,358)*26+25);top+=c.height;});return top+50;}
   function paint(ctx,canvas){const t=themes[mode];ctx.fillStyle=t.bg;ctx.fillRect(0,0,WIDTH,canvas.height);ctx.fillStyle=t.green;ctx.fillRect(0,0,WIDTH,7);ctx.font='bold 23px Arial';ctx.fillText('CAIO MACÊDO · PERSONAL TRAINER',28,43);ctx.fillStyle=t.ink;ctx.font='bold 29px Arial';wrap(ctx,selected.title,28,88,744,32);ctx.font='19px Arial';ctx.fillText(workout.student.slice(0,65),28,layoutHeader-29);cards.forEach(c=>{ctx.fillStyle=t.card;ctx.fillRect(20,c.top,760,c.height-12);ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';const y=wrap(ctx,c.row.label+'. '+c.row.nome,36,c.top+38,358,28);ctx.fillStyle=t.green;ctx.font='20px Arial';wrap(ctx,c.row.detalhes,36,Math.max(y+13,c.top+120),358,26);});ctx.fillStyle=t.green;ctx.font='17px Arial';const sources=new Set(cards.map(c=>c.asset.localURL?'arquivo local':c.asset.kind==='created-example'?'exemplo criado':themes[c.asset.collection].name));ctx.fillText('Demonstrações '+[...sources].join(' + ')+' · Treino '+selected.id,28,canvas.height-20);}
-  function drawSlot(ctx,video,asset){ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,SLOT_W,SLOT_H);const scale=Math.min(SLOT_W/video.videoWidth,SLOT_H/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;ctx.drawImage(video,(SLOT_W-w)/2,(SLOT_H-h)/2,w,h);}
+  function drawSlot(ctx,video,asset){
+    ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,SLOT_W,SLOT_H);
+    const scale=Math.min(SLOT_W/video.videoWidth,SLOT_H/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;ctx.drawImage(video,(SLOT_W-w)/2,(SLOT_H-h)/2,w,h);
+    if(cmWhiteInk(asset)){
+      const frame=ctx.getImageData(0,0,SLOT_W,SLOT_H),pixels=frame.data;
+      // Same sRGB transform as the preview's invert(1) hue-rotate(180deg).
+      // Black/white swap while the muscle highlight retains its green hue.
+      for(let i=0;i<pixels.length;i+=4){const r=pixels[i],g=pixels[i+1],b=pixels[i+2],shift=255-2*(.213*r+.715*g+.072*b);pixels[i]=r+shift;pixels[i+1]=g+shift;pixels[i+2]=b+shift;}
+      ctx.putImageData(frame,0,0);return frame;
+    }
+  }
   async function generateGIF(){
     if(job||!cards.length)return;const missing=cards.filter(c=>!c.asset);if(missing.length){controls.status.textContent='Falta confirmar: '+missing.map(c=>c.row.nome).join(', ')+'. Toque numa sugestão ou escolha um vídeo.';missing[0].article.scrollIntoView({block:'center'});return;}if(cards.length>20){controls.status.textContent='Use até 20 demonstrações por GIF. Divida esta seção.';return;}
     clearResult();const active={cancelled:false,abort:new AbortController(),worker:null,decoder:node('video',{muted:'',playsinline:'',preload:'auto','aria-hidden':'true',class:'gif-decoder'}),urls:[]};active.decoder.muted=true;job=active;dialog.append(active.decoder);setBusy(true);cards.forEach(c=>{c.video.pause();c.video.removeAttribute('src');c.video.load();});
@@ -127,7 +138,7 @@ window.GymFasterWorkout = (() => {
       for(const item of unique.values()){
         active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);
         for(let frame=0;frame<FRAMES;frame++){
-          await seek(video,Math.max(0.001,frame/FRAMES*video.duration),active);drawSlot(sc,video,item.asset);const pixels=sc.getImageData(0,0,SLOT_W,SLOT_H).data.buffer;await send(active,{type:'cache',key:item.key,frame,pixels},[pixels]);controls.status.textContent='Preparando movimento '+(index+1)+'/'+unique.size+' · '+Math.round((index*FRAMES+frame+1)/(unique.size*FRAMES)*85)+'%';
+          await seek(video,Math.max(0.001,frame/FRAMES*video.duration),active);const converted=drawSlot(sc,video,item.asset);const pixels=(converted||sc.getImageData(0,0,SLOT_W,SLOT_H)).data.buffer;await send(active,{type:'cache',key:item.key,frame,pixels},[pixels]);controls.status.textContent='Preparando movimento '+(index+1)+'/'+unique.size+' · '+Math.round((index*FRAMES+frame+1)/(unique.size*FRAMES)*85)+'%';
         }index++;
       }
       controls.status.textContent='Finalizando GIF…';const result=await send(active,{type:'finish'});check(active);
