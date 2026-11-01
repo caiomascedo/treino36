@@ -3,6 +3,8 @@ window.GymFasterWorkout = (() => {
   const WIDTH=800,CARD=270,HEADER=175,FRAMES=100,SLOT_W=350,SLOT_H=242;
   const themes={cm:{name:'CM',bg:'#050906',card:'#0a110d',ink:'#f3faf5',green:'#3aeb91'},gymfaster:{name:'GymFaster',bg:'#eff5f1',card:'#fff',ink:'#1b3428',green:'#176b43'}};
   let integration,dialog,controls,videos=[],catalogPromise,workout,selected,cards=[],mode='gymfaster',file,blobURL,observer,job=null,sequence=0,layoutHeader=HEADER,layoutBlocks=[],focusReturn,libraryDirty=false;
+  let batchState=null,files=[],resultURLs=[];
+  const workingCards=()=>batchState?.cards||cards;
   let presentation={style:'detailed',colors:false};try{presentation={...presentation,...JSON.parse(localStorage.getItem('treinoGifPresentationV1')||'{}')};}catch(e){}
   const colors=['#b91c1c','#15803d','#ca8a04','#111111','#1d4ed8','#9333ea','#c2410c','#0f766e','#be185d','#4338ca'];
   const colorFor=index=>colors[index]||'hsl('+Math.round(index*137.5%360)+' 70% 32%)';
@@ -15,9 +17,9 @@ window.GymFasterWorkout = (() => {
   function choiceKey(name){return mode+':'+match().canonical(name);}
   function remember(name,asset){try{const prefs=preferences();prefs[choiceKey(name)]=asset.id;localStorage.setItem(prefKey,JSON.stringify(prefs));}catch(error){}}
   function configure(options){integration=options;}
-  function clearResult(){file=null;if(blobURL)URL.revokeObjectURL(blobURL);blobURL=null;controls.result.replaceChildren();controls.result.hidden=true;controls.share.hidden=true;controls.download.hidden=true;}
-  function cancel(){if(!job)return;job.cancelled=true;job.abort.abort();job.worker?.terminate();if(job.decoder){job.decoder.pause();job.decoder.removeAttribute('src');job.decoder.load();}}
-  function disposeCards(){observer?.disconnect();cards.forEach(card=>{card.video.pause();card.video.removeAttribute('src');card.video.load();if(card.localURL)URL.revokeObjectURL(card.localURL);});cards=[];}
+  function clearResult(){files=[];resultURLs.forEach(url=>URL.revokeObjectURL(url));resultURLs=[];file=null;if(blobURL)URL.revokeObjectURL(blobURL);blobURL=null;controls.result.replaceChildren();controls.result.hidden=true;controls.share.hidden=true;controls.download.hidden=true;controls.share.textContent='Compartilhar GIF';controls.download.textContent='Baixar GIF';}
+  function cancel(){if(batchState)batchState.cancelled=true;if(!job)return;job.cancelled=true;job.abort.abort();job.worker?.terminate();if(job.decoder){job.decoder.pause();job.decoder.removeAttribute('src');job.decoder.load();}}
+  function disposeCards(){observer?.disconnect();workingCards().forEach(card=>{card.video.pause();card.video.removeAttribute('src');card.video.load();if(card.localURL)URL.revokeObjectURL(card.localURL);});cards=[];}
   function create(){
     dialog=node('dialog',{id:'workoutGifDialog','aria-labelledby':'workoutGifTitle'});
     const heading=node('h3',{id:'workoutGifTitle'}),help=node('p',{},'Monte a ficha com movimentos do corpo inteiro. O GIF repete por 5 segundos e pode ser baixado ou compartilhado.'),student=node('strong',{class:'gif-student'});
@@ -27,25 +29,25 @@ window.GymFasterWorkout = (() => {
     const actions=node('div',{class:'gif-actions'}),generate=node('button',{type:'button',class:'gif-primary'}),share=node('button',{type:'button',hidden:''},'Compartilhar GIF'),download=node('button',{type:'button',hidden:''},'Baixar GIF'),stop=node('button',{type:'button',hidden:''},'Cancelar geração'),close=node('button',{type:'button'},'Fechar');
     const presentationBox=node('div',{class:'gif-presentation'}),style=node('select',{'aria-label':'Prescrição dos conjugados'}),colorLabel=node('label'),colorCheck=node('input',{type:'checkbox','aria-label':'Cores nos conjugados'});style.append(node('option',{value:'detailed'},'Prescrição em cada exercício'),node('option',{value:'simplified'},'Nomes + prescrição única'));style.value=presentation.style;colorCheck.checked=presentation.colors;colorLabel.append(colorCheck,document.createTextNode(' Cores nos conjugados'));presentationBox.append(style,colorLabel);style.onchange=colorCheck.onchange=()=>{presentation={style:style.value,colors:colorCheck.checked};try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();};actions.append(generate,share,download,stop,close);dialog.append(heading,help,student,library,section,status,accept,presentationBox,list,result,actions);document.body.append(dialog);
     controls={heading,student,library,section,status,list,result,accept,generate,share,download,stop,presentationFields:[style,colorCheck]};
-    library.onchange=()=>{mode=library.value;render();};section.onchange=()=>{selected=workout.sections.find(s=>s.id===section.value);render();};
+    library.onchange=()=>{mode=library.value;render();};section.onchange=()=>{selected=section.value==='ALL'?completeWorkout():workout.sections.find(s=>s.id===section.value);render();};
     accept.onclick=()=>{cards.filter(c=>!c.asset&&c.suggestions.length).forEach(c=>selectAsset(c,c.suggestions[0]));readiness();};
-    generate.onclick=generateGIF;stop.onclick=cancel;close.onclick=()=>dialog.close();
+    generate.onclick=()=>selected?.id==='ALL'?generateCompleteWorkout():generateGIF();stop.onclick=cancel;close.onclick=()=>dialog.close();
     dialog.addEventListener('close',()=>{sequence++;cancel();disposeCards();clearResult();if(focusReturn?.isConnected)focusReturn.focus();});
-    download.onclick=()=>{if(!file||!blobURL)return;const link=node('a',{href:blobURL,download:file.name});document.body.append(link);link.click();link.remove();};
-    share.onclick=async()=>{if(!file)return;try{if(navigator.canShare?.({files:[file]}))await navigator.share({files:[file],title:'Treino '+selected.id+' · '+themes[mode].name});else{controls.status.textContent='Baixe o GIF e anexe a imagem na conversa do aluno.';download.click();}}catch(error){if(error.name!=='AbortError')controls.status.textContent='Não foi possível compartilhar. Use Baixar GIF e anexe a imagem na conversa.';}};
+    download.onclick=()=>{for(const item of files){const url=URL.createObjectURL(item),link=node('a',{href:url,download:item.name});document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}};
+    share.onclick=async()=>{if(!files.length)return;try{if(navigator.canShare?.({files}))await navigator.share({files,title:(selected.id==='ALL'?'Treino completo A–F':'Treino '+selected.id)+' · '+themes[mode].name});else{controls.status.textContent=files.length>1?'Este navegador não permite enviar os GIFs juntos. Baixe os arquivos e anexe na conversa do aluno.':'Baixe o GIF e anexe a imagem na conversa do aluno.';download.click();}}catch(error){if(error.name!=='AbortError')controls.status.textContent='Não foi possível compartilhar. Use Baixar GIF e anexe a imagem na conversa.';}};
   }
-  function setBusy(busy){controls.presentationFields.forEach(e=>e.disabled=busy);controls.library.disabled=busy;controls.section.disabled=busy;controls.generate.disabled=busy||!cards.length;controls.accept.disabled=busy;controls.stop.hidden=!busy;cards.forEach(c=>{c.choose.disabled=busy;c.upload.disabled=busy;c.suggestionBox.querySelectorAll('button').forEach(b=>b.disabled=busy);});}
+  function setBusy(busy){busy=busy||!!batchState;controls.presentationFields.forEach(e=>e.disabled=busy);controls.library.disabled=busy;controls.section.disabled=busy;controls.generate.disabled=busy||!cards.length;controls.accept.disabled=busy;controls.stop.hidden=!busy;workingCards().forEach(c=>{c.choose.disabled=busy;c.upload.disabled=busy;c.suggestionBox.querySelectorAll('button').forEach(b=>b.disabled=busy);});}
   function readiness(){
-    if(job)return;
+    if(job||batchState)return;
     const missing=cards.filter(c=>!c.asset),ready=cards.length-missing.length,suggested=missing.filter(c=>c.suggestions.length).length;
     controls.generate.disabled=!cards.length;
-    controls.generate.textContent=missing.length?'Revisar '+missing.length+' exercício'+(missing.length>1?'s':''):'Gerar GIF '+themes[mode].name;
+    controls.generate.textContent=missing.length?'Revisar '+missing.length+' exercício'+(missing.length>1?'s':''):selected?.id==='ALL'?'Gerar GIFs do treino completo para enviar':'Gerar GIF '+themes[mode].name;
     controls.accept.hidden=!suggested;controls.accept.textContent='Usar sugestões mostradas ('+suggested+')';
     controls.status.textContent=cards.length?ready+'/'+cards.length+' demonstrações prontas. '+(missing.length?'Confira as sugestões destacadas; conjugados aparecem lado a lado no mesmo bloco.':'Confira os movimentos e gere o GIF.'): 'Este treino está vazio. Adicione os exercícios na ficha.';
   }
   function invertInk(asset){return !asset.localURL&&((mode==='cm')!==(asset.collection==='cm'));}
   function assetURL(asset){return asset.localURL||asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';}
-  function playVisible(card){if(card.visible&&card.asset&&!job){if(!card.video.getAttribute('src'))card.video.src=assetURL(card.asset);card.video.play().catch(()=>{});}else card.video.pause();}
+  function playVisible(card){if(card.visible&&card.asset&&!job&&!batchState){if(!card.video.getAttribute('src'))card.video.src=assetURL(card.asset);card.video.play().catch(()=>{});}else card.video.pause();}
   function videoCaption(asset,reason){return asset.name+' · '+(asset.localURL?'Arquivo local · reenvie ao reabrir a ficha':asset.kind==='created-example'?'Exemplo criado':themes[asset.collection].name)+(asset.collection==='gymfaster'&&asset.gender&&!asset.kind?' · '+asset.gender:'')+(reason?' · '+reason:'');}
   function setVideo(card,asset,reason){
     if(card.localURL&&card.localURL!==asset?.localURL)URL.revokeObjectURL(card.localURL);
@@ -61,22 +63,22 @@ window.GymFasterWorkout = (() => {
     setVideo(card,asset,'Escolhido por você');readiness();
   }
   function doses(text,count){const parts=text.replace(/^[\s—–-]+/,'').split(/\s*\+\s*/);if(parts.length!==count||!parts.every(p=>/^(?:\d+\s*[x×]\s*)?\d+(?:\s*[-–]\s*\d+)?(?:\s*(?:s|seg|segundos))?$/i.test(p.trim())))return null;const prefix=parts[0].match(/^(\d+\s*[x×]\s*)/);return parts.map(p=>/^\d+\s*[x×]/.test(p)||!prefix?p:prefix[1]+p);}
-  function expandedRows(){return selected.rows.flatMap((row,index)=>{const parts=match().parts(row.nome),reps=row.detalhes.replace(/^[\s—–-]+/,'').match(/^(\s*\d+\s*[x×])\s*([\d\s–-]+)\+([\d\s–-]+)$/i);const split=doses(row.detalhes,parts.length);return parts.map((name,part)=>({...row,nome:name,fullDetails:row.detalhes,gifURL:row.gifs?.[part]||'',video:row.gifs?.[part]||(parts.length===1?row.video:''),compound:parts.length>1?row.nome:null,sourceIndex:index,partIndex:part,partCount:parts.length,label:String(index+1)+(parts.length>1?String.fromCharCode(97+part):''),detalhes:split?split[part]:parts.length===2&&reps?reps[1]+' '+reps[part+2].trim():row.detalhes}));});}
+  function expandedRows(){return selected.rows.flatMap((row,index)=>{const parts=match().parts(row.nome),reps=row.detalhes.replace(/^[\s—–-]+/,'').match(/^(\s*\d+\s*[x×])\s*([\d\s–-]+)\+([\d\s–-]+)$/i);const split=doses(row.detalhes,parts.length);return parts.map((name,part)=>({...row,nome:name,fullDetails:row.detalhes,gifURL:row.gifs?.[part]||'',video:row.gifs?.[part]||(parts.length===1?row.video:''),compound:parts.length>1?row.nome:null,sourceIndex:index,partIndex:part,partCount:parts.length,label:String((row.sectionIndex??index)+1)+(parts.length>1?String.fromCharCode(97+part):''),detalhes:split?split[part]:parts.length===2&&reps?reps[1]+' '+reps[part+2].trim():row.detalhes}));});}
   function render(){
-    if(job)return;
+    if(job||batchState)return;
     clearResult();disposeCards();controls.list.replaceChildren();dialog.dataset.library=mode;controls.library.value=mode;controls.heading.textContent='Treino em GIF · '+themes[mode].name;controls.student.textContent=workout.student+' · '+(selected?.title||'Treino');
     if(!selected){readiness();return;}
     observer=new IntersectionObserver(entries=>entries.forEach(entry=>{const card=cards.find(c=>c.observeTarget===entry.target);if(card){card.visible=entry.isIntersecting;playVisible(card);}}),{root:dialog,rootMargin:'30px'});
-    const prefs=preferences(),compoundHosts=new Map();
-    expandedRows().forEach(row=>{
+    const prefs=preferences(),compoundHosts=new Map();let currentSection='';
+    expandedRows().forEach(row=>{if(selected.id==='ALL'&&row.sectionID!==currentSection){currentSection=row.sectionID;controls.list.append(node('h4',{class:'gif-section-heading'},row.sectionTitle));}
       const article=node('article',{class:'gif-card'}),text=node('div',{class:'gif-card-text'}),name=node('strong',{},row.label+'. '+row.nome),details=node('p',{},row.detalhes),caption=node('small'),suggestionBox=node('div',{class:'gif-suggestions'}),choose=node('button',{type:'button'},'Escolher outro vídeo'),upload=node('button',{type:'button'},'Vídeo do aparelho'),input=node('input',{type:'file',accept:'video/*',hidden:'','aria-label':'Arquivo de vídeo de '+row.nome});
       const video=node('video',{muted:'',playsinline:'',loop:'',preload:'none','aria-label':'Demonstração de '+row.nome});video.muted=true;
       const resolution=match().resolve(row,availableVideos(),mode,match().driveID(row.gifURL)||prefs[choiceKey(row.nome)]),card={row,article,video,caption,choose,upload,suggestionBox,suggestions:resolution.suggestions,asset:null,localURL:null,visible:false};
       let host=controls.list;
       if(row.compound){
         if(!compoundHosts.has(row.sourceIndex)){
-          const block=node('section',{class:'gif-compound','aria-label':'Conjugado '+(row.sourceIndex+1)+': '+row.compound});
-          const heading=node('h4',{},(row.sourceIndex+1)+'. Conjugado'),grid=node('div',{class:'gif-compound-grid','data-size':String(row.partCount)});
+          const block=node('section',{class:'gif-compound','aria-label':'Conjugado '+((row.sectionIndex??row.sourceIndex)+1)+': '+row.compound});
+          const heading=node('h4',{},((row.sectionIndex??row.sourceIndex)+1)+'. Conjugado'),grid=node('div',{class:'gif-compound-grid','data-size':String(row.partCount)});
           block.append(heading,grid);controls.list.append(block);compoundHosts.set(row.sourceIndex,grid);
         }
         host=compoundHosts.get(row.sourceIndex);article.classList.add('gif-compound-card');
@@ -84,7 +86,7 @@ window.GymFasterWorkout = (() => {
       resolution.suggestions.forEach(asset=>{const button=node('button',{type:'button'},'Usar '+themes[asset.collection].name+': '+asset.name);button.onclick=()=>selectAsset(card,asset);suggestionBox.append(button);});
       choose.onclick=()=>openPicker(card);
       upload.onclick=()=>input.click();input.onchange=()=>{const chosen=input.files?.[0];if(!chosen||job)return;if((!chosen.type.startsWith('video/')&&!/\.(mp4|m4v|mov|webm)$/i.test(chosen.name))||chosen.size>100*1048576){controls.status.textContent='Escolha um vídeo de até 100 MB.';return;}setVideo(card,{name:chosen.name,collection:mode,localURL:URL.createObjectURL(chosen)},'Usado somente neste GIF');readiness();};
-      video.onerror=()=>{if(card.asset&&!job)card.caption.textContent='A prévia não carregou. Você pode tentar Gerar GIF para carregar a demonstração novamente.';};
+      video.onerror=()=>{if(card.asset&&!job&&!batchState)card.caption.textContent='A prévia não carregou. Você pode tentar Gerar GIF para carregar a demonstração novamente.';};
       if(row.compound){
         const options=node('details',{class:'gif-card-options'}),summary=node('summary',{},'Vídeo / editar');options.append(summary,caption,choose,upload,input);card.options=options;
         text.append(name,details,suggestionBox,options);text.style.gridColumn='1';text.style.gridRow=String(row.partIndex+1);
@@ -98,7 +100,7 @@ window.GymFasterWorkout = (() => {
     for(const card of cards){if(!card.row.compound)continue;const text=card.article.querySelector('.gif-card-text'),title=text.querySelector('strong'),details=text.querySelector('p');title.querySelector('.gif-color-dot')?.remove();details.hidden=presentation.style==='simplified';card.video.style.borderTop=presentation.colors?'4px solid '+colorFor(card.row.partIndex):'';if(presentation.colors){const dot=node('span',{class:'gif-color-dot','aria-hidden':'true'},'• ');dot.style.color=colorFor(card.row.partIndex);title.prepend(dot);}if(card.row.partIndex===card.row.partCount-1&&presentation.style==='simplified'){const summary=node('p',{class:'gif-compound-summary'}),split=doses(card.row.fullDetails,card.row.partCount);if(presentation.colors&&split){split.forEach((dose,i)=>{if(i)summary.append(document.createTextNode(' + '));const badge=node('span',{},'• '+dose);badge.style.color=colorFor(i);badge.style.background='#fff';summary.append(badge);});}else summary.textContent=gifText(card.row.fullDetails);text.append(summary);}}
   }
   function refreshLibraryState(){
-    if(job||!controls||!dialog?.open)return;
+    if(job||batchState||!controls||!dialog?.open)return;
     const active=availableVideos(),prefs=preferences();
     for(const card of cards){
       if(card.asset?.localURL)continue;
@@ -169,14 +171,14 @@ window.GymFasterWorkout = (() => {
 
   async function loadCatalogs(){if(!catalogPromise)catalogPromise=Promise.all(['cmfit-catalog.json?v=1','gymfaster-catalog.json?v=3'].map(async url=>{const response=await fetch(url);if(!response.ok)throw Error('Catálogo indisponível');return response.json();})).then(([cm,gym])=>videos=[...cm.videos.map(v=>({...v,collection:'cm'})),...gym.videos.map(v=>({...v,collection:'gymfaster'}))]).catch(error=>{catalogPromise=null;throw error;});return catalogPromise;}
   async function open(library=mode){
-    if(!integration||job)return;if(!dialog)create();const token=++sequence;focusReturn=document.activeElement;mode=themes[library]?library:'gymfaster';workout=integration.read();controls.section.replaceChildren();workout.sections.forEach(s=>controls.section.append(node('option',{value:s.id},s.title)));selected=workout.sections.find(s=>s.id==='A')||workout.sections[0];controls.section.value=selected?.id||'';controls.generate.disabled=true;if(!dialog.open)dialog.showModal();controls.status.textContent='Carregando as bibliotecas CM e GymFaster…';
+    if(!integration||job||batchState)return;if(!dialog)create();const token=++sequence;focusReturn=document.activeElement;mode=themes[library]?library:'gymfaster';workout=integration.read();controls.section.replaceChildren();workout.sections.forEach(s=>controls.section.append(node('option',{value:s.id},s.title)));controls.section.append(node('option',{value:'ALL'},'Treino completo A–F · um GIF por seção'));selected=workout.sections.find(s=>s.id==='A')||workout.sections[0];controls.section.value=selected?.id||'';controls.generate.disabled=true;if(!dialog.open)dialog.showModal();controls.status.textContent='Carregando as bibliotecas CM e GymFaster…';
     try{await loadCatalogs();if(dialog.open&&token===sequence)render();}catch(error){controls.status.textContent='Não foi possível carregar as bibliotecas. Feche e tente novamente.';}
   }
   function check(active){if(active.cancelled||active!==job||!dialog.open)throw Error('Geração cancelada.');}
   function mediaEvent(video,event,active,action){return new Promise((resolve,reject)=>{let settled=false;const timeout=setTimeout(()=>finish(Error('Não foi possível ler o vídeo. Confira a conexão e tente novamente.')),15000),poll=setInterval(()=>{try{check(active);}catch(error){finish(error);}},100);const done=()=>finish(),failed=()=>{console.warn('GIF decoder',active.currentName,video.error?.code,video.error?.message);finish(Error('Não foi possível ler '+(active.currentName||'esta demonstração')+'. Escolha outro vídeo ou um arquivo MP4.'));};function finish(error){if(settled)return;settled=true;clearTimeout(timeout);clearInterval(poll);video.removeEventListener(event,done);video.removeEventListener('error',failed);error?reject(error):resolve();}video.addEventListener(event,done,{once:true});video.addEventListener('error',failed,{once:true});try{action();}catch(error){finish(error);}});}
   async function loadDecoder(url,active){const video=active.decoder;await mediaEvent(video,'loadeddata',active,()=>{video.src=url;video.preload='auto';video.load();});if(!Number.isFinite(video.duration)||video.duration<=0)throw Error('A duração de um vídeo não foi reconhecida. Escolha outro arquivo.');return video;}
   async function seek(video,time,active){check(active);if(Math.abs(video.currentTime-time)>0.0001||video.readyState<2)await mediaEvent(video,'seeked',active,()=>{video.currentTime=time;});check(active);if(Math.abs(video.currentTime-time)>0.08)throw Error('Não foi possível avançar o movimento. Tente novamente.');await new Promise(resolve=>requestAnimationFrame(resolve));check(active);}
-  function send(active,data,transfers=[]){return new Promise((resolve,reject)=>{let settled=false;const target=active.worker,timeout=setTimeout(()=>finish(Error('A geração demorou demais. Tente um treino menor.')),120000),poll=setInterval(()=>{try{check(active);}catch(error){finish(error);}},100);const response=event=>{if(event.data.type==='progress'){controls.status.textContent='Finalizando GIF: '+event.data.percent+'%';return;}event.data.type==='error'?finish(Error(event.data.message)):finish(null,event.data);},failed=()=>finish(Error('Não foi possível iniciar o gerador. Recarregue o treino36 e tente novamente.'));function finish(error,value){if(settled)return;settled=true;clearTimeout(timeout);clearInterval(poll);target.removeEventListener('message',response);target.removeEventListener('error',failed);error?reject(error):resolve(value);}target.addEventListener('message',response);target.addEventListener('error',failed);target.postMessage(data,transfers);});}
+  function send(active,data,transfers=[]){return new Promise((resolve,reject)=>{let settled=false;const target=active.worker,timeout=setTimeout(()=>finish(Error('A geração demorou demais. Tente um treino menor.')),120000),poll=setInterval(()=>{try{check(active);}catch(error){finish(error);}},100);const response=event=>{if(event.data.type==='progress'){controls.status.textContent=(batchState?'Treino '+selected.id+' · ':'')+'Finalizando GIF: '+event.data.percent+'%';return;}event.data.type==='error'?finish(Error(event.data.message)):finish(null,event.data);},failed=()=>finish(Error('Não foi possível iniciar o gerador. Recarregue o treino36 e tente novamente.'));function finish(error,value){if(settled)return;settled=true;clearTimeout(timeout);clearInterval(poll);target.removeEventListener('message',response);target.removeEventListener('error',failed);error?reject(error):resolve(value);}target.addEventListener('message',response);target.addEventListener('error',failed);target.postMessage(data,transfers);});}
   function gifText(text){return String(text).replace(/(\d)\s*—\s*(?=\d)/g,'$1-').replace(/—/g,' ').replace(/\s+/g,' ').trim();}
   function wrap(ctx,text,x,y,width,step){text=gifText(text);let line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){ctx.fillText(line,x,y);y+=step;line=word;}else line=next;}if(line)ctx.fillText(line,x,y);return y+step;}
   function lineCount(ctx,text,width){text=gifText(text);let n=1,line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){n++;line=word;}else line=next;}return n;}
@@ -224,7 +226,7 @@ window.GymFasterWorkout = (() => {
     for(const block of layoutBlocks){
       ctx.fillStyle=t.card;ctx.fillRect(20,block.top,760,block.height-12);
       if(block.compound){
-        ctx.fillStyle=t.green;ctx.font='bold 18px Arial';ctx.fillText((block.sourceIndex+1)+'. CONJUGADO',36,block.top+28);
+        ctx.fillStyle=t.green;ctx.font='bold 18px Arial';ctx.fillText((block.members[0].row.sectionIndex??block.sourceIndex)+1+'. CONJUGADO',36,block.top+28);
         if(presentation.style==='simplified'){const text=block.members[0].row.fullDetails,split=doses(text,block.members.length);ctx.font='20px Arial';ctx.fillStyle=t.green;if(presentation.colors&&split)paintDoses(ctx,split,36,block.summaryY,0);else wrap(ctx,text,36,block.summaryY,358,24);}
         for(const pair of block.pairs){
           pair.forEach(c=>{ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';wrap(ctx,c.row.label+'. '+c.row.nome,c.nameX,c.nameY,presentation.colors?338:358,26);if(presentation.colors){dot(ctx,43,c.nameY-8,c.row.partIndex);dot(ctx,c.slotX+8,c.slotY-8,c.row.partIndex);}if(presentation.style!=='simplified'){ctx.fillStyle=t.green;ctx.font='20px Arial';if(presentation.colors)paintDoses(ctx,[c.row.detalhes],c.nameX,c.detailsY,c.row.partIndex);else wrap(ctx,c.row.detalhes,c.nameX,c.detailsY,358,24);}});
@@ -249,15 +251,40 @@ window.GymFasterWorkout = (() => {
       ctx.putImageData(frame,0,0);return frame;
     }
   }
-  async function generateGIF(){
+  function completeWorkout(){return {id:'ALL',title:'Treino completo · A–F',rows:workout.sections.flatMap(section=>section.rows.map((row,index)=>({...row,sectionID:section.id,sectionTitle:section.title,sectionIndex:index}))) };}
+  async function generateCompleteWorkout(){
+    if(job||batchState||!cards.length)return;
+    const sections=workout.sections.filter(section=>cards.some(card=>card.row.sectionID===section.id));
+    const missing=cards.filter(card=>!card.asset);if(missing.length){controls.status.textContent='Falta confirmar '+missing.length+' demonstrações antes de gerar o treino completo.';missing[0].article.scrollIntoView({block:'center'});return;}
+    const oversized=sections.find(section=>cards.filter(card=>card.row.sectionID===section.id).length>20);if(oversized){controls.status.textContent='O treino '+oversized.id+' ultrapassa 20 demonstrações. Divida essa seção antes de gerar.';return;}
+    if(!window.confirm('Gerar '+sections.length+' GIFs do treino completo ('+sections.map(s=>s.id).join(', ')+') para enviar? Será um GIF de 5 segundos por seção. Pode levar vários minutos e consumir bastante internet. Tem certeza que deseja continuar?'))return;
+    const allCards=cards,selection=selected,generated=[];clearResult();batchState={cards:allCards,cancelled:false};setBusy(true);allCards.forEach(card=>card.video.pause());
+    try{
+      for(const section of sections){
+        if(batchState.cancelled||!dialog.open)break;
+        selected=section;cards=allCards.filter(card=>card.row.sectionID===section.id);
+        const result=await generateGIF(true);if(!result)break;generated.push({file:result,section});
+      }
+    }finally{
+      const cancelled=batchState.cancelled,reason=controls.status.textContent;batchState=null;selected=selection;cards=dialog.open?allCards:[];setBusy(false);
+      if(dialog.open){
+        files=generated.map(item=>item.file);file=files[0]||null;controls.result.replaceChildren();
+        generated.forEach(item=>{const url=URL.createObjectURL(item.file);resultURLs.push(url);const result=node('section',{class:'gif-batch-result'});result.append(node('strong',{},item.section.title),node('img',{src:url,alt:'Treino '+item.section.id+' em movimento'}),node('a',{href:url,download:item.file.name},'Baixar GIF '+item.section.id));controls.result.append(result);});
+        controls.result.hidden=!files.length;controls.share.hidden=!files.length;controls.download.hidden=!files.length;controls.share.textContent=files.length>1?'Enviar GIFs do treino completo':'Compartilhar GIF';controls.download.textContent=files.length>1?'Baixar GIFs':'Baixar GIF';
+        controls.status.textContent=generated.length===sections.length?generated.length+' GIFs prontos · 5 segundos cada. Confira e toque em Enviar GIFs do treino completo.':(cancelled?'Geração cancelada. ':reason+' ')+generated.length+'/'+sections.length+' GIFs prontos. Você pode baixar ou compartilhar os que foram concluídos.';
+        cards.forEach(playVisible);if(files.length)controls.result.scrollIntoView({block:'start'});if(libraryDirty){libraryDirty=false;refreshLibraryState();}
+      }
+    }
+  }
+  async function generateGIF(batch=false){
     if(job||!cards.length)return;const missing=cards.filter(c=>!c.asset);if(missing.length){controls.status.textContent='Falta confirmar: '+missing.map(c=>c.row.nome).join(', ')+'. Toque numa sugestão ou escolha um vídeo.';missing[0].article.scrollIntoView({block:'center'});return;}if(cards.length>20){controls.status.textContent='Use até 20 demonstrações por GIF. Divida esta seção.';return;}
-    clearResult();const active={cancelled:false,abort:new AbortController(),worker:null,decoder:node('video',{muted:'',playsinline:'',preload:'auto','aria-hidden':'true',class:'gif-decoder'}),urls:[]};active.decoder.muted=true;job=active;dialog.append(active.decoder);setBusy(true);cards.forEach(c=>{c.video.pause();c.video.removeAttribute('src');c.video.load();});
+    if(!batch)clearResult();const active={cancelled:false,abort:new AbortController(),worker:null,decoder:node('video',{muted:'',playsinline:'',preload:'auto','aria-hidden':'true',class:'gif-decoder'}),urls:[]};active.decoder.muted=true;job=active;dialog.append(active.decoder);setBusy(true);cards.forEach(c=>{c.video.pause();c.video.removeAttribute('src');c.video.load();});
     try{
       const canvas=document.createElement('canvas');canvas.width=WIDTH;const ctx=canvas.getContext('2d',{willReadFrequently:true}),height=layout(ctx);if(height>12000)throw Error('A ficha ficou muito longa. Divida o treino para gerar o GIF.');canvas.height=height;paint(ctx,canvas);const base=ctx.getImageData(0,0,WIDTH,height).data.buffer;
       const slot=document.createElement('canvas');slot.width=SLOT_W;slot.height=SLOT_H;const sc=slot.getContext('2d',{willReadFrequently:true});const unique=new Map();cards.forEach(c=>{const source=assetURL(c.asset);c.key=source+'|'+c.slotWidth+'x'+c.slotHeight;if(!unique.has(c.key))unique.set(c.key,{asset:c.asset,key:c.key,source,width:c.slotWidth,height:c.slotHeight,url:null});});
       let index=0;
       for(const item of unique.values()){
-        check(active);controls.status.textContent='Carregando movimento '+(++index)+'/'+unique.size+'…';
+        check(active);controls.status.textContent=(batchState?'Treino '+selected.id+' · ':'')+'Carregando movimento '+(++index)+'/'+unique.size+'…';
         const timer=setTimeout(()=>active.abort.abort(),60000);let response;try{response=await fetch(item.source,{signal:active.abort.signal,cache:'force-cache'});if(!response.ok)throw Error('Não foi possível carregar '+item.asset.name+'. Tente novamente.');const blob=await response.blob();item.url=URL.createObjectURL(blob);active.urls.push(item.url);}finally{clearTimeout(timer);}
         slot.width=item.width;slot.height=item.height;active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);await seek(video,0.001,active);drawSlot(sc,video,item.asset);cards.filter(c=>c.key===item.key).forEach(c=>ctx.drawImage(slot,c.slotX,c.slotY));
       }
@@ -266,15 +293,15 @@ window.GymFasterWorkout = (() => {
       for(const item of unique.values()){
         slot.width=item.width;slot.height=item.height;active.currentName=item.asset.name;const video=await loadDecoder(item.url,active);
         for(let frame=0;frame<FRAMES;frame++){
-          await seek(video,Math.max(0.001,frame/FRAMES*video.duration),active);const converted=drawSlot(sc,video,item.asset);const pixels=(converted||sc.getImageData(0,0,item.width,item.height)).data.buffer;await send(active,{type:'cache',key:item.key,frame,pixels},[pixels]);controls.status.textContent='Preparando movimento '+(index+1)+'/'+unique.size+' · '+Math.round((index*FRAMES+frame+1)/(unique.size*FRAMES)*85)+'%';
+          await seek(video,Math.max(0.001,frame/FRAMES*video.duration),active);const converted=drawSlot(sc,video,item.asset);const pixels=(converted||sc.getImageData(0,0,item.width,item.height)).data.buffer;await send(active,{type:'cache',key:item.key,frame,pixels},[pixels]);controls.status.textContent=(batchState?'Treino '+selected.id+' · ':'')+'Preparando movimento '+(index+1)+'/'+unique.size+' · '+Math.round((index*FRAMES+frame+1)/(unique.size*FRAMES)*85)+'%';
         }index++;
       }
-      controls.status.textContent='Finalizando GIF…';const result=await send(active,{type:'finish'});check(active);
-      file=new File([result.bytes],'treino_'+selected.id+'_'+mode+'_'+workout.student.slice(0,80).replace(/[^a-z0-9áéíóúâêôãõç_-]+/gi,'_')+'.gif',{type:'image/gif'});blobURL=URL.createObjectURL(file);controls.result.replaceChildren(node('img',{src:blobURL,alt:'Treino '+selected.id+' · '+themes[mode].name+' em movimento'}));controls.result.hidden=false;controls.share.hidden=false;controls.download.hidden=false;controls.status.textContent='GIF pronto · '+themes[mode].name+' · 5 segundos · '+(file.size/1048576).toFixed(1)+' MB. Confira e compartilhe.';controls.result.scrollIntoView({block:'start'});
+      controls.status.textContent=(batchState?'Treino '+selected.id+' · ':'')+'Finalizando GIF…';const result=await send(active,{type:'finish'});check(active);
+      const generated=new File([result.bytes],'treino_'+selected.id+'_'+mode+'_'+workout.student.slice(0,80).replace(/[^a-z0-9áéíóúâêôãõç_-]+/gi,'_')+'.gif',{type:'image/gif'});if(batch)return generated;file=generated;files=[file];blobURL=URL.createObjectURL(file);controls.result.replaceChildren(node('img',{src:blobURL,alt:'Treino '+selected.id+' · '+themes[mode].name+' em movimento'}));controls.result.hidden=false;controls.share.hidden=false;controls.download.hidden=false;controls.status.textContent='GIF pronto · '+themes[mode].name+' · 5 segundos · '+(file.size/1048576).toFixed(1)+' MB. Confira e compartilhe.';controls.result.scrollIntoView({block:'start'});
     }catch(error){if(dialog.open&&job===active)controls.status.textContent=active.cancelled?'Geração cancelada. Você pode tentar novamente.':error.name==='AbortError'?'O carregamento demorou demais. Verifique a conexão e tente novamente.':error.message||'Não foi possível gerar o GIF. Tente novamente.';}
-    finally{active.worker?.terminate();active.decoder.pause();active.decoder.removeAttribute('src');active.decoder.load();active.decoder.remove();active.urls.forEach(url=>URL.revokeObjectURL(url));if(job===active){job=null;setBusy(false);if(dialog.open){cards.forEach(playVisible);if(libraryDirty){libraryDirty=false;refreshLibraryState();}}}}
+    finally{active.worker?.terminate();active.decoder.pause();active.decoder.removeAttribute('src');active.decoder.load();active.decoder.remove();active.urls.forEach(url=>URL.revokeObjectURL(url));if(job===active){job=null;setBusy(false);if(dialog.open&&!batchState){cards.forEach(playVisible);if(libraryDirty){libraryDirty=false;refreshLibraryState();}}}}
   }
-  window.addEventListener('workout-video-library-change',()=>{if(dialog?.open){if(job)libraryDirty=true;else if(!document.querySelector('.gif-video-picker[open]'))refreshLibraryState();}});
+  window.addEventListener('workout-video-library-change',()=>{if(dialog?.open){if(job||batchState)libraryDirty=true;else if(!document.querySelector('.gif-video-picker[open]'))refreshLibraryState();}});
   async function pick(options){
     const button=options.trigger||document.activeElement;
     try{
