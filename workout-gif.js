@@ -54,10 +54,10 @@ window.GymFasterWorkout = (() => {
   }
   function selectAsset(card,asset){
     remember(card.row.nome,asset);
-    if(!card.row.compound){integration.save(card.row.source,asset.url,workout.student);card.row.video=asset.url;}
+    integration.save(card.row.source,asset.url,workout.student,card.row.partIndex);card.row.video=asset.url;card.row.gifURL=asset.url;
     setVideo(card,asset,'Escolhido por você');readiness();
   }
-  function expandedRows(){return selected.rows.flatMap((row,index)=>{const parts=match().parts(row.nome),reps=row.detalhes.replace(/^[\s—–-]+/,'').match(/^(\s*\d+\s*[x×])\s*([\d\s–-]+)\+([\d\s–-]+)$/i);return parts.map((name,part)=>({...row,nome:name,video:parts.length===1?row.video:'',compound:parts.length>1?row.nome:null,sourceIndex:index,partIndex:part,partCount:parts.length,label:String(index+1)+(parts.length>1?String.fromCharCode(97+part):''),detalhes:parts.length===2&&reps?reps[1]+' '+reps[part+2].trim():row.detalhes}));});}
+  function expandedRows(){return selected.rows.flatMap((row,index)=>{const parts=match().parts(row.nome),reps=row.detalhes.replace(/^[\s—–-]+/,'').match(/^(\s*\d+\s*[x×])\s*([\d\s–-]+)\+([\d\s–-]+)$/i);return parts.map((name,part)=>({...row,nome:name,gifURL:row.gifs?.[part]||'',video:row.gifs?.[part]||(parts.length===1?row.video:''),compound:parts.length>1?row.nome:null,sourceIndex:index,partIndex:part,partCount:parts.length,label:String(index+1)+(parts.length>1?String.fromCharCode(97+part):''),detalhes:parts.length===2&&reps?reps[1]+' '+reps[part+2].trim():row.detalhes}));});}
   function render(){
     if(job)return;
     clearResult();disposeCards();controls.list.replaceChildren();dialog.dataset.library=mode;controls.library.value=mode;controls.heading.textContent='Treino em GIF · '+themes[mode].name;controls.student.textContent=workout.student+' · '+(selected?.title||'Treino');
@@ -67,7 +67,7 @@ window.GymFasterWorkout = (() => {
     expandedRows().forEach(row=>{
       const article=node('article',{class:'gif-card'}),text=node('div',{class:'gif-card-text'}),name=node('strong',{},row.label+'. '+row.nome),details=node('p',{},row.detalhes),caption=node('small'),suggestionBox=node('div',{class:'gif-suggestions'}),choose=node('button',{type:'button'},'Escolher outro vídeo'),upload=node('button',{type:'button'},'Vídeo do aparelho'),input=node('input',{type:'file',accept:'video/*',hidden:'','aria-label':'Arquivo de vídeo de '+row.nome});
       const video=node('video',{muted:'',playsinline:'',loop:'',preload:'none','aria-label':'Demonstração de '+row.nome});video.muted=true;
-      const resolution=match().resolve(row,availableVideos(),mode,prefs[choiceKey(row.nome)]),card={row,article,video,caption,choose,upload,suggestionBox,suggestions:resolution.suggestions,asset:null,localURL:null,visible:false};
+      const resolution=match().resolve(row,availableVideos(),mode,match().driveID(row.gifURL)||prefs[choiceKey(row.nome)]),card={row,article,video,caption,choose,upload,suggestionBox,suggestions:resolution.suggestions,asset:null,localURL:null,visible:false};
       let host=controls.list;
       if(row.compound){
         if(!compoundHosts.has(row.sourceIndex)){
@@ -141,7 +141,7 @@ window.GymFasterWorkout = (() => {
       removed.textContent=showRemoved?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showRemoved;undo.hidden=!lastRemoved;
       if(!found.length)list.append(node('p',{},showRemoved?'Nenhum vídeo apagado nesta biblioteca.':'Tente menos palavras, outro grupo ou Ver todos os vídeos.'));
       found.forEach(asset=>{
-        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+themes[asset.collection].name+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:''));choose.disabled=asset.removed;choose.onclick=()=>{if(onSelect)onSelect(asset,card.row.nome);else selectAsset(card,asset);picker.close();};const eye=node('button',{type:'button',class:'gif-preview-eye','aria-label':'Ver movimento: '+asset.name+' · '+themes[asset.collection].name+(asset.gender?' · '+asset.gender:''),title:'Ver movimento antes de escolher'},'◉');eye.innerHTML=window.WorkoutVideoPreview.eye;eye.onclick=()=>WorkoutVideoPreview.open(asset);row.append(choose,eye);
+        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+themes[asset.collection].name+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:''));choose.disabled=asset.removed;choose.onclick=()=>{if(onSelect)onSelect(asset,card.row.nome);else selectAsset(card,asset);picker.close();};const eye=node('button',{type:'button',class:'gif-preview-eye','aria-label':'Ver movimento: '+asset.name+' · '+themes[asset.collection].name+(asset.gender?' · '+asset.gender:''),title:'Ver movimento antes de escolher'},'◉');eye.textContent='(GIFs)';eye.onclick=()=>WorkoutVideoPreview.open(asset);row.append(choose,eye);
         if(asset.name!==asset.originalName)row.append(node('small',{},'Nome original: '+asset.originalName));
         const actions=node('div',{class:'gif-library-row-tools'});actions.hidden=!editing;
         if(asset.removed){const restore=node('button',{type:'button'},'Restaurar');restore.onclick=()=>act(()=>{library().restore(asset.id);notice='Vídeo restaurado.';});actions.append(restore);}
@@ -266,7 +266,7 @@ window.GymFasterWorkout = (() => {
       const text=String(options.name||''),linked=match().driveID(options.video||text.match(/\[v[ií]deo:\s*([^\]]+)\]/i)?.[1]||''),saved=videos.find(v=>v.id===linked);
       if(options.previewOnly&&saved){WorkoutVideoPreview.open(saved);return;}
       const parts=text.split(/\r?\n/).flatMap(line=>match().parts(line.replace(/\[v[ií]deo:[^\]]+\]/gi,'').split(/\s+[—–]\s+|\s+\d+\s*[x×]\s*\d/i)[0].trim())).filter(Boolean),card={row:{nome:parts[0]||''}};
-      const picker=openPicker(card,(asset,name)=>{try{const prefs=preferences();prefs[asset.collection+':'+match().canonical(name)]=asset.id;localStorage.setItem(prefKey,JSON.stringify(prefs));}catch(error){}options.onSelect?.(asset,name);WorkoutVideoPreview.open(asset,button);},'both');
+      const picker=openPicker(card,(asset,name)=>{if(options.persistChoice!==false){try{const prefs=preferences();prefs[asset.collection+':'+match().canonical(name)]=asset.id;localStorage.setItem(prefKey,JSON.stringify(prefs));}catch(error){}}options.onSelect?.(asset,name);WorkoutVideoPreview.open(asset,button);},'both');
       if(parts.length>1){const group=node('div',{class:'gif-picker-parts','aria-label':'Exercícios do conjugado'});parts.forEach(name=>{const b=node('button',{type:'button'},name);b.onclick=()=>{card.row.nome=name;picker.querySelector('h3').textContent=name;const search=picker.querySelector('input[type=search]');search.value=name;search.dispatchEvent(new Event('input'));};group.append(b);});picker.querySelector('.gif-picker-top').after(group);}
       picker.addEventListener('close',()=>{if(button?.isConnected)button.focus();},{once:true});
     }catch(error){window.alert('Não foi possível abrir a biblioteca de vídeos. Tente novamente.');}
@@ -277,5 +277,6 @@ window.GymFasterWorkout = (() => {
     const response=await fetch(assetURL(asset),{cache:'force-cache'});if(!response.ok)throw Error('Não foi possível baixar o vídeo. Tente novamente.');
     const blob=await response.blob(),objectURL=URL.createObjectURL(blob),link=node('a',{href:objectURL,download:String(name||asset.name).replace(/[\\/:*?"<>|]/g,'_').slice(0,140)+'.mp4'});document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(objectURL),60000);
   }
-  return {configure,open,pick,downloadVideo};
+  async function findSamples(name,urls=[]){await loadCatalogs();const available=availableVideos(),prefs=preferences();return match().parts(name).map((part,index)=>{if(urls[index]!==undefined)return urls[index];const remembered=available.find(v=>v.id===(prefs['cm:'+match().canonical(part)]||prefs['gymfaster:'+match().canonical(part)]));if(remembered)return remembered.url;const exact=match().rank(part,available,mode).find(item=>item.score===1);return exact?.video.url||'';});}
+  return {configure,open,pick,downloadVideo,findSamples};
 })();

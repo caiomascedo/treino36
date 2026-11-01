@@ -22,20 +22,20 @@ with sync_playwright() as p:
  page.evaluate('''()=>localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'one',nome:'Exemplo',whatsapp:'+55 (55) 99999-8888',treino:{A:['Agachamento Livre — 3×12','Leg Press 45° — 3×15'],B:['Remada — 3×12']},titulos:{A:'A. Quadríceps',B:'B. Costas'}}]))''')
  page.reload();page.locator('#pdfBtn').click();expect(page.locator('#pdfBody .yt-link')).to_have_count(3)
  assert page.locator('#pdfBody .yt-link').all_text_contents()==['(Vídeo)']*3
- assert page.locator('#pdfBody .pdf-ex-name').evaluate_all("rows=>rows.every(row=>row.lastElementChild.classList.contains('yt-link'))")
+ assert page.locator('#pdfBody .pdf-ex-row').evaluate_all("rows=>rows.every(row=>row.querySelector('.pdf-media-links > .yt-link'))")
  assert not page.locator('#pdfReviewTools > details:not(.pdf-section-choice)').evaluate('el=>el.open')
  first=page.locator('#pdfBody .pdf-ex-row').first
- initial_href=first.locator('a').get_attribute('href');assert 'youtube.com/results' in parse_qs(urlparse(initial_href).query)['url'][0]
+ initial_href=first.locator('.yt-link').get_attribute('href');assert 'youtube.com/results' in parse_qs(urlparse(initial_href).query)['url'][0]
  before=page.evaluate("localStorage.getItem('treinoAlunos')")
  page.get_by_role('button',name='Editar texto',exact=True).click();first.locator('.pdf-ex-title').fill('Agachamento no Smith');first.locator('.pdf-ex-details').fill('— 4×15')
- assert first.inner_text().strip().endswith('4×15(Vídeo)') or first.inner_text().strip().endswith('4×15 (Vídeo)')
- assert 'Agachamento no Smith' in parse_qs(urlparse(first.locator('a').get_attribute('href')).query)['ex'][0]
+ assert first.locator('.pdf-ex-details').inner_text()=='— 4×15'
+ assert 'Agachamento no Smith' in parse_qs(urlparse(first.locator('.yt-link').get_attribute('href')).query)['ex'][0]
  page.locator('#pdfReviewTools > details:not(.pdf-section-choice) > summary').click();page.locator('.pdf-video-section > summary').first.click();choice=page.locator('.pdf-video-choice').first
  choice.locator('input').fill('javascript:alert(1)');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==0
  expect(page.locator('#pdfReviewTools [role=status]')).to_contain_text('http ou https')
  choice.get_by_role('button',name='Automático',exact=True).click();expect(choice.locator('input')).to_have_value('')
  custom='https://www.youtube.com/watch?v=12345678901';choice.locator('input').fill(custom)
- assert parse_qs(urlparse(first.locator('a').get_attribute('href')).query)['url']==[custom]
+ assert parse_qs(urlparse(first.locator('.yt-link').get_attribute('href')).query)['url']==[custom]
  page.screenshot(path='/tmp/pdf-review-mobile.png')
  page.locator('#downloadPdfBtn').click();page.wait_for_function('pdfWindows.length===1&&pdfWindows[0].url',timeout=30000)
  assert not page.locator('#pdfBody').evaluate("el=>el.classList.contains('pdf-is-editing')")
@@ -62,8 +62,8 @@ with sync_playwright() as p:
  def export_and_check(model):
   page.get_by_role('combobox',name='Modelo do PDF').select_option(model)
   assert all(urlparse(href).netloc=='caio.tail953b6e.ts.net' and urlparse(href).path=='/r/yt' for href in page.locator('#pdfBody .yt-link').evaluate_all('links=>links.map(a=>a.href)'))
-  if model=='old':expect(page.locator('#pdfBody .pdf-ex-row > .yt-link')).to_have_count(54)
-  else:expect(page.locator('#pdfBody .pdf-ex-name > .yt-link')).to_have_count(54)
+  if model=='old':expect(page.locator('#pdfBody .pdf-media-links > .yt-link')).to_have_count(54)
+  else:expect(page.locator('#pdfBody .pdf-media-links > .yt-link')).to_have_count(54)
   count=page.evaluate('pdfWindows.length');page.locator('#downloadPdfBtn').click();page.wait_for_function(f'pdfWindows.length==={count+1}&&pdfWindows.at(-1).url',timeout=30000)
   encoded=page.evaluate("async()=>{const blob=pdfBlobs.get(pdfWindows.at(-1).url),bytes=new Uint8Array(await blob.arrayBuffer());let text='';for(const byte of bytes)text+=String.fromCharCode(byte);return btoa(text);}")
   with fitz.open(stream=base64.b64decode(encoded),filetype='pdf') as doc:
