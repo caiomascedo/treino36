@@ -49,8 +49,8 @@ with sync_playwright() as p:
  initial=['Agachamento Smith — 4x 6-8','Leg Press 45 + Ag Sumo — 3x 8+10','Cadeira Extensora — 4x 10','Adutor — 3x 15','Step Up + Ag Frontal — 3x 8+20','Glúteo Na Polia — 3x 8']
  data=[{'student_id':'smart-cm','nome':'Aluno GIF','treino':{'A':initial,'B':['Remada — 3x12']},'titulos':{'A':'A. Pernas','B':'B. Costas'}}]
  page.evaluate('(people)=>localStorage.setItem("treinoAlunos",JSON.stringify(people))',data);page.reload()
- pdf=page.locator('#pdfBtn').bounding_box();c=page.locator('#cmfitWorkoutABtn').bounding_box();g=page.locator('#gymfasterWorkoutABtn').bounding_box();assert abs(pdf['y']-c['y'])<2 and abs(c['y']-g['y'])<2
- page.locator('#cmfitWorkoutABtn').click();dialog=page.locator('#workoutGifDialog');expect(dialog).to_be_visible();expect(dialog).to_have_attribute('data-library','cm');expect(dialog.locator('.gif-card')).to_have_count(8)
+ boxes=[page.locator(selector).bounding_box() for selector in ['#pdfBtn','#workoutGifsBtn','#screenshotBtn','#moreOptions']];assert max(box['y'] for box in boxes)-min(box['y'] for box in boxes)<2
+ page.locator('#workoutGifsBtn').click();dialog=page.locator('#workoutGifDialog');dialog.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('cm');expect(dialog).to_be_visible();expect(dialog).to_have_attribute('data-library','cm');expect(dialog.locator('.gif-card')).to_have_count(8)
  expect(dialog.locator('[role=status]')).to_contain_text('6/8')
  assert not page.locator('#pdfViewerModal').evaluate('e=>e.classList.contains("open")')
  expect(dialog.locator('.gif-card').nth(1)).to_contain_text('3x 8');expect(dialog.locator('.gif-card').nth(2)).to_contain_text('3x 10')
@@ -69,14 +69,14 @@ with sync_playwright() as p:
  assert '_cm_' in download.value.suggested_filename
  dialog.get_by_role('button',name='Compartilhar GIF').click();page.wait_for_function('shared.length===1');assert page.evaluate('shared[0].type')=='image/gif'
  expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto')
- dialog.get_by_role('button',name='Fechar',exact=True).click();page.locator('#cmfitWorkoutABtn').click();expect(dialog.locator('[role=status]')).to_contain_text('8/8');dialog.get_by_role('button',name='Fechar',exact=True).click()
+ dialog.get_by_role('button',name='Fechar',exact=True).click();page.locator('#workoutGifsBtn').click();expect(dialog.locator('[role=status]')).to_contain_text('8/8');dialog.get_by_role('button',name='Fechar',exact=True).click()
  # Independent Gym choices, despite the same student's saved CM preferences.
  items=gym if ENGINE=='chromium' else gym
  ids=['1h_RNwLjYKoJtTOAEHgKYgoMd1JBB_NPo','1zuCVsAdSRy7VUtwgtjf1BwK7qa5kKQvL','1J0581Mjqk4_p6XEv5-PW1RZT5miqGXRr','11c8topUm97PrFofkMtbcgceOiyV1R2xr','1LTkLxUPSOchKmQZcLPJlwByuhk2yNhQB','1qE-BHUb2Y1kxLjWakLpxfot3J1MDdxWr']
  if ENGINE=='webkit':ids=ids[2:4]
  sources=[next(v for v in gym if v['id']==id) for id in ids]
  data[0]['treino']['A']=[v['name']+' — 4x9 [Vídeo: '+v['url']+']' for v in sources]
- page.evaluate('(people)=>localStorage.setItem("treinoAlunos",JSON.stringify(people))',data);page.reload();page.locator('#gymfasterWorkoutABtn').click()
+ page.evaluate('(people)=>localStorage.setItem("treinoAlunos",JSON.stringify(people))',data);page.reload();page.locator('#workoutGifsBtn').click();page.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('gymfaster')
  expect(dialog).to_have_attribute('data-library','gymfaster');expect(dialog.locator('[role=status]')).to_contain_text(str(len(ids))+'/'+str(len(ids)))
  before=page.evaluate('localStorage.getItem("treinoAlunos")')
  dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=240000)

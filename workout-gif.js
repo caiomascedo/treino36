@@ -79,7 +79,7 @@ window.GymFasterWorkout = (() => {
     search.oninput=update;library.onchange=update;close.onclick=()=>picker.close();picker.append(title,search,library,list,close);document.body.append(picker);picker.onclose=()=>picker.remove();update();picker.showModal();
   }
   async function loadCatalogs(){if(!catalogPromise)catalogPromise=Promise.all(['cmfit-catalog.json?v=1','gymfaster-catalog.json?v=1'].map(async url=>{const response=await fetch(url);if(!response.ok)throw Error('Catálogo indisponível');return response.json();})).then(([cm,gym])=>videos=[...cm.videos.map(v=>({...v,collection:'cm'})),...gym.videos.map(v=>({...v,collection:'gymfaster'}))]).catch(error=>{catalogPromise=null;throw error;});return catalogPromise;}
-  async function open(library='gymfaster'){
+  async function open(library=mode){
     if(!integration||job)return;if(!dialog)create();const token=++sequence;focusReturn=document.activeElement;mode=themes[library]?library:'gymfaster';workout=integration.read();controls.section.replaceChildren();workout.sections.forEach(s=>controls.section.append(node('option',{value:s.id},s.title)));selected=workout.sections.find(s=>s.id==='A')||workout.sections[0];controls.section.value=selected?.id||'';controls.generate.disabled=true;if(!dialog.open)dialog.showModal();controls.status.textContent='Carregando as bibliotecas CM e GymFaster…';
     try{await loadCatalogs();if(dialog.open&&token===sequence)render();}catch(error){controls.status.textContent='Não foi possível carregar as bibliotecas. Feche e tente novamente.';}
   }
