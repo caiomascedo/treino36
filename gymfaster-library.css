@@ -12,3 +12,4 @@
 #workoutExportActions>#pdfBtn{background:#dc143c}#workoutExportActions>#workoutGifsBtn{background:#1e6f3f}#workoutExportActions>#screenshotBtn{background:#4a90e2}
 #workoutExportActions>#moreOptions{grid-column:auto;min-width:0}#workoutExportActions>#moreOptions>summary{display:flex;align-items:center;justify-content:center;height:100%}
 @media(max-width:350px){#workoutExportActions>button,#workoutExportActions>#moreOptions>summary{font-size:.58rem;padding:4px 2px}}
+#gymfasterLibrary .gym-library-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px}#gymfasterLibrary .gym-library-tools small{flex-basis:100%;font-size:11px;margin:0}#gymfasterLibrary .gym-remove{color:#a52b2b;background:#fff0f0}#gymfasterLibrary .gym-restore{color:#176b43;background:#e1ece5}
