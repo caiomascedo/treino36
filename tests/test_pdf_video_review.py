@@ -62,7 +62,7 @@ with sync_playwright() as p:
  def export_and_check(model):
   page.get_by_role('combobox',name='Modelo do PDF').select_option(model)
   assert all(urlparse(href).netloc=='caio.tail953b6e.ts.net' and urlparse(href).path=='/r/yt' for href in page.locator('#pdfBody .yt-link').evaluate_all('links=>links.map(a=>a.href)'))
-  if model=='old':expect(page.locator('#pdfBody .pdf-ex-name > .yt-link')).to_have_count(54)
+  if model=='old':expect(page.locator('#pdfBody .pdf-youtube-corner > .yt-link')).to_have_count(54)
   else:expect(page.locator('#pdfBody .pdf-ex-name > .yt-link')).to_have_count(54)
   count=page.evaluate('pdfWindows.length');page.locator('#downloadPdfBtn').click();page.wait_for_function(f'pdfWindows.length==={count+1}&&pdfWindows.at(-1).url',timeout=30000)
   encoded=page.evaluate("async()=>{const blob=pdfBlobs.get(pdfWindows.at(-1).url),bytes=new Uint8Array(await blob.arrayBuffer());let text='';for(const byte of bytes)text+=String.fromCharCode(byte);return btoa(text);}")
