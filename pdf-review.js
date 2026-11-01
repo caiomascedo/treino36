@@ -43,8 +43,8 @@ window.WorkoutPDFReview=(()=>{
       const links=node('span',{class:'pdf-compound-links'}),tail=node('span',{class:'pdf-compound-tail'}),lastDose=dose.lastElementChild;lastDose.replaceWith(tail);tail.append(lastDose,document.createTextNode('\u00a0'),links);
       names.forEach((name,i)=>{const a=node('a',{class:'yt-link',target:'_blank',rel:'noopener','aria-label':'Vídeo de '+name,title:name});
         try{const custom=videoURL(entry.parts[i]?.input.value??entry.urls[i]??''),url=makeURL(name,custom,entry.row.dataset.sectionTitle);a.href=tracking.value==='direct'?directVideoURL(url):url;entry.parts[i]?.input.setCustomValidity('');}catch(error){entry.partValid=false;entry.parts[i]?.input.setCustomValidity(error.message);status.textContent=error.message;}
-        a.textContent='('+(model.value==='old'?'YouTube':'Vídeo')+' '+(i+1)+')';
-        if(colors.checked){const color=palette[i%palette.length];a.style.color=color;a.style.borderColor=color;}
+        if(model.value==='old')a.innerHTML=(icon||'<span aria-hidden="true">▶</span>')+' YouTube '+(i+1);else a.textContent='(Vídeo '+(i+1)+')';
+        if(colors.checked){const color=palette[i%palette.length];a.style.color=model.value==='old'?'white':color;a.style.borderColor=color;if(model.value==='old')a.style.background=color;}
         if(includeVideos.checked&&entry.row.dataset.allowVideo!=='false'){if(links.childNodes.length)links.append(document.createTextNode(' '));links.append(a);}entry.partLinks.push(a);
       });
       if(includeGifs.checked&&entry.row.dataset.allowGifs!=='false')entry.gifLinks.forEach((a,i)=>{const part=Number(a.dataset.gifPart??i);if(part<names.length){if(colors.checked)a.style.color=palette[part%palette.length];else a.style.removeProperty('color');if(links.childNodes.length)links.append(document.createTextNode(' '));links.append(a);}});
