@@ -31,10 +31,10 @@ with sync_playwright() as p:
  assert first.locator('.pdf-ex-details').inner_text()=='— 4×15'
  assert 'Agachamento no Smith' in parse_qs(urlparse(first.locator('.yt-link').get_attribute('href')).query)['ex'][0]
  page.locator('#pdfReviewTools > details:not(.pdf-section-choice) > summary').click();page.locator('.pdf-video-section > summary').first.click();choice=page.locator('.pdf-video-choice').first
- choice.locator('input').fill('javascript:alert(1)');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==0
+ choice.locator(':scope > label > input').fill('javascript:alert(1)');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==0
  expect(page.locator('#pdfReviewTools [role=status]')).to_contain_text('http ou https')
- choice.get_by_role('button',name='Automático',exact=True).click();expect(choice.locator('input')).to_have_value('')
- custom='https://www.youtube.com/watch?v=12345678901';choice.locator('input').fill(custom)
+ choice.get_by_role('button',name='Automático',exact=True).click();expect(choice.locator(':scope > label > input')).to_have_value('')
+ custom='https://www.youtube.com/watch?v=12345678901';choice.locator(':scope > label > input').fill(custom)
  assert parse_qs(urlparse(first.locator('.yt-link').get_attribute('href')).query)['url']==[custom]
  page.screenshot(path='/tmp/pdf-review-mobile.png')
  page.locator('#downloadPdfBtn').click();page.wait_for_function('pdfWindows.length===1&&pdfWindows[0].url',timeout=30000)
@@ -95,7 +95,7 @@ with sync_playwright() as p:
  # Choose a single section for this PDF without changing the student's workout.
  page.locator('.pdf-section-choice > summary').click();page.get_by_role('button',name='Desmarcar todas',exact=True).click();count=page.evaluate('pdfWindows.length');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==count
  expect(page.locator('#pdfReviewTools [role=status]')).to_contain_text('pelo menos uma seção')
- page.get_by_role('checkbox',name='Incluir seção F no PDF',exact=True).check();expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
+ page.locator('.pdf-section-choice > summary').click();page.get_by_role('checkbox',name='Incluir seção F no PDF',exact=True).check();expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
  page.locator('#downloadPdfBtn').click();page.wait_for_function(f'pdfWindows.length==={count+1}&&pdfWindows.at(-1).url')
  encoded=page.evaluate("async()=>{const bytes=new Uint8Array(await pdfBlobs.get(pdfWindows.at(-1).url).arrayBuffer());let text='';for(const byte of bytes)text+=String.fromCharCode(byte);return btoa(text);}")
  with fitz.open(stream=base64.b64decode(encoded),filetype='pdf') as doc:
