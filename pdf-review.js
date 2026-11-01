@@ -12,7 +12,7 @@ window.WorkoutPDFReview=(()=>{
     }
     throw Error('Use o link original do vídeo para abrir sem monitoramento.');
   }
-  function mount(body,tools,makeURL,icon,onVideoChange){
+  function mount(body,tools,makeURL,icon,onVideoChange,samples){
     tools.replaceChildren();let editing=false;const edit=node('button',{type:'button','aria-pressed':'false'},'Editar texto'),hint=node('small',{},'O texto é editado só neste PDF. Os links escolhidos ficam salvos nos exercícios.'),videos=node('details'),summary=node('summary',{},'Vídeos · opcional'),help=node('p',{},'Sem alterações, mantém a busca automática do exercício. Para abrir um vídeo específico, busque e cole o link escolhido.'),rows=node('div'),status=node('p',{role:'status'});const expand=node('button',{type:'button'},'Expandir todos'),collapse=node('button',{type:'button'},'Recolher todos'),groupTools=node('div',{class:'pdf-video-group-tools'});groupTools.append(expand,collapse);expand.onclick=()=>{videos.open=true;for(const panel of rows.querySelectorAll('.pdf-video-section'))panel.open=true;};collapse.onclick=()=>{for(const panel of rows.querySelectorAll('.pdf-video-section'))panel.open=false;};videos.append(summary,help,groupTools,rows);tools.append(edit,hint,videos,status);
     const fields=[...body.querySelectorAll('[data-pdf-editable]')],entries=[],groups=new Map();
     const sectionBox=node('details',{class:'pdf-section-choice'}),sectionLegend=node('summary',{},'Seções no PDF'),sectionChecks=node('div',{class:'pdf-section-checks'}),allSections=node('button',{type:'button'},'Marcar todas'),noSections=node('button',{type:'button'},'Desmarcar todas'),sectionInputs=[];sectionBox.append(sectionLegend,sectionChecks,allSections,noSections);tools.insertBefore(sectionBox,hint);
@@ -51,13 +51,18 @@ window.WorkoutPDFReview=(()=>{
       entry.update=update;input.oninput=remember;reset.onclick=()=>{input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));};title.addEventListener('input',update);update();
     }
     if(window.GymFasterLibrary){
-      for(const entry of entries)GymFasterLibrary.addChoice({item:entry.input.closest(".pdf-video-choice"),input:entry.input,title:entry.title});
+      for(const entry of entries){
+        if(!samples){GymFasterLibrary.addChoice({item:entry.input.closest('.pdf-video-choice'),input:entry.input,title:entry.title});continue;}
+        const area=node('div',{class:'pdf-gif-controls'}),choose=node('button',{type:'button',class:'pdf-gif-choice'},'GIFs'),count=node('small',{class:'pdf-gif-count'}),previews=node('div',{class:'pdf-gif-previews'});area.append(choose,count,previews);entry.input.closest('.pdf-video-choice').append(area);
+        function refresh(){const urls=samples.read(entry.row),names=WorkoutVideoMatch.parts(entry.title.textContent);count.textContent=urls.filter(Boolean).length+'/'+names.length+' GIFs associados';previews.replaceChildren();urls.forEach((url,index)=>{if(!url)return;const name=names[index]||'Demonstração '+(index+1),view=node('button',{type:'button','aria-label':'Ver GIF de '+name},(names.length>1?name+' ':'')+'(GIFs)');view.onclick=()=>GymFasterWorkout.pick({name,video:url,previewOnly:true});previews.append(view);});}
+        choose.onclick=()=>samples.choose(entry.row,entry.title.textContent,refresh);entry.title.addEventListener('input',refresh);refresh();
+      }
       const prepare=node("button",{type:"button",class:"gym-prepare-a"},"Preparar treino A · GymFaster");prepare.onclick=()=>GymFasterLibrary.prepareA();tools.prepend(prepare);
     }
     applyModel();applyLinkOptions();
-    current={finish,validate(){if(!sectionInputs.some(input=>input.checked)){status.textContent='Selecione pelo menos uma seção para gerar o PDF.';sectionBox.scrollIntoView({block:'nearest'});return false;}const invalid=includeVideos.checked&&entries.find(entry=>!entry.valid&&!entry.row.closest('.pdf-sec').hidden);if(invalid){videos.open=true;invalid.input.closest('.pdf-video-section').open=true;invalid.input.reportValidity();invalid.input.focus();return false;}finish();return true;}};
+    current={finish,refreshMedia:applyModel,validate(){if(!sectionInputs.some(input=>input.checked)){status.textContent='Selecione pelo menos uma seção para gerar o PDF.';sectionBox.scrollIntoView({block:'nearest'});return false;}const invalid=includeVideos.checked&&entries.find(entry=>!entry.valid&&!entry.row.closest('.pdf-sec').hidden);if(invalid){videos.open=true;invalid.input.closest('.pdf-video-section').open=true;invalid.input.reportValidity();invalid.input.focus();return false;}finish();return true;}};
   }
-  return {mount,videoURL,directVideoURL,beforeExport:()=>!current||current.validate()};
+  return {mount,videoURL,directVideoURL,refreshMedia:()=>current?.refreshMedia(),beforeExport:()=>!current||current.validate()};
 })();
 
 window.WhatsAppCopy=(()=>{

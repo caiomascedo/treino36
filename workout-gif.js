@@ -109,7 +109,7 @@ window.GymFasterWorkout = (() => {
     }
     if(!file)readiness();
   }
-  function openPicker(card,onSelect,initialSource=mode){
+  function openPicker(card,onSelect,initialSource=mode,previewIcon=false){
     const picker=node('dialog',{class:'gif-video-picker','aria-label':'Escolher vídeo para '+card.row.nome});
     const title=node('h3',{},card.row.nome),top=node('div',{class:'gif-picker-top'}),search=node('input',{type:'search','aria-label':'Buscar demonstração',placeholder:'Nome, aparelho ou abreviação'});
     const source=node('select',{'aria-label':'Biblioteca da demonstração'}),group=node('select',{'aria-label':'Grupo muscular da demonstração'}),gender=node('select',{'aria-label':'Versão da demonstração'});
@@ -141,7 +141,7 @@ window.GymFasterWorkout = (() => {
       removed.textContent=showRemoved?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showRemoved;undo.hidden=!lastRemoved;
       if(!found.length)list.append(node('p',{},showRemoved?'Nenhum vídeo apagado nesta biblioteca.':'Tente menos palavras, outro grupo ou Ver todos os vídeos.'));
       found.forEach(asset=>{
-        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+themes[asset.collection].name+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:''));choose.disabled=asset.removed;choose.onclick=()=>{if(onSelect)onSelect(asset,card.row.nome);else selectAsset(card,asset);picker.close();};const eye=node('button',{type:'button',class:'gif-preview-eye','aria-label':'Ver movimento: '+asset.name+' · '+themes[asset.collection].name+(asset.gender?' · '+asset.gender:''),title:'Ver movimento antes de escolher'},'◉');eye.textContent='(GIFs)';eye.onclick=()=>WorkoutVideoPreview.open(asset);row.append(choose,eye);
+        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+themes[asset.collection].name+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:''));choose.disabled=asset.removed;choose.onclick=()=>{if(onSelect)onSelect(asset,card.row.nome);else selectAsset(card,asset);picker.close();};const eye=node('button',{type:'button',class:'gif-preview-eye','aria-label':'Ver movimento: '+asset.name+' · '+themes[asset.collection].name+(asset.gender?' · '+asset.gender:''),title:'Ver movimento antes de escolher'},'◉');if(previewIcon)eye.innerHTML=WorkoutVideoPreview.eye;else eye.textContent='(GIFs)';eye.onclick=()=>WorkoutVideoPreview.open(asset);row.append(choose,eye);
         if(asset.name!==asset.originalName)row.append(node('small',{},'Nome original: '+asset.originalName));
         const actions=node('div',{class:'gif-library-row-tools'});actions.hidden=!editing;
         if(asset.removed){const restore=node('button',{type:'button'},'Restaurar');restore.onclick=()=>act(()=>{library().restore(asset.id);notice='Vídeo restaurado.';});actions.append(restore);}
@@ -264,9 +264,9 @@ window.GymFasterWorkout = (() => {
     try{
       await loadCatalogs();
       const text=String(options.name||''),linked=match().driveID(options.video||text.match(/\[v[ií]deo:\s*([^\]]+)\]/i)?.[1]||''),saved=videos.find(v=>v.id===linked);
-      if(options.previewOnly&&saved){WorkoutVideoPreview.open(saved);return;}
+      if(options.previewOnly&&saved){WorkoutVideoPreview.open(library().decorate(saved));return;}
       const parts=text.split(/\r?\n/).flatMap(line=>match().parts(line.replace(/\[v[ií]deo:[^\]]+\]/gi,'').split(/\s+[—–]\s+|\s+\d+\s*[x×]\s*\d/i)[0].trim())).filter(Boolean),card={row:{nome:parts[0]||''}};
-      const picker=openPicker(card,(asset,name)=>{if(options.persistChoice!==false){try{const prefs=preferences();prefs[asset.collection+':'+match().canonical(name)]=asset.id;localStorage.setItem(prefKey,JSON.stringify(prefs));}catch(error){}}options.onSelect?.(asset,name);WorkoutVideoPreview.open(asset,button);},'both');
+      const picker=openPicker(card,(asset,name)=>{if(options.persistChoice!==false){try{const prefs=preferences();prefs[asset.collection+':'+match().canonical(name)]=asset.id;localStorage.setItem(prefKey,JSON.stringify(prefs));}catch(error){}}options.onSelect?.(asset,name);WorkoutVideoPreview.open(asset,button);},'both',!!options.previewIcon);
       if(parts.length>1){const group=node('div',{class:'gif-picker-parts','aria-label':'Exercícios do conjugado'});parts.forEach(name=>{const b=node('button',{type:'button'},name);b.onclick=()=>{card.row.nome=name;picker.querySelector('h3').textContent=name;const search=picker.querySelector('input[type=search]');search.value=name;search.dispatchEvent(new Event('input'));};group.append(b);});picker.querySelector('.gif-picker-top').after(group);}
       picker.addEventListener('close',()=>{if(button?.isConnected)button.focus();},{once:true});
     }catch(error){window.alert('Não foi possível abrir a biblioteca de vídeos. Tente novamente.');}
