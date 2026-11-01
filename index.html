@@ -1509,7 +1509,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="media-visibility.js?v=1"></script>
 <link rel="stylesheet" href="workout-gif.css?v=10">
 <link rel="stylesheet" href="gymfaster-library.css?v=5">
-<script src="pdf-review.js?v=9"></script>
+<script src="pdf-review.js?v=10"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -5064,7 +5064,7 @@ window.AvaliacaoTreinoSync = (function () {
         const bold = li.querySelector('.bold');
         const nome = bold ? bold.textContent.trim() : txt.split(' ').slice(0,3).join(' ');
         const detalhes = txt.replace(nome, '').trim();
-        result.push({ nome, detalhes, video:videoDoExercicio(li), gifs:gifsDoExercicio(li), source:li });
+        result.push({ nome, detalhes, video:videoDoExercicio(li), gifs:gifsDoExercicio(li), registeredGifs:gifsCadastrados(li), source:li });
       }
     });
     return result;
@@ -5147,11 +5147,11 @@ window.AvaliacaoTreinoSync = (function () {
       html += '<div class="pdf-sec ' + SEC_COLORS[sec] + '" data-pdf-section="'+sec+'">';
       html += '<div class="pdf-sec-title ' + SEC_COLORS[sec] + '" data-pdf-editable>' + escHtml(titulo) + '</div>';
       for (let ex of exs) {
-        const url = ytSearchUrl(ex.nome, nomeAluno, titulo,ex.video),visibility=WorkoutMediaVisibility.forSection(sec);
+        const url = ytSearchUrl(ex.nome, nomeAluno, titulo,ex.video),visibility=WorkoutMediaVisibility.forSection(sec),registered=ex.registeredGifs||[];
         html += '<div class="pdf-ex-row" data-section-title="'+escAttr(titulo)+'" data-video-url="'+escAttr(ex.video||'')+'" data-allow-video="'+visibility.video+'" data-allow-gifs="'+visibility.gifs+'" data-pdf-source="'+(sourceRows.push(ex.source)-1)+'">'
           + '<div class="pdf-ex-name"><span class="pdf-ex-title" data-pdf-editable>' + escHtml(ex.nome) + '</span> <span class="pdf-ex-details" data-pdf-editable>' + escHtml(ex.detalhes) + '</span></div><div class="pdf-media-links">'
           + '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" class="yt-link" contenteditable="false">(Vídeo)</a>'
-          + (ex.gifs||[]).map(function(gif,i){return gif?'<a class="pdf-gif-link" href="'+escAttr(gif)+'" target="_blank" rel="noopener">(GIFs'+(ex.gifs.length>1?' '+(i+1):'')+')</a>':'';}).join('')+'</div></div>';
+          + registered.map(function(gif,i){return gif?'<a class="pdf-gif-link" href="'+escAttr(gif)+'" target="_blank" rel="noopener">(GIFs'+(registered.length>1?' '+(i+1):'')+')</a>':'';}).join('')+'</div></div>';
       }
       html += '</div>';
     }
@@ -5159,8 +5159,8 @@ window.AvaliacaoTreinoSync = (function () {
 
     document.getElementById('pdfBody').innerHTML = html;
     WorkoutPDFReview.mount(document.getElementById('pdfBody'),document.getElementById('pdfReviewTools'),function(exercise,video,section){return ytSearchUrl(exercise,nomeAluno,section,video);},ytIcon(),function(row,url){var source=sourceRows[Number(row.dataset.pdfSource)];if(!source||!source.isConnected||document.getElementById('searchName').value.trim()!==nomeAluno)return;atribuirVideoExercicio(source,url);pushState();concluirAutoSave();},{
-      read:function(row){var source=sourceRows[Number(row.dataset.pdfSource)];return source?.isConnected?gifsDoExercicio(source):[];},
-      choose:function(row,title,refresh){GymFasterWorkout.pick({name:title,previewIcon:true,persistChoice:false,onSelect:function(asset,partName){var source=sourceRows[Number(row.dataset.pdfSource)];if(!source?.isConnected||document.getElementById('searchName').value.trim()!==nomeAluno)return;var parts=WorkoutVideoMatch.parts(title),index=Math.max(0,parts.findIndex(function(name){return WorkoutVideoMatch.canonical(name)===WorkoutVideoMatch.canonical(partName);})),gifs=gifsDoExercicio(source);while(gifs.length<=index)gifs.push('');gifs[index]=asset.url;atribuirGIFExercicio(source,gifs);pushState();concluirAutoSave();var slot=row.querySelector('.pdf-media-links');slot.querySelectorAll('.pdf-gif-link').forEach(function(a){a.remove();});gifs.forEach(function(url,i){if(!url)return;var a=document.createElement('a');a.className='pdf-gif-link';a.href=url;a.target='_blank';a.rel='noopener';a.textContent='(GIFs'+(gifs.length>1?' '+(i+1):'')+')';slot.append(a);});WorkoutPDFReview.refreshMedia();refresh();}});}
+      read:function(row){var source=sourceRows[Number(row.dataset.pdfSource)];return source?.isConnected?gifsCadastrados(source):[];},
+      choose:function(row,title,refresh){GymFasterWorkout.pick({name:title,previewIcon:true,persistChoice:false,onSelect:function(asset,partName){var source=sourceRows[Number(row.dataset.pdfSource)];if(!source?.isConnected||document.getElementById('searchName').value.trim()!==nomeAluno)return;var parts=WorkoutVideoMatch.parts(title),index=Math.max(0,parts.findIndex(function(name){return WorkoutVideoMatch.canonical(name)===WorkoutVideoMatch.canonical(partName);})),gifs=gifsCadastrados(source);while(gifs.length<=index)gifs.push('');gifs[index]=asset.url;var display=gifsDoExercicio(source);display[index]=asset.url;atribuirGIFExercicio(source,display,gifs);pushState();concluirAutoSave();var slot=row.querySelector('.pdf-media-links');slot.querySelectorAll('.pdf-gif-link').forEach(function(a){a.remove();});gifs.forEach(function(url,i){if(!url)return;var a=document.createElement('a');a.className='pdf-gif-link';a.href=url;a.target='_blank';a.rel='noopener';a.textContent='(GIFs'+(gifs.length>1?' '+(i+1):'')+')';slot.append(a);});WorkoutPDFReview.refreshMedia();refresh();}});}
     });
     document.getElementById('pdfViewerModal').classList.add('open');
   }
@@ -5562,8 +5562,9 @@ window.AvaliacaoTreinoSync = (function () {
   // YouTube videos and quick demonstrations are separate, portable attachments.
   function videoDoExercicio(row){var link=row.querySelector('a.exercise-video')||row.querySelector('a[href]:not(.gif-sample)');if(!link)return '';try{var url=WorkoutPDFReview.videoURL(link.getAttribute('href')),parsed=new URL(url);if(parsed.hostname==='caio.tail953b6e.ts.net'&&parsed.pathname==='/r/yt')url=parsed.searchParams.get('url')||'';return WorkoutPDFReview.videoURL(url);}catch(e){return '';}}
   function gifsDoExercicio(row){try{return JSON.parse(row.querySelector('.exercise-gifs')?.dataset.gifs||'[]');}catch(e){return [];}}
+  function gifsCadastrados(row){var holder=row.querySelector('.exercise-gifs');try{return holder?.dataset.registered?JSON.parse(holder.dataset.registered):gifsDoExercicio(row);}catch(e){return [];}}
   function vinculosTexto(data){return (data.url?' [Vídeo: '+data.url+']':'')+(data.gifs?.length?' [GIFs: '+data.gifs.map(function(url){return url||'-';}).join(' | ')+']':'');}
-  function textoDoExercicio(row,comLink){var url=videoDoExercicio(row),gifs=gifsDoExercicio(row),clone=row.cloneNode(true);clone.querySelectorAll('.exercise-video,.exercise-gifs').forEach(function(n){n.remove();});clone.querySelectorAll('a').forEach(function(a){if(/^\(?(?:v[ií]deo|gifs?)\)?$|^youtube$/i.test(a.textContent.trim()))a.remove();else a.replaceWith(document.createTextNode(a.textContent));});return clone.textContent.trim()+(comLink?vinculosTexto({url:url,gifs:gifs}):'');}
+  function textoDoExercicio(row,comLink){var url=videoDoExercicio(row),gifs=gifsCadastrados(row),clone=row.cloneNode(true);clone.querySelectorAll('.exercise-video,.exercise-gifs').forEach(function(n){n.remove();});clone.querySelectorAll('a').forEach(function(a){if(/^\(?(?:v[ií]deo|gifs?)\)?$|^youtube$/i.test(a.textContent.trim()))a.remove();else a.replaceWith(document.createTextNode(a.textContent));});return clone.textContent.trim()+(comLink?vinculosTexto({url:url,gifs:gifs}):'');}
   function separarLinkExercicio(raw){
     var text=String(raw||''),url='',gifs=[];if(/<\/?(?:span|a|b|strong)\b/i.test(text)){var holder=document.createElement('template');holder.innerHTML=text;text=textoDoExercicio(holder.content,true);}
     text=text.replace(/\[gifs?:\s*([^\]]*)\]/gi,function(all,value){gifs=value.split(/\s*\|\s*/).map(function(v){if(!v||v==='-')return '';try{return WorkoutPDFReview.videoURL(v);}catch(e){return '';}});return '';});
@@ -5573,8 +5574,8 @@ window.AvaliacaoTreinoSync = (function () {
     if(url&&WorkoutVideoMatch.driveID(url)){if(!gifs.length)gifs=[url];url='';}
     return {text:text.trim(),url:url,gifs:gifs};
   }
-  function htmlAmostras(nome,gifs){if(!gifs?.length)return '';var names=WorkoutVideoMatch.parts(nome);return '<span class="exercise-gifs" data-gifs="'+escAttr(JSON.stringify(gifs))+'">'+gifs.map(function(url,i){return url?'<span class="gif-sample-item">'+(names.length>1?escHtml(names[i]||'Demonstração '+(i+1))+' ':'')+'<a class="gif-sample" contenteditable="false" draggable="false" href="'+escAttr(url)+'" title="Ver demonstração de '+escAttr(names[i]||nome)+'">(GIFs)</a></span>':'';}).join('')+'</span>';}
-  function atribuirGIFExercicio(row,gifs){row.querySelectorAll('.exercise-gifs').forEach(function(n){n.remove();});var nome=separarExercicio(textoDoExercicio(row,false)).nome;row.insertAdjacentHTML('beforeend',htmlAmostras(nome,gifs));}
+  function htmlAmostras(nome,gifs,registered=gifs){if(!gifs?.length)return '';var names=WorkoutVideoMatch.parts(nome);return '<span class="exercise-gifs" data-gifs="'+escAttr(JSON.stringify(gifs))+'" data-registered="'+escAttr(JSON.stringify(registered))+'">'+gifs.map(function(url,i){return url?'<span class="gif-sample-item">'+(names.length>1?escHtml(names[i]||'Demonstração '+(i+1))+' ':'')+'<a class="gif-sample" contenteditable="false" draggable="false" href="'+escAttr(url)+'" title="Ver demonstração de '+escAttr(names[i]||nome)+'">(GIFs)</a></span>':'';}).join('')+'</span>';}
+  function atribuirGIFExercicio(row,gifs,registered=gifs){row.querySelectorAll('.exercise-gifs').forEach(function(n){n.remove();});var nome=separarExercicio(textoDoExercicio(row,false)).nome;row.insertAdjacentHTML('beforeend',htmlAmostras(nome,gifs,registered));}
   function atribuirVideoExercicio(row,url){row.querySelectorAll('a.exercise-video').forEach(function(n){n.remove();});if(url){var a=document.createElement('a');a.className='exercise-video';a.href=url;a.target='_blank';a.rel='noopener';a.contentEditable='false';a.textContent='(Vídeo)';var gifs=row.querySelector('.exercise-gifs');row.insertBefore(a,gifs||null);}}
   function formatExerciseLine(line){if(!line?.trim())return null;var linked=separarLinkExercicio(line),clean=cleanLine(linked.text).replace(/\*\*/g,'');if(!clean)return null;var ex=separarExercicio(clean);return '<li><span class="bold">'+escHtml(ex.nome)+'</span>'+escHtml(ex.separador+ex.detalhes)+(linked.url?' <a class="exercise-video" href="'+escAttr(linked.url)+'" target="_blank" rel="noopener" contenteditable="false">(Vídeo)</a>':'')+htmlAmostras(ex.nome,linked.gifs)+'</li>';}
 
@@ -7325,7 +7326,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('pdfBtn').addEventListener('click', gerarPDFViewer);
   if(window.GymFasterWorkout)GymFasterWorkout.configure({
     read:function(){return {student:document.getElementById('searchName').value.trim()||'Aluno',sections:SECOES.map(function(id){return {id:id,title:getTituloSecao(id),rows:getExerciciosSecao(id)};})};},
-    save:function(source,url,student,part){if(!source||!source.isConnected||(document.getElementById('searchName').value.trim()||'Aluno')!==student)return;var gifs=gifsDoExercicio(source);gifs[part||0]=url;atribuirGIFExercicio(source,gifs);pushState();concluirAutoSave();}
+    save:function(source,url,student,part){if(!source||!source.isConnected||(document.getElementById('searchName').value.trim()||'Aluno')!==student)return;var gifs=gifsDoExercicio(source),registered=gifsCadastrados(source);gifs[part||0]=url;registered[part||0]=url;atribuirGIFExercicio(source,gifs,registered);pushState();concluirAutoSave();}
   });
   document.getElementById('screenshotBtn').addEventListener('click', tirarPrint);
   document.getElementById('copyFullTreinoBtn').addEventListener('click', copiarTreinoCompleto);
@@ -7870,7 +7871,7 @@ window.AvaliacaoTreinoSync = (function () {
       if(!group.getClientRects().length)return;
       var gr=group.getBoundingClientRect();
       itensDaLista(list).forEach(function(row,i){
-        var sampleName=separarExercicio(textoDoExercicio(row,false)).nome,sampleURLs=gifsDoExercicio(row),signature=sampleName+JSON.stringify(sampleURLs);if(sampleHydration.get(row)!==signature){sampleHydration.set(row,signature);GymFasterWorkout.findSamples(sampleName,sampleURLs).then(function(urls){if(row.isConnected&&separarExercicio(textoDoExercicio(row,false)).nome===sampleName&&JSON.stringify(gifsDoExercicio(row))===JSON.stringify(sampleURLs)&&urls.some(Boolean)&&JSON.stringify(urls)!==JSON.stringify(sampleURLs)){atribuirGIFExercicio(row,urls);sampleHydration.set(row,sampleName+JSON.stringify(urls));}}).catch(function(){});}
+        var sampleName=separarExercicio(textoDoExercicio(row,false)).nome,sampleURLs=gifsDoExercicio(row),signature=sampleName+JSON.stringify(sampleURLs);if(sampleHydration.get(row)!==signature){sampleHydration.set(row,signature);GymFasterWorkout.findSamples(sampleName,sampleURLs).then(function(urls){if(row.isConnected&&separarExercicio(textoDoExercicio(row,false)).nome===sampleName&&JSON.stringify(gifsDoExercicio(row))===JSON.stringify(sampleURLs)&&urls.some(Boolean)&&JSON.stringify(urls)!==JSON.stringify(sampleURLs)){atribuirGIFExercicio(row,urls,gifsCadastrados(row));sampleHydration.set(row,sampleName+JSON.stringify(urls));}}).catch(function(){});}
         var rect=row.getBoundingClientRect(), grip=document.createElement('button');
         grip.type='button';grip.className='main-exercise-grip';grip.textContent='⋮⋮';grip._exerciseRow=row;
         grip.style.top=(rect.top-gr.top-1)+'px';grip.style.height=Math.max(22,rect.height)+'px';
@@ -8389,7 +8390,7 @@ window.AvaliacaoTreinoSync = (function () {
   var exerciseEditor=criarDialogo('exerciseEditDialog','Editar exercício','<label for="exerciseEditText">Nome e prescrição</label><textarea id="exerciseEditText"></textarea><label for="exerciseEditYoutube">Vídeo / YouTube (opcional)</label><input id="exerciseEditYoutube" type="url" placeholder="https://www.youtube.com/…"><p id="exerciseEditVideoStatus"></p><div id="exerciseGifChoices"></div><p id="exerciseEditStatus" role="status"></p><div class="dialog-actions"><button type="button" id="exerciseEditSave">Salvar alterações</button><button type="button" id="exerciseEditDelete">Apagar exercício</button><button data-close>Cancelar</button></div>');
   var exerciseEditContext=null,exerciseEditGifs=[];
   function atualizarGIFEditor(){var text=document.getElementById('exerciseEditText').value;document.getElementById('exerciseEditVideoStatus').textContent=document.getElementById('exerciseEditYoutube').value?'(Vídeo) e (GIFs) podem aparecer juntos.':'Associe um GIF a cada exercício, inclusive nos conjugados.';renderAmostrasEditor(document.getElementById('exerciseGifChoices'),text+vinculosTexto({gifs:exerciseEditGifs}),function(part,url){while(exerciseEditGifs.length<=part.part)exerciseEditGifs.push('');exerciseEditGifs[part.part]=url;atualizarGIFEditor();});}
-  document.getElementById('editExerciseBtn').onclick=function(){if(!menuContext?.row.isConnected)return;exerciseEditContext=menuContext;var holder=menuContext.config.main?menuContext.row:menuContext.row.querySelector('.exercise-text');exerciseEditGifs=gifsDoExercicio(holder);document.getElementById('exerciseEditText').value=textoDoExercicio(holder,false);document.getElementById('exerciseEditYoutube').value=videoDoExercicio(holder);document.getElementById('exerciseEditStatus').textContent='';atualizarGIFEditor();exerciseMenu.close();exerciseEditor.showModal();};
+  document.getElementById('editExerciseBtn').onclick=function(){if(!menuContext?.row.isConnected)return;exerciseEditContext=menuContext;var holder=menuContext.config.main?menuContext.row:menuContext.row.querySelector('.exercise-text');exerciseEditGifs=gifsCadastrados(holder);document.getElementById('exerciseEditText').value=textoDoExercicio(holder,false);document.getElementById('exerciseEditYoutube').value=videoDoExercicio(holder);document.getElementById('exerciseEditStatus').textContent='';atualizarGIFEditor();exerciseMenu.close();exerciseEditor.showModal();};
   document.getElementById('exerciseEditText').addEventListener('input',atualizarGIFEditor);document.getElementById('exerciseEditYoutube').addEventListener('input',atualizarGIFEditor);
   document.getElementById('exerciseEditSave').onclick=function(){var ctx=exerciseEditContext,text=document.getElementById('exerciseEditText').value.trim(),url='';if(!ctx?.row.isConnected)return;try{url=WorkoutPDFReview.videoURL(document.getElementById('exerciseEditYoutube').value);}catch(e){document.getElementById('exerciseEditStatus').textContent=e.message;return;}if(!text){document.getElementById('exerciseEditStatus').textContent='Preencha o nome do exercício.';return;}var holder=document.createElement('div');holder.innerHTML=formatExerciseLine(text+vinculosTexto({url:url,gifs:exerciseEditGifs}));if(ctx.config.main||zoomMode!=='paste')pushState();var target=ctx.config.main?ctx.row:ctx.row.querySelector('.exercise-text');target.innerHTML=holder.firstElementChild.innerHTML;ctx.config.commit([ctx.config.sec(ctx.row.parentElement)]);concluirAutoSave();exerciseEditor.close();};
   document.getElementById('exerciseEditDelete').onclick=function(){if(!exerciseEditContext?.row.isConnected)return;menuContext=exerciseEditContext;executarAcaoExercicio('delete');concluirAutoSave();exerciseEditor.close();};
