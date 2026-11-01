@@ -95,7 +95,7 @@ with sync_playwright() as p:
  # Choose a single section for this PDF without changing the student's workout.
  page.locator('.pdf-section-choice > summary').click();page.get_by_role('button',name='Desmarcar todas',exact=True).click();count=page.evaluate('pdfWindows.length');page.locator('#downloadPdfBtn').click();assert page.evaluate('pdfWindows.length')==count
  expect(page.locator('#pdfReviewTools [role=status]')).to_contain_text('pelo menos uma seção')
- page.get_by_role('checkbox',name='Incluir seção F no PDF',exact=True).check();expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
+ page.locator('.pdf-section-choice > summary').click();page.get_by_role('checkbox',name='Incluir seção F no PDF',exact=True).check();expect(page.locator('#pdfBody .pdf-sec:not([hidden])')).to_have_count(1)
  page.locator('#downloadPdfBtn').click();page.wait_for_function(f'pdfWindows.length==={count+1}&&pdfWindows.at(-1).url')
  encoded=page.evaluate("async()=>{const bytes=new Uint8Array(await pdfBlobs.get(pdfWindows.at(-1).url).arrayBuffer());let text='';for(const byte of bytes)text+=String.fromCharCode(byte);return btoa(text);}")
  with fitz.open(stream=base64.b64decode(encoded),filetype='pdf') as doc:
