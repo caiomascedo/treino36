@@ -9,7 +9,7 @@ window.WorkoutVideoLibrary = (() => {
     return {...video,name:custom||originalName,originalName,removed:state.removed[video.id]===true,aliases:[...new Set([...(video.aliases||[]),originalName])]};
   }
   function apply(videos,includeRemoved=false){const state=read();return videos.map(v=>decorate(v,state)).filter(v=>includeRemoved||!v.removed);}
-  function rename(id,name){const value=String(name).replace(/\s+/g,' ').trim();if(!value)throw Error('Digite um nome para o exercício.');if(value.length>160)throw Error('Use um nome de até 160 caracteres.');const state=read();state.names[id]=value;save(state,id,'rename');}
+  function rename(id,name){const value=String(name).replace(/\s+/g,' ').trim();if(!value)throw Error('Digite um nome para o exercício.');if(value.length>160)throw Error('Use um nome de até 160 caracteres.');const state=read();if(window.WorkoutCatalog?.current().some(v=>v.id!==id&&WorkoutCatalog.key(decorate(v,state).name)===WorkoutCatalog.key(value)))throw Error('Já existe um exercício com este nome. Informe a variação para diferenciá-lo.');state.names[id]=value;save(state,id,'rename');}
   function remove(id){const state=read();state.removed[id]=true;save(state,id,'remove');}
   function restore(id){const state=read();delete state.removed[id];save(state,id,'restore');}
   function resetName(id){const state=read();delete state.names[id];save(state,id,'rename');}

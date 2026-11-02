@@ -10,55 +10,54 @@ window.GymFasterLibrary = (() => {
   };
   const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   async function load() {
-    if (catalog) return catalog;
-    if (!pending) pending = fetch('gymfaster-catalog.json?v=3').then(response => {
-      if (!response.ok) throw Error('Catálogo indisponível.');
-      return response.json();
-    }).then(data => {
-      if (!Array.isArray(data.videos) || !data.videos.length) throw Error('Catálogo vazio.');
-      catalog = data; return data;
-    }).finally(() => { pending = null; });
-    return pending;
+    const videos = await WorkoutCatalog.load();
+    catalog = {videos:videos.filter(video=>video.collection!=='cm')}; return catalog;
   }
   function create() {
     dialog = el('dialog', {id: 'gymfasterLibrary', 'aria-labelledby': 'gymfasterTitle'});
-    const heading = el('h3', {id: 'gymfasterTitle'}, 'Vídeos GymFaster');
+    const heading = el('h3', {id: 'gymfasterTitle'}, 'Biblioteca de vídeos · Lyfta + GymFaster');
     const help = el('p', {class: 'gym-help'});
-    const search = el('input', {type: 'search', placeholder: 'Buscar exercício ou equipamento', 'aria-label': 'Buscar no GymFaster'});
+    const search = el('input', {type: 'search', placeholder: 'Buscar exercício ou equipamento', 'aria-label': 'Buscar na biblioteca de vídeos'});
     const filters = el('div', {class: 'gym-filters'});
-    const group = el('select', {'aria-label': 'Grupo muscular GymFaster'});
-    const gender = el('select', {'aria-label': 'Versão GymFaster'});
+    const group = el('select', {'aria-label': 'Categoria dos vídeos'});
+    const gender = el('select', {'aria-label': 'Versão dos vídeos'});
     group.append(el('option', {value: ''}, 'Todos os grupos'));
     gender.append(el('option', {value: ''}, 'Todas as versões'));
     filters.append(group, gender);
     const status = el('p', {role: 'status'}), list = el('div', {class: 'gym-results'});
     const preview = el('div', {class: 'gym-preview', hidden: ''});
+    const addVideo=el('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await load();controls.search.value=asset.name;controls.group.value='';controls.gender.value='';controls.render();});
     const libraryTools=el('div',{class:'gym-library-tools'}),removed=el('button',{type:'button'},'Ver apagados'),undo=el('button',{type:'button',hidden:''},'Desfazer exclusão'),libraryHint=el('small',{},'Apagar remove da sua biblioteca neste navegador, com opção de restaurar.');libraryTools.append(removed,undo,libraryHint);
+    const drive = el('a', {target:'_blank',rel:'noopener noreferrer'}, 'Abrir coleção unificada no Drive');
     const close = el('button', {type: 'button', class: 'gym-close'}, 'Fechar');
     function clearPreview() { preview.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('src'); video.load(); }); preview.replaceChildren(); preview.hidden = true; }
     close.onclick = () => dialog.close();
-    dialog.append(heading, help, search, filters, status, libraryTools, preview, list, close);
+    dialog.append(heading, help, drive, search, filters, status, addVideo, libraryTools, preview, list, close);
     document.body.append(dialog);
     dialog.addEventListener('close', () => { clearPreview(); selection = null; if (previousFocus?.isConnected) previousFocus.focus(); });
     function render() {
       list.replaceChildren(); clearPreview();
       if (!catalog) return;
+      drive.href=WorkoutCatalog.folderURL;drive.hidden=!WorkoutCatalog.folderURL;
       const words = normalize(search.value).split(' ').filter(Boolean);
       const all=WorkoutVideoLibrary.apply(catalog.videos,true),available=all.filter(v=>!v.removed),deleted=all.length-available.length;removed.textContent=showDeleted?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showDeleted;undo.hidden=!all.some(v=>v.id===lastRemoved&&v.removed);
       const matches = all.filter(video => video.removed===showDeleted && (!group.value || video.group === group.value) && (!gender.value || video.gender === gender.value) && words.every(word => normalize([video.name,...(video.aliases||[])].join(' ')).includes(word)));
       status.textContent = (notice?notice+' ':'')+matches.length + ' de ' + (showDeleted?deleted:available.length) + (showDeleted?' vídeos apagados. ':' vídeos disponíveis. ') + (available.length<catalog.videos.length?'('+ (catalog.videos.length-available.length)+' apagados da sua lista) ':'') + (matches.length ? 'Confira o aparelho e a variação antes de escolher.' : 'Tente menos palavras ou outro grupo. Sem essa variação, mantenha o vídeo atual ou cole outro link.');
+      matches.sort((a,b)=>a.group.localeCompare(b.group,'pt-BR')||a.name.localeCompare(b.name,'pt-BR'));
+      let category='';
       matches.forEach(video => {
+        if(video.group!==category){category=video.group;list.append(el('h4',{class:'video-category-title'},category));}
         const row = el('article', {class: 'gym-result','data-video-id':video.id}), title = el('strong', {}, video.name), meta = el('small', {}, video.group + ' · ' + video.gender);
         const actions = el('div', {class: 'gym-actions'}), watch = el('button', {type: 'button'}, 'Ver movimento');
-        const original = el('a', {href: video.url, target: '_blank', rel: 'noopener noreferrer'}, 'Abrir no Drive');
+        const original = el('a', {href: video.driveUrl||video.url, target: '_blank', rel: 'noopener noreferrer'}, 'Abrir no Drive');
         watch.onclick = () => {
           clearPreview();
-          const motion = selection?.context === 'gif' ? el('video', {src: 'gymfaster-media/' + video.id + '.mp4', controls: '', loop: '', playsinline: '', muted: '', class: 'gym-motion', 'aria-label': video.name}) : el('iframe', {src: 'https://drive.google.com/file/d/' + video.id + '/preview', title: video.name, allow: 'fullscreen', allowfullscreen: ''});
+          const motion = el('video', {src:video.media||'gymfaster-media/'+video.id+'.mp4', controls:'',loop:'',playsinline:'',muted:'',class:'gym-motion'+(video.collection==='cm'?' cm-ink-on-white':''),'aria-label':video.name});
           preview.replaceChildren(el('strong', {}, video.name + ' · ' + video.gender), motion);
           preview.hidden = false; preview.scrollIntoView({block: 'nearest'});
           if (motion.tagName === 'VIDEO') { motion.muted = true; motion.play().catch(() => {}); }
         };
-        actions.append(watch, original);
+        if(video.url.startsWith('local-video:'))original.hidden=true;actions.append(watch, original);
         const remove=el('button',{type:'button',class:video.removed?'gym-restore':'gym-remove'},video.removed?'Restaurar':'Apagar');remove.onclick=()=>{try{if(video.removed){notice='Vídeo restaurado.';WorkoutVideoLibrary.restore(video.id);}else{lastRemoved=video.id;notice='Vídeo apagado da sua lista.';WorkoutVideoLibrary.remove(video.id);}}catch(error){lastRemoved=null;notice=error.message;render();}};actions.append(remove);
         if (selection&&!video.removed) {
           const use = el('button', {type: 'button', class: 'gym-use'}, 'Usar este vídeo');
@@ -76,20 +75,21 @@ window.GymFasterLibrary = (() => {
   async function open(options) {
     if (!controls) controls = create();
     previousFocus = document.activeElement; selection = options || null;showDeleted=false;notice='';
-    controls.help.textContent = options ? 'Escolha o vídeo de “' + options.name + '”. A escolha fica salva neste exercício. ' + (options.context === 'gif' ? 'O movimento aparecerá na ficha em GIF.' : 'O PDF abre o vídeo por link.') : 'Explore a coleção. Para montar a ficha animada do aluno, use o botão GIFs ao lado do PDF e escolha CM ou GymFaster.';
+    controls.help.textContent = options ? 'Escolha o vídeo de “' + options.name + '”. A escolha fica salva neste exercício. ' + (options.context === 'gif' ? 'O movimento aparecerá na ficha em GIF.' : 'O PDF abre o vídeo por link.') : 'Vídeos organizados por categoria, com uma demonstração por exercício e variação. Use Adicionar vídeo para incluir um arquivo deste aparelho.';
     controls.search.value = options ? options.name : ''; controls.group.value = ''; controls.gender.value = '';
     controls.status.textContent = 'Carregando catálogo…';
     dialog.querySelector('.gym-results').replaceChildren();
     if (!dialog.open) dialog.showModal();
     try {
       const data = await load();
-      if (controls.group.options.length === 1) {
+      {
+        controls.group.replaceChildren(el('option',{value:''},'Todas as categorias'));controls.gender.replaceChildren(el('option',{value:''},'Todas as versões'));
         [...new Set(data.videos.map(video => video.group))].sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(value => controls.group.append(el('option', {value}, value)));
         [...new Set(data.videos.map(video => video.gender))].sort().forEach(value => controls.gender.append(el('option', {value}, value)));
       }
       if (dialog.open) controls.render();
     } catch (error) {
-      controls.status.textContent = 'Não foi possível carregar o GymFaster. Feche e tente novamente; seus vídeos atuais foram mantidos.';
+      controls.status.textContent = 'Não foi possível carregar a biblioteca. Feche e tente novamente; seus vídeos atuais foram mantidos.';
     }
   }
   function addChoice({item, input, title}) {
@@ -126,7 +126,7 @@ window.GymFasterLibrary = (() => {
     const menu = document.querySelector('#moreOptions .more-options-menu');
     if (!menu) return;
     const library = el('button', {type: 'button', id: 'gymfasterCollectionBtn'}, '🎞 GymFaster');
-    function updateCount(){load().then(data => { const available=WorkoutVideoLibrary.apply(data.videos),examples=available.filter(video=>video.kind==='created-example').length; library.textContent=available.length<data.videos.length?'🎞 GymFaster · '+available.length+'/'+data.videos.length+' disponíveis':'🎞 GymFaster · '+(available.length-examples)+' vídeos'+(examples?' + '+examples+' exemplo'+(examples>1?'s':''):''); }).catch(()=>{});}
+    function updateCount(){load().then(data => { const available=WorkoutVideoLibrary.apply(data.videos),examples=available.filter(video=>video.kind==='created-example').length; library.textContent=available.length<data.videos.length?'🎞 Biblioteca de vídeos · '+available.length+'/'+data.videos.length+' disponíveis':'🎞 Biblioteca de vídeos · '+(available.length-examples)+' vídeos'+(examples?' + '+examples+' exemplo'+(examples>1?'s':''):''); }).catch(()=>{});}
     updateCount();window.addEventListener('workout-video-library-change',()=>{updateCount();if(dialog?.open)controls.render();});
     library.onclick = () => { document.getElementById('moreOptions').open = false; open(); };
     const gifs = el('button', {type: 'button', id: 'workoutGifsBtn'}, '🎞 GIFs');

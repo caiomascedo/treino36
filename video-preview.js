@@ -11,8 +11,8 @@ window.WorkoutVideoPreview=(()=>{
       dialog.append(title,video,status,close);document.body.append(dialog);dialog.addEventListener('close',closeVideo);
       video.onerror=()=>{status.textContent='Não foi possível carregar a prévia. Feche e tente novamente.';};
     }
-    returnFocus=focusTarget||document.activeElement;dialog.querySelector('h3').textContent=asset.name+' · '+(asset.collection==='cm'?'CM':'GymFaster')+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:'');dialog.querySelector('[role=status]').textContent='';
-    video.classList.toggle('cm-ink-on-white',asset.collection==='cm');video.src=asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';
+    returnFocus=focusTarget||document.activeElement;dialog.querySelector('h3').textContent=asset.name+' · '+(asset.source||(asset.collection==='cm'?'CM':'Lyfta + GymFaster'))+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:'');dialog.querySelector('[role=status]').textContent='';
+    video.classList.toggle('cm-ink-on-white',asset.collection==='cm');video.src=asset.localURL||asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';
     if(!dialog.open)dialog.showModal();video.play().catch(()=>{});
   }
   const eye='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';

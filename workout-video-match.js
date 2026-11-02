@@ -10,6 +10,7 @@ window.WorkoutVideoMatch = (() => {
     let value = clean(text).split(' ').filter(Boolean).map(w=>Object.prototype.hasOwnProperty.call(words,w)?words[w]:w).filter(w=>!stop.has(w)).join(' ');
     const aliases = {
       'extensora':'cadeira extensora','adutora':'cadeira adutora','abdutora':'cadeira abdutora',
+      'cadeira extensora maquina':'cadeira extensora','cadeira adutora maquina':'cadeira adutora','cadeira abdutora maquina':'cadeira abdutora',
       'stepup':'subida step','step up':'subida step','subida step':'subida step',
       'gluteo coice polia':'gluteo polia','elevacao pelvica banco barra':'elevacao pelvica barra',
       'agachamento classico barra':'agachamento livre barra','voador inverso':'crucifixo inverso maquina',
@@ -23,7 +24,8 @@ window.WorkoutVideoMatch = (() => {
     return pieces.length>1 && pieces.every(p=>/[a-zá-ú]{2}/i.test(p)&&!qualifier.test(clean(p))) ? pieces : [String(name).trim()];
   }
   function driveID(value) {
-    try { const url=new URL(value); if(url.hostname==='caio.tail953b6e.ts.net')return driveID(url.searchParams.get('url')||''); return url.hostname==='drive.google.com' ? url.pathname.match(/\/file\/d\/([^/]+)/)?.[1] || url.searchParams.get('id') : null; } catch(error){return null;}
+    if(String(value).startsWith('local-video:'))return String(value).slice(12);
+    try { const url=new URL(value); if(url.hostname==='caio.tail953b6e.ts.net')return driveID(url.searchParams.get('url')||''); if(url.hostname==='caiomascedo.github.io')return url.pathname.match(/^\/treino36\/gymfaster-media\/([^/]+)\.mp4$/)?.[1]||null; return url.hostname==='drive.google.com' ? url.pathname.match(/\/file\/d\/([^/]+)/)?.[1] || url.searchParams.get('id') : null; } catch(error){return null;}
   }
   function names(video) {
     const list=[canonical(video.name),...(video.aliases||[]).map(canonical)];
@@ -52,9 +54,9 @@ window.WorkoutVideoMatch = (() => {
       .sort((a,b)=>b.score-a.score || Number(b.video.collection===preferred)-Number(a.video.collection===preferred) || Number(b.video.gender==='Feminino')-Number(a.video.gender==='Feminino'));
   }
   function resolve(row, videos, preferred, remembered) {
-    const saved=videos.find(v=>v.id===remembered);
+    const saved=videos.find(v=>(v.id===remembered||(v.sourceIds||[]).includes(remembered)));
     if(saved)return {video:saved,reason:'Sua escolha anterior',suggestions:[]};
-    const id=driveID(row.video),linked=videos.find(v=>v.id===id&&v.collection===preferred);
+    const id=driveID(row.video),linked=videos.find(v=>(v.id===id||(v.sourceIds||[]).includes(id))&&v.collection===preferred);
     if(linked)return {video:linked,reason:'Vídeo salvo no treino',suggestions:[]};
     const ranked=rank(row.nome,videos,preferred), exact=ranked.find(item=>item.score===1&&item.video.collection===preferred);
     if(exact)return {video:exact.video,reason:'Reconhecido pelo nome',suggestions:[]};
