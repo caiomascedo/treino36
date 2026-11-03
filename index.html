@@ -1506,12 +1506,13 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="workout-video-match.js?v=unified-2"></script>
 <script src="video-preview.js?v=2"></script>
 <script src="video-catalog.js?v=1"></script>
-<script src="workout-gif.js?v=16"></script>
+<script src="workout-gif.js?v=17"></script>
 <script src="workout-media-text.js?v=2"></script>
 <script src="media-visibility.js?v=2"></script>
-<link rel="stylesheet" href="workout-gif.css?v=unified-12">
+<script src="compound-colors.js?v=1"></script>
+<link rel="stylesheet" href="workout-gif.css?v=unified-13">
 <link rel="stylesheet" href="gymfaster-library.css?v=6">
-<script src="pdf-review.js?v=16"></script>
+<script src="pdf-review.js?v=17"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -1523,7 +1524,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=18">
+<link rel="stylesheet" href="pdf-review.css?v=19">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -1768,7 +1769,7 @@ window.AvaliacaoTreinoSync = (function () {
   <p id="exerciseActionsText"></p>
   <div class="exercise-edit-actions"><button type="button" id="editExerciseBtn">✎ Editar exercício / vídeo</button><span id="exerciseSampleActions"></span></div>
   <button type="button" id="duplicateExerciseBtn">⧉ Duplicar exercício</button>
-  <div class="exercise-extra-actions"><button type="button" id="copyExerciseBtn">📋 Copiar exercício</button><button type="button" id="pasteExerciseBtn">📋 Colar exercício</button><button type="button" id="deleteExerciseBtn" hidden>🗑️ Apagar exercício</button></div>
+  <div class="exercise-extra-actions"><button type="button" id="copyExerciseBtn">📋 Copiar exercício</button><button type="button" id="pasteExerciseBtn">📋 Colar exercício</button><button type="button" id="deleteExerciseBtn">🗑️ Apagar exercício</button></div>
   <p id="exerciseCopyStatus" role="status" hidden></p>
   <p class="move-label">Mover para a seção:</p>
   <div id="exerciseDestinations"></div>
@@ -5581,7 +5582,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   function htmlAmostras(nome,gifs,registered=gifs){if(!gifs?.length)return '';var names=WorkoutVideoMatch.parts(nome);return '<span class="exercise-gifs" data-gifs="'+escAttr(JSON.stringify(gifs))+'" data-registered="'+escAttr(JSON.stringify(registered))+'">'+gifs.map(function(url,i){return url?'<span class="gif-sample-item">'+'<a class="gif-sample" data-sample-index="'+i+'" contenteditable="true" href="'+escAttr(url)+'" title="Ver demonstração de '+escAttr(names[i]||nome)+'">(GIFs'+(gifs.length>1?' '+(i+1):'')+')</a></span>':'';}).join('')+'</span>';}
   function atribuirGIFExercicio(row,gifs,registered=gifs){row.querySelectorAll('.exercise-gifs').forEach(function(n){n.remove();});var nome=separarExercicio(textoDoExercicio(row,false)).nome;row.insertAdjacentHTML('beforeend',htmlAmostras(nome,gifs,registered));}
-  function htmlVideos(urls){if(!urls?.some(Boolean))return '';return '<span class="exercise-videos" data-videos="'+escAttr(JSON.stringify(urls))+'">'+urls.map(function(url,i){return url?' <a class="exercise-video" href="'+escAttr(url)+'" target="_blank" rel="noopener" contenteditable="true">(Vídeo'+(urls.length>1?' '+(i+1):'')+')</a>':'';}).join('')+'</span>';}
+  function htmlVideos(urls){if(!urls?.some(Boolean))return '';return '<span class="exercise-videos" data-videos="'+escAttr(JSON.stringify(urls))+'">'+urls.map(function(url,i){return url?' <a class="exercise-video" data-video-part="'+i+'" href="'+escAttr(url)+'" target="_blank" rel="noopener" contenteditable="true">(Vídeo'+(urls.length>1?' '+(i+1):'')+')</a>':'';}).join('')+'</span>';}
   function atribuirVideoExercicio(row,url,part){var urls=videosDoExercicio(row),index=Number.isInteger(part)?part:0;while(urls.length<=index)urls.push('');urls[index]=url;row.querySelectorAll('.exercise-videos,a.exercise-video').forEach(function(n){n.remove();});var holder=document.createElement('span');holder.innerHTML=htmlVideos(urls);var gifs=row.querySelector('.exercise-gifs');while(holder.firstChild)row.insertBefore(holder.firstChild,gifs||null);}
   function formatExerciseLine(line){if(!line?.trim())return null;var linked=separarLinkExercicio(line),clean=cleanLine(linked.text).replace(/\*\*/g,'');if(!clean)return null;var ex=separarExercicio(clean);return '<li><span class="bold">'+escHtml(ex.nome)+'</span>'+escHtml(ex.separador+ex.detalhes)+htmlVideos(linked.videos)+htmlAmostras(ex.nome,linked.gifs)+'</li>';}
 
@@ -8414,7 +8415,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('exerciseEditSave').onclick=function(){var ctx=exerciseEditContext,text=document.getElementById('exerciseEditText').value.trim(),url='';if(!ctx?.row.isConnected)return;try{url=WorkoutPDFReview.videoURL(document.getElementById('exerciseEditYoutube').value);}catch(e){document.getElementById('exerciseEditStatus').textContent=e.message;return;}if(!text){document.getElementById('exerciseEditStatus').textContent='Preencha o nome do exercício.';return;}var holder=document.createElement('div');exerciseEditVideos[0]=url;holder.innerHTML=formatExerciseLine(text+vinculosTexto({url:url,videos:exerciseEditVideos,gifs:exerciseEditGifs}));if(ctx.config.main||zoomMode!=='paste')pushState();var target=ctx.config.main?ctx.row:ctx.row.querySelector('.exercise-text');target.innerHTML=holder.firstElementChild.innerHTML;ctx.config.commit([ctx.config.sec(ctx.row.parentElement)]);concluirAutoSave();exerciseEditor.close();};
   document.getElementById('exerciseEditDelete').onclick=function(){if(!exerciseEditContext?.row.isConnected)return;menuContext=exerciseEditContext;executarAcaoExercicio('delete');concluirAutoSave();exerciseEditor.close();};
   var ultimoExercicioCopiado = '';
-  document.getElementById('deleteExerciseBtn').addEventListener('click',function(){executarAcaoExercicio('delete');});
+  document.getElementById('deleteExerciseBtn').addEventListener('click',function(){executarAcaoExercicio('delete');concluirAutoSave();});
   document.getElementById('copyExerciseBtn').addEventListener('click',async function(){
     var context=menuContext;
     if(!context||!context.row.isConnected)return;

@@ -27,7 +27,7 @@ window.GymFasterWorkout = (() => {
     const section=node('select',{'aria-label':'Treino para o GIF'}),status=node('p',{role:'status','aria-live':'polite'}),list=node('div',{class:'gif-cards'}),result=node('div',{class:'gif-result',hidden:''});
     const accept=node('button',{type:'button',class:'gif-accept-suggestions',hidden:''},'Usar sugestões mostradas');
     const actions=node('div',{class:'gif-actions'}),generate=node('button',{type:'button',class:'gif-primary'}),share=node('button',{type:'button',hidden:''},'Compartilhar GIF'),download=node('button',{type:'button',hidden:''},'Baixar GIF'),stop=node('button',{type:'button',hidden:''},'Cancelar geração'),close=node('button',{type:'button'},'Fechar');
-    const presentationBox=node('div',{class:'gif-presentation'}),style=node('select',{'aria-label':'Prescrição dos conjugados'}),colorLabel=node('label'),colorCheck=node('input',{type:'checkbox','aria-label':'Cores nos conjugados'});style.append(node('option',{value:'detailed'},'Prescrição em cada exercício'),node('option',{value:'simplified'},'Nomes + prescrição única'));style.value=presentation.style;colorCheck.checked=presentation.colors;colorLabel.append(colorCheck,document.createTextNode(' Cores nos conjugados'));presentationBox.append(style,colorLabel);style.onchange=colorCheck.onchange=()=>{presentation={style:style.value,colors:colorCheck.checked};try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();};actions.append(generate,share,download,stop,close);dialog.append(heading,help,student,library,section,status,accept,presentationBox,list,result,actions);document.body.append(dialog);
+    const presentationBox=node('div',{class:'gif-presentation'}),style=node('select',{'aria-label':'Prescrição dos conjugados'}),colorLabel=node('label'),colorCheck=node('input',{type:'checkbox','aria-label':'Cores nos conjugados'});style.append(node('option',{value:'detailed'},'Prescrição em cada exercício'),node('option',{value:'simplified'},'Nomes + prescrição única'));style.value=presentation.style;colorCheck.checked=presentation.colors;colorLabel.append(colorCheck,document.createTextNode(' Cores nos conjugados'));presentationBox.append(style,colorLabel);style.onchange=colorCheck.onchange=()=>{presentation={style:style.value,colors:colorCheck.checked};try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();readiness();};actions.append(generate,share,download,stop,close);dialog.append(heading,help,student,library,section,status,accept,presentationBox,list,result,actions);document.body.append(dialog);
     controls={heading,student,library,section,status,list,result,accept,generate,share,download,stop,presentationFields:[style,colorCheck]};
     library.onchange=()=>{mode=library.value;render();};section.onchange=()=>{selected=section.value==='ALL'?completeWorkout():workout.sections.find(s=>s.id===section.value);render();};
     accept.onclick=()=>{cards.filter(c=>!c.asset&&c.suggestions.length).forEach(c=>selectAsset(c,c.suggestions[0]));readiness();};
@@ -63,6 +63,7 @@ window.GymFasterWorkout = (() => {
     setVideo(card,asset,'Escolhido por você');readiness();
   }
   function doses(text,count){const parts=text.replace(/^[\s—–-]+/,'').split(/\s*\+\s*/);if(parts.length!==count||!parts.every(p=>/^(?:\d+\s*[x×]\s*)?\d+(?:\s*[-–]\s*\d+)?(?:\s*(?:s|seg|segundos))?$/i.test(p.trim())))return null;const prefix=parts[0].match(/^(\d+\s*[x×]\s*)/);return parts.map(p=>/^\d+\s*[x×]/.test(p)||!prefix?p:prefix[1]+p);}
+  function summaryDoses(text,count){const exact=doses(text,count);if(exact)return exact;const terms=text.replace(/^[\s—–-]+/,'').split(/\s*\+\s*/);return terms.length>1&&terms.every(term=>/\d/.test(term))?terms:null;}
   function expandedRows(){return selected.rows.flatMap((row,index)=>{const parts=match().parts(row.nome),reps=row.detalhes.replace(/^[\s—–-]+/,'').match(/^(\s*\d+\s*[x×])\s*([\d\s–-]+)\+([\d\s–-]+)$/i);const split=doses(row.detalhes,parts.length);return parts.map((name,part)=>({...row,nome:name,fullDetails:row.detalhes,gifURL:row.gifs?.[part]||'',video:row.gifs?.[part]||(parts.length===1?row.video:''),compound:parts.length>1?row.nome:null,sourceIndex:index,partIndex:part,partCount:parts.length,label:String((row.sectionIndex??index)+1)+(parts.length>1?String.fromCharCode(97+part):''),detalhes:split?split[part]:parts.length===2&&reps?reps[1]+' '+reps[part+2].trim():row.detalhes}));});}
   function render(){
     if(job||batchState)return;
@@ -96,8 +97,24 @@ window.GymFasterWorkout = (() => {
     });updatePresentation();readiness();
   }
   function updatePresentation(){
-    controls.list.querySelectorAll('.gif-compound-summary').forEach(n=>n.remove());
-    for(const card of cards){if(!card.row.compound)continue;const text=card.article.querySelector('.gif-card-text'),title=text.querySelector('strong'),details=text.querySelector('p');title.querySelector('.gif-color-dot')?.remove();details.hidden=presentation.style==='simplified';card.video.style.borderTop=presentation.colors?'4px solid '+colorFor(card.row.partIndex):'';if(presentation.colors){const dot=node('span',{class:'gif-color-dot','aria-hidden':'true'},'• ');dot.style.color=colorFor(card.row.partIndex);title.prepend(dot);}if(card.row.partIndex===card.row.partCount-1&&presentation.style==='simplified'){const summary=node('p',{class:'gif-compound-summary'}),split=doses(card.row.fullDetails,card.row.partCount);if(presentation.colors&&split){split.forEach((dose,i)=>{if(i)summary.append(document.createTextNode(' + '));const badge=node('span',{},'• '+dose);badge.style.color=colorFor(i);badge.style.background='#fff';summary.append(badge);});}else summary.textContent=gifText(card.row.fullDetails);text.append(summary);}}
+    controls.list.querySelectorAll('.gif-compound-summary,.gif-dose-warning').forEach(n=>n.remove());
+    for(const card of cards){
+      if(!card.row.compound)continue;
+      const text=card.article.querySelector('.gif-card-text'),title=text.querySelector('strong'),details=text.querySelector('p');
+      title.querySelector('.gif-color-dot')?.remove();details.hidden=presentation.style==='simplified';details.replaceChildren();
+      card.video.style.borderTop=presentation.colors?'4px solid '+colorFor(card.row.partIndex):'';
+      if(presentation.colors){const dot=node('span',{class:'gif-color-dot','aria-hidden':'true'},'• ');dot.style.color=colorFor(card.row.partIndex);title.prepend(dot);}
+      if(presentation.colors){const value=node('span',{},card.row.detalhes);value.style.color=colorFor(card.row.partIndex);details.append(value);}else details.textContent=card.row.detalhes;
+      if(card.row.partIndex===card.row.partCount-1){
+        const split=summaryDoses(card.row.fullDetails,card.row.partCount);
+        if(presentation.style==='simplified'){
+          const summary=node('p',{class:'gif-compound-summary'});
+          if(presentation.colors&&split)split.forEach((dose,i)=>{if(i)summary.append(document.createTextNode(' + '));const badge=node('span',{},'• '+dose);badge.style.color=colorFor(i);badge.style.background='#fff';summary.append(badge);});
+          else summary.textContent=gifText(card.row.fullDetails);text.append(summary);
+        }
+        if(split&&split.length!==card.row.partCount){const warning=node('small',{class:'gif-dose-warning'},card.row.partCount+' exercícios e '+split.length+' prescrições: confira a associação. Todos os valores foram mantidos.');text.append(warning);}
+      }
+    }
   }
   function refreshLibraryState(){
     if(job||batchState||!controls||!dialog?.open)return;
@@ -198,7 +215,7 @@ window.GymFasterWorkout = (() => {
         c.top=top;c.height=Math.max(CARD,Math.max(38+names*28+13,120)+lineCount(ctx,c.row.detalhes,358)*26+25);c.slotX=410;c.slotY=top+5;c.slotWidth=SLOT_W;c.slotHeight=SLOT_H;block.height=c.height;
       }else if(presentation.style==='simplified'){
         let cursor=top+36;for(const c of block.members){ctx.font='bold 23px Arial';c.top=top;c.nameX=presentation.colors?56:36;c.nameY=cursor+22;cursor=c.nameY+lineCount(ctx,c.row.label+'. '+c.row.nome,presentation.colors?338:358)*26+10;}
-        block.summaryY=cursor+16;ctx.font='20px Arial';cursor=block.summaryY+lineCount(ctx,block.members[0].row.fullDetails,358)*24+24;
+        block.summaryY=cursor+16;ctx.font='20px Arial';const summary=summaryDoses(block.members[0].row.fullDetails,block.members.length);cursor=(presentation.colors&&summary?paintDoses(ctx,summary,36,block.summaryY,0,true):block.summaryY+lineCount(ctx,block.members[0].row.fullDetails,358)*24)+24;
         for(let i=0;i<block.members.length;i+=2){const pair=block.members.slice(i,i+2);pair.forEach((c,column)=>{c.slotX=column?594:410;c.slotY=top+48+Math.floor(i/2)*230;c.slotWidth=166;c.slotHeight=212;});block.pairs.push(pair);}
         block.height=Math.max(CARD,cursor-top,48+block.pairs.length*230+10);
       }else{
@@ -228,7 +245,7 @@ window.GymFasterWorkout = (() => {
       ctx.fillStyle=t.card;ctx.fillRect(20,block.top,760,block.height-12);
       if(block.compound){
         ctx.fillStyle=t.green;ctx.font='bold 18px Arial';ctx.fillText((block.members[0].row.sectionIndex??block.sourceIndex)+1+'. CONJUGADO',36,block.top+28);
-        if(presentation.style==='simplified'){const text=block.members[0].row.fullDetails,split=doses(text,block.members.length);ctx.font='20px Arial';ctx.fillStyle=t.green;if(presentation.colors&&split)paintDoses(ctx,split,36,block.summaryY,0);else wrap(ctx,text,36,block.summaryY,358,24);}
+        if(presentation.style==='simplified'){const text=block.members[0].row.fullDetails,split=summaryDoses(text,block.members.length);ctx.font='20px Arial';ctx.fillStyle=t.green;if(presentation.colors&&split)paintDoses(ctx,split,36,block.summaryY,0);else wrap(ctx,text,36,block.summaryY,358,24);}
         for(const pair of block.pairs){
           pair.forEach(c=>{ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';wrap(ctx,c.row.label+'. '+c.row.nome,c.nameX,c.nameY,presentation.colors?338:358,26);if(presentation.colors){dot(ctx,43,c.nameY-8,c.row.partIndex);dot(ctx,c.slotX+8,c.slotY-8,c.row.partIndex);}if(presentation.style!=='simplified'){ctx.fillStyle=t.green;ctx.font='20px Arial';if(presentation.colors)paintDoses(ctx,[c.row.detalhes],c.nameX,c.detailsY,c.row.partIndex);else wrap(ctx,c.row.detalhes,c.nameX,c.detailsY,358,24);}});
           if(pair.length===2){ctx.fillStyle=t.green;ctx.font='bold 28px Arial';ctx.textAlign='center';ctx.fillText('+',585,pair[0].slotY+pair[0].slotHeight/2+8);ctx.textAlign='start';}
@@ -239,7 +256,7 @@ window.GymFasterWorkout = (() => {
     }
   }
   function dot(ctx,x,y,index){ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=colorFor(index);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();}
-  function paintDoses(ctx,values,x,y,start){const origin=x;values.forEach((text,i)=>{const label='• '+gifText(text),width=ctx.measureText(label).width+12;if(x+width>origin+358){x=origin;y+=28;}ctx.fillStyle='#fff';ctx.fillRect(x-2,y-19,width,24);ctx.fillStyle=colorFor(start+i);ctx.fillText(label,x+3,y);x+=width;if(i<values.length-1){ctx.fillStyle=themes[mode].green;ctx.fillText('+',x,y);x+=18;}});}
+  function paintDoses(ctx,values,x,y,start,measureOnly=false){const origin=x;values.forEach((text,i)=>{const label='• '+gifText(text),width=ctx.measureText(label).width+12;if(x+width>origin+358){x=origin;y+=28;}if(!measureOnly){ctx.fillStyle='#fff';ctx.fillRect(x-2,y-19,width,24);ctx.fillStyle=colorFor(start+i);ctx.fillText(label,x+3,y);}x+=width;if(i<values.length-1){if(!measureOnly){ctx.fillStyle=themes[mode].green;ctx.fillText('+',x,y);}x+=18;}});return y+28;}
   function drawSlot(ctx,video,asset){
     const width=ctx.canvas.width,height=ctx.canvas.height;
     ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,width,height);

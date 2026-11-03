@@ -55,3 +55,7 @@ a.exercise-video{display:inline-block;user-select:none;-webkit-user-select:none;
 .gif-video-add p {line-height:1.5;}
 .gif-picker-top {flex-wrap:wrap;}
 .video-category-title {grid-column:1/-1;padding:10px 0 5px;border-bottom:1px solid #b7c9bf;}
+
+.gif-dose-warning{display:block;margin-top:6px;color:#83550b;font-size:11px;line-height:1.4}.compound-ink-link{color:var(--compound-ink)!important}.compound-colors-control{border:0;border-radius:6px;background:#526675;color:white;padding:5px 7px;cursor:pointer;font:11px Arial}.compound-colors-control[aria-pressed=true]{background:#176b43}.compound-colors-control[hidden]{display:none}.exercise-extra-actions #deleteExerciseBtn{flex-basis:100%;grid-column:1/-1}
+
+.hide-buttons .compound-colors-control,.temp-hide-buttons .compound-colors-control{display:none!important}@media print{.compound-colors-control{display:none!important}}
