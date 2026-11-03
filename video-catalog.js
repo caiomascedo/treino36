@@ -14,18 +14,19 @@ window.WorkoutCatalog = (() => {
       const tx = db.transaction('videos', action === 'getAll' ? 'readonly' : 'readwrite');
       const request = tx.objectStore('videos')[action](...(value === undefined ? [] : [value]));
       tx.oncomplete = () => resolve(request.result);
-      tx.onerror = tx.onabort = () => reject(Error('Não foi possível salvar. Verifique o espaço disponível no aparelho.'));
+      tx.onerror = tx.onabort = () => {const error=Error('Não foi possível salvar. Verifique o espaço disponível no aparelho.');error.cause=tx.error||request.error;reject(error);};
     }); } finally { db.close(); }
   }
   async function refresh() {
     const saved = await records('getAll');
     urls.forEach(URL.revokeObjectURL); urls = [];
-    custom = saved.map(({blob, ...asset}) => { const media = URL.createObjectURL(blob); urls.push(media); return {...asset, media}; });
+    custom = saved.map(({blob,bytes,mimeType, ...asset}) => { const media = URL.createObjectURL(blob||new Blob([bytes],{type:mimeType||'video/mp4'})); urls.push(media); return {...asset, media}; });
     return custom;
   }
   function current() {
-    const seen = new Map();
-    return [...base, ...custom].filter(asset => {
+    const seen = new Map(),assets=[...base,...custom],visible=window.WorkoutVideoLibrary?new Set(WorkoutVideoLibrary.apply(assets,true).map(video=>video.id)):null;
+    return assets.filter(asset => {
+      if(visible&&!visible.has(asset.id))return false;
       const identity = asset.exerciseKey || key(asset.name);
       if (seen.has(identity)) {
         const kept=seen.get(identity);kept.sourceIds=[...new Set([...(kept.sourceIds||[]),asset.id,...(asset.sourceIds||[])])];return false;
@@ -56,24 +57,37 @@ window.WorkoutCatalog = (() => {
     try { await new Promise((resolve,reject) => { const timer=setTimeout(()=>reject(Error('Não foi possível ler este vídeo.')),15000); probe.onloadedmetadata=()=>{clearTimeout(timer); probe.videoWidth && probe.duration > 0 ? resolve() : reject(Error('Vídeo inválido.'));}; probe.onerror=()=>{clearTimeout(timer);reject(Error('Formato de vídeo não suportado neste navegador.'));};probe.preload='metadata';probe.src=media; }); }
     finally { probe.removeAttribute('src'); probe.load(); URL.revokeObjectURL(media); }
     const id = 'user-'+hash;
-    await records('put',{id,name,group,gender:'Pessoal',collection:'gymfaster',source:'Meu vídeo',url:'local-video:'+id,sha256:hash,exerciseKey:identity,blob:file,aliases:[]});
+    const record={id,name,group,gender:'Pessoal',collection:'gymfaster',source:'Meu vídeo',url:'local-video:'+id,sha256:hash,exerciseKey:identity,aliases:[]};
+    try{await records('put',{...record,blob:file});}
+    catch(error){
+      // Some WebKit stores reject Blob/File serialization; bytes remain durable.
+      if(error.cause?.name!=='UnknownError')throw error;
+      await records('put',{...record,bytes:await file.arrayBuffer(),mimeType:file.type});
+    }
     // Do not revoke existing URLs: an open preview or GIF can still be using them.
     const asset={id,name,group,gender:'Pessoal',collection:'gymfaster',source:'Meu vídeo',url:'local-video:'+id,sha256:hash,exerciseKey:identity,media:URL.createObjectURL(file),aliases:[]};
     urls.push(asset.media);custom.push(asset);
+    window.WorkoutVideoLibrary?.registerUpload(id);
     window.dispatchEvent(new CustomEvent('workout-video-library-change',{detail:{action:'add',id}}));
     return asset;
   }
-  function openAdd(onAdded) {
+  async function deleteLocal(id) {
+    await load();const asset=custom.find(video=>video.id===id);if(!asset)return false;
+    await records('delete',id);custom=custom.filter(video=>video.id!==id);
+    URL.revokeObjectURL(asset.media);urls=urls.filter(url=>url!==asset.media);return true;
+  }
+  function openAdd(onAdded,defaults={}) {
     const dialog=document.createElement('dialog');dialog.className='gif-video-add';dialog.setAttribute('aria-label','Adicionar vídeo à biblioteca');
     const make=(tag,text)=>{const e=document.createElement(tag);if(text)e.textContent=text;return e;};
     const title=make('h3','Adicionar vídeo'),hint=make('p','O vídeo fica salvo somente neste navegador e aparelho. Ele não será enviado ao Drive nem ficará disponível para outras pessoas pelo PDF. Você pode usá-lo nas prévias e nos GIFs. Guarde também o arquivo original.'),form=make('form'),name=make('input'),category=make('select'),file=make('input'),status=make('p'),save=make('button','Salvar vídeo'),close=make('button','Cancelar');
-    name.required=true;name.maxLength=160;name.placeholder='Ex.: Afundo com Halteres';name.setAttribute('aria-label','Nome do exercício');category.required=true;category.setAttribute('aria-label','Categoria do vídeo');
+    name.value=String(defaults.name||'').slice(0,160);name.required=true;name.maxLength=160;name.placeholder='Ex.: Afundo com Halteres';name.setAttribute('aria-label','Nome do exercício');category.required=true;category.setAttribute('aria-label','Categoria do vídeo');
     const placeholder=make('option','Escolha a categoria');placeholder.value='';category.append(placeholder);
     [...new Set(current().map(v=>v.group))].sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(g=>{const option=make('option',g);option.value=g;category.append(option);});
+    if(defaults.group)category.value=defaults.group;
     file.type='file';file.accept='video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm';file.required=true;file.setAttribute('aria-label','Arquivo de vídeo');save.type='submit';close.type='button';status.setAttribute('role','status');close.onclick=()=>dialog.close();
     form.append(name,category,file,save,close,status);dialog.append(title,hint,form);document.body.append(dialog);dialog.onclose=()=>dialog.remove();
     form.onsubmit=async event=>{event.preventDefault();save.disabled=true;close.disabled=true;status.textContent='Verificando vídeo e repetições…';try{const asset=await add(file.files[0],name.value,category.value);onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;}finally{save.disabled=false;close.disabled=false;}};
     dialog.showModal();name.focus();return dialog;
   }
-  return {load,current,add,openAdd,key,get folderURL(){return folderURL;}};
+  return {load,current,add,openAdd,deleteLocal,key,get folderURL(){return folderURL;}};
 })();

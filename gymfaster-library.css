@@ -13,3 +13,5 @@
 #workoutExportActions>#moreOptions{grid-column:auto;min-width:0}#workoutExportActions>#moreOptions>summary{display:flex;align-items:center;justify-content:center;height:100%}
 @media(max-width:350px){#workoutExportActions>button,#workoutExportActions>#moreOptions>summary{font-size:.58rem;padding:4px 2px}}
 #gymfasterLibrary .gym-library-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px}#gymfasterLibrary .gym-library-tools small{flex-basis:100%;font-size:11px;margin:0}#gymfasterLibrary .gym-remove{color:#a52b2b;background:#fff0f0}#gymfasterLibrary .gym-restore{color:#176b43;background:#e1ece5}
+#gymfasterLibrary .video-browser-scroll>input{box-sizing:border-box;width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:7px;font:16px Arial}
+#gymfasterLibrary .gym-rename{padding:7px 10px;font-size:17px;background:white;border:1px solid #dce4ea}

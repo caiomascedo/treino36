@@ -26,24 +26,24 @@ window.GymFasterLibrary = (() => {
     filters.append(group, gender);
     const status = el('p', {role: 'status'}), list = el('div', {class: 'gym-results'});
     const preview = el('div', {class: 'gym-preview', hidden: ''});
-    const addVideo=el('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await load();controls.search.value=asset.name;controls.group.value='';controls.gender.value='';controls.render();});
-    const libraryTools=el('div',{class:'gym-library-tools'}),removed=el('button',{type:'button'},'Ver apagados'),undo=el('button',{type:'button',hidden:''},'Desfazer exclusão'),libraryHint=el('small',{},'Apagar remove da sua biblioteca neste navegador, com opção de restaurar.');libraryTools.append(removed,undo,libraryHint);
+    const addVideo=el('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await load();controls.search.value=asset.name;controls.group.value='';controls.gender.value='';controls.render();},{name:selection?.name||search.value,group:group.value});
+    const libraryTools=el('div',{class:'gym-library-tools'}),removed=el('button',{type:'button'},'Ver apagados'),undo=el('button',{type:'button',hidden:''},'Desfazer exclusão'),libraryHint=el('small',{},'Em Ver apagados, restaure ou apague definitivamente desta biblioteca neste navegador.');libraryTools.append(removed,undo,libraryHint);
     const drive = el('a', {target:'_blank',rel:'noopener noreferrer'}, 'Abrir coleção unificada no Drive');
     const close = el('button', {type: 'button', class: 'gym-close'}, 'Fechar');
     function clearPreview() { preview.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('src'); video.load(); }); preview.replaceChildren(); preview.hidden = true; }
     close.onclick = () => dialog.close();
-    dialog.append(heading, help, drive, search, filters, status, addVideo, libraryTools, preview, list, close);
+    const browser=el('div',{class:'video-browser-scroll'});browser.append(heading,help,drive,search,filters,status,addVideo,libraryTools,preview,list);dialog.append(browser,close);
     document.body.append(dialog);
     document.addEventListener('click', event => { if (dialog.open && !preview.hidden && !preview.contains(event.target)) clearPreview(); }, true);
     dialog.addEventListener('close', () => { clearPreview(); selection = null; if (previousFocus?.isConnected) previousFocus.focus(); });
     function render() {
-      list.replaceChildren(); clearPreview();
+      const scroll=browser.scrollTop;list.replaceChildren(); clearPreview();
       if (!catalog) return;
       drive.href=WorkoutCatalog.folderURL;drive.hidden=!WorkoutCatalog.folderURL;
       const words = normalize(search.value).split(' ').filter(Boolean);
       const all=WorkoutVideoLibrary.apply(catalog.videos,true),available=all.filter(v=>!v.removed),deleted=all.length-available.length;removed.textContent=showDeleted?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showDeleted;undo.hidden=!all.some(v=>v.id===lastRemoved&&v.removed);
       const matches = all.filter(video => video.removed===showDeleted && (!group.value || video.group === group.value) && (!gender.value || video.gender === gender.value) && words.every(word => normalize([video.name,...(video.aliases||[])].join(' ')).includes(word)));
-      status.textContent = (notice?notice+' ':'')+matches.length + ' de ' + (showDeleted?deleted:available.length) + (showDeleted?' vídeos apagados. ':' vídeos disponíveis. ') + (available.length<catalog.videos.length?'('+ (catalog.videos.length-available.length)+' apagados da sua lista) ':'') + (matches.length ? 'Confira o aparelho e a variação antes de escolher.' : 'Tente menos palavras ou outro grupo. Sem essa variação, mantenha o vídeo atual ou cole outro link.');
+      status.textContent = (notice?notice+' ':'')+matches.length + ' de ' + (showDeleted?deleted:available.length) + (showDeleted?' vídeos apagados. ':' vídeos disponíveis. ') + (deleted?'('+deleted+' apagados da sua lista) ':'') + (matches.length ? 'Confira o aparelho e a variação antes de escolher.' : 'Tente menos palavras ou outro grupo. Sem essa variação, mantenha o vídeo atual ou cole outro link.');
       matches.sort((a,b)=>a.group.localeCompare(b.group,'pt-BR')||a.name.localeCompare(b.name,'pt-BR'));
       let category='';
       matches.forEach(video => {
@@ -58,18 +58,22 @@ window.GymFasterLibrary = (() => {
           preview.hidden = false; preview.scrollIntoView({block: 'nearest'});
           if (motion.tagName === 'VIDEO') { motion.muted = true; motion.play().catch(() => {}); }
         };
-        if(video.url.startsWith('local-video:'))original.hidden=true;actions.append(watch, original);
+        if(video.url.startsWith('local-video:'))original.hidden=true;actions.append(watch);
+        if(!video.removed){const rename=el('button',{type:'button',class:'gym-rename','aria-label':'Renomear vídeo: '+video.name,title:'Renomear'},'✎');rename.onclick=()=>{
+          row.querySelector('form')?.remove();const form=el('form',{class:'video-rename-form'}),input=el('input',{type:'text',value:selection?.name||video.name,maxlength:'160','aria-label':'Novo nome do vídeo'}),save=el('button',{type:'submit'},'Salvar nome'),cancel=el('button',{type:'button'},'Cancelar');form.append(input,save,cancel);row.append(form);input.focus();input.select();cancel.onclick=()=>{form.remove();rename.focus();};form.onsubmit=event=>{event.preventDefault();try{WorkoutVideoLibrary.rename(video.id,input.value);notice='Nome atualizado na sua biblioteca.';render();}catch(error){let message=form.querySelector('[role=status]');if(!message){message=el('small',{role:'status'});form.append(message);}message.textContent=error.message;}};
+        };actions.append(rename);}actions.append(original);
         const remove=el('button',{type:'button',class:video.removed?'gym-restore':'gym-remove'},video.removed?'Restaurar':'Apagar');remove.onclick=()=>{try{if(video.removed){notice='Vídeo restaurado.';WorkoutVideoLibrary.restore(video.id);}else{lastRemoved=video.id;notice='Vídeo apagado da sua lista.';WorkoutVideoLibrary.remove(video.id);}}catch(error){lastRemoved=null;notice=error.message;render();}};actions.append(remove);
+        if(video.removed){const purge=el('button',{type:'button',class:'gym-remove gym-purge'},'Apagar definitivamente');purge.onclick=async()=>{purge.disabled=true;try{if(await WorkoutVideoLibrary.purge(video)){if(lastRemoved===video.id)lastRemoved=null;notice='Vídeo apagado definitivamente desta biblioteca.';render();}}catch(error){notice=error.message;render();}finally{purge.disabled=false;}};actions.append(purge);}
         if (selection&&!video.removed) {
           const use = el('button', {type: 'button', class: 'gym-use'}, 'Usar este vídeo');
           use.onclick = () => { const apply = selection.apply; apply(video); dialog.close(); };
           actions.append(use);
         }
         row.append(title, meta, actions); list.append(row);
-      });
+      });browser.scrollTop=scroll;
     }
     removed.onclick=()=>{showDeleted=!showDeleted;search.value='';group.value='';gender.value='';notice='';render();};undo.onclick=()=>{if(!lastRemoved)return;const id=lastRemoved;lastRemoved=null;notice='Exclusão desfeita.';try{WorkoutVideoLibrary.restore(id);}catch(error){lastRemoved=id;notice=error.message;render();}};
-    function filter(){notice='';render();}search.oninput = filter; group.onchange = filter; gender.onchange = filter;
+    function filter(){notice='';browser.scrollTop=0;render();}search.oninput = filter; group.onchange = filter; gender.onchange = filter;
     return {help, search, group, gender, status, render};
   }
   let controls;
@@ -127,7 +131,7 @@ window.GymFasterLibrary = (() => {
     const menu = document.querySelector('#moreOptions .more-options-menu');
     if (!menu) return;
     const library = el('button', {type: 'button', id: 'gymfasterCollectionBtn'}, '🎞 GymFaster');
-    function updateCount(){load().then(data => { const available=WorkoutVideoLibrary.apply(data.videos),examples=available.filter(video=>video.kind==='created-example').length; library.textContent=available.length<data.videos.length?'🎞 Biblioteca de vídeos · '+available.length+'/'+data.videos.length+' disponíveis':'🎞 Biblioteca de vídeos · '+(available.length-examples)+' vídeos'+(examples?' + '+examples+' exemplo'+(examples>1?'s':''):''); }).catch(()=>{});}
+    function updateCount(){load().then(data => { const all=WorkoutVideoLibrary.apply(data.videos,true),available=all.filter(video=>!video.removed),examples=available.filter(video=>video.kind==='created-example').length; library.textContent=available.length<all.length?'🎞 Biblioteca de vídeos · '+available.length+'/'+all.length+' disponíveis':'🎞 Biblioteca de vídeos · '+(available.length-examples)+' vídeos'+(examples?' + '+examples+' exemplo'+(examples>1?'s':''):''); }).catch(()=>{});}
     updateCount();window.addEventListener('workout-video-library-change',()=>{updateCount();if(dialog?.open)controls.render();});
     library.onclick = () => { document.getElementById('moreOptions').open = false; open(); };
     const gifs = el('button', {type: 'button', id: 'workoutGifsBtn'}, '🎞 GIFs');

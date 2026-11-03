@@ -142,8 +142,8 @@ window.GymFasterWorkout = (() => {
     const title=node('h3',{},card.row.nome),top=node('div',{class:'gif-picker-top'}),search=node('input',{type:'search','aria-label':'Buscar demonstração',placeholder:'Nome, aparelho ou abreviação'});
     const source=node('select',{'aria-label':'Biblioteca da demonstração'}),group=node('select',{'aria-label':'Grupo muscular da demonstração'}),gender=node('select',{'aria-label':'Versão da demonstração'});
     const filters=node('div',{class:'gif-picker-filters'}),status=node('p',{class:'gif-picker-count',role:'status'}),all=node('button',{type:'button'},'Ver todos os vídeos'),list=node('div',{class:'gif-picker-results'}),close=node('button',{type:'button'},'Fechar');
-    const addVideo=node('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await loadCatalogs();source.value='both';search.value=asset.name;refreshFilters();});
-    const manage=node('button',{type:'button','aria-pressed':'false'},'Editar biblioteca'),tools=node('div',{class:'gif-library-tools',hidden:''}),help=node('small',{},'As alterações ficam salvas neste navegador. Apagar remove o vídeo da sua lista, com opção de restaurar.'),removed=node('button',{type:'button'},'Ver apagados'),undo=node('button',{type:'button',hidden:''},'Desfazer exclusão');
+    const addVideo=node('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await loadCatalogs();source.value='both';search.value=asset.name;refreshFilters();},{name:card.row.nome,group:group.value||card.asset?.group});
+    const manage=node('button',{type:'button','aria-pressed':'false'},'Editar biblioteca'),tools=node('div',{class:'gif-library-tools',hidden:''}),help=node('small',{},'As alterações ficam neste navegador. Em Ver apagados, restaure ou apague definitivamente da biblioteca.'),removed=node('button',{type:'button'},'Ver apagados'),undo=node('button',{type:'button',hidden:''},'Desfazer exclusão');
     const initialName=card.row.nome;let editing=false,showRemoved=false,lastRemoved=null,notice='',browseAll=false;
     source.append(node('option',{value:'both'},'Catálogo unificado'),node('option',{value:'gymfaster'},'Lyfta + GymFaster'),node('option',{value:'cm'},'CM'));source.value=card.asset?.collection||initialSource;search.value=card.row.nome;
     function refreshFilters(){
@@ -162,39 +162,39 @@ window.GymFasterWorkout = (() => {
     }
     function act(action){try{action();}catch(error){notice=error.message;}update();}
     function renameForm(row,asset){
-      row.querySelector('.gif-library-row-tools').hidden=true;
-      const form=node('form',{class:'gif-library-rename'}),input=node('input',{type:'text',value:asset.name,maxlength:'160','aria-label':'Novo nome do vídeo'}),save=node('button',{type:'submit'},'Salvar nome'),cancel=node('button',{type:'button'},'Cancelar');
+      row.querySelector('.gif-library-row-tools').hidden=true;row.querySelector('.gif-library-rename')?.remove();
+      const form=node('form',{class:'gif-library-rename'}),input=node('input',{type:'text',value:card.row.nome||asset.name,maxlength:'160','aria-label':'Novo nome do vídeo'}),save=node('button',{type:'submit'},'Salvar nome'),cancel=node('button',{type:'button'},'Cancelar');
       form.append(input,save,cancel);row.append(form);input.focus();input.select();
-      form.onsubmit=event=>{event.preventDefault();act(()=>{library().rename(asset.id,input.value);notice='Nome atualizado na sua biblioteca.';});};
+      form.onsubmit=event=>{event.preventDefault();try{library().rename(asset.id,input.value);notice='Nome atualizado na sua biblioteca.';update();}catch(error){let message=form.querySelector('[role=status]');if(!message){message=node('small',{role:'status'});form.append(message);}message.textContent=error.message;}};
       cancel.onclick=()=>update();input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();update();}};
     }
     function update(){
-      const scroll=list.scrollTop;list.replaceChildren();
+      const scroll=browser.scrollTop;list.replaceChildren();
       const raw=videos.filter(v=>source.value==='both'?v.collection!=='cm':v.collection===source.value),decorated=library().apply(raw,true),deleted=decorated.filter(v=>v.removed).length,available=decorated.length-deleted;
       const pool=decorated.filter(v=>v.removed===showRemoved&&(!group.value||v.group===group.value)&&(!gender.value||v.gender===gender.value));
       const query=search.value.trim(),context=browseAll||query===card.row.nome,chosen=context&&!showRemoved?previous(pool):null,ranked=query?related(query,pool):browseAll?[...related(card.row.nome,pool),...pool]:pool;
       const tokens=match().canonical(query).split(' ').filter(Boolean),remaining=query?pool.filter(v=>tokens.every(word=>match().canonical([v.name,...v.aliases].join(' ')).includes(word))):[];
       const seen=new Set(),found=[...(chosen?[chosen]:[]),...ranked,...remaining].filter(v=>{const identity=source.value==='both'?(v.exerciseKey||WorkoutCatalog.key(v.name)):v.id;if(seen.has(identity))return false;seen.add(identity);return true;});
-      status.textContent=(notice?notice+' ':'')+found.length+(showRemoved?' apagados encontrados':' resultados')+' · '+available+' disponíveis de '+raw.length+' vídeos';notice='';
+      status.textContent=(notice?notice+' ':'')+found.length+(showRemoved?' apagados encontrados':' resultados')+' · '+available+' disponíveis de '+decorated.length+' vídeos';notice='';
       removed.textContent=showRemoved?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showRemoved;undo.hidden=!lastRemoved;
       if(!found.length)list.append(node('p',{},showRemoved?'Nenhum vídeo apagado nesta biblioteca.':'Tente menos palavras, outro grupo ou Ver todos os vídeos.'));
       found.forEach(asset=>{
-        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+themes[asset.collection].name+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:''));choose.disabled=asset.removed;choose.onclick=()=>{if(onSelect)onSelect(asset,card.row.nome);else selectAsset(card,asset);picker.close();};const eye=node('button',{type:'button',class:'gif-preview-eye','aria-label':'Ver movimento: '+asset.name+' · '+themes[asset.collection].name+(asset.gender?' · '+asset.gender:''),title:'Ver movimento antes de escolher'},'◉');if(previewIcon)eye.innerHTML=WorkoutVideoPreview.eye;else eye.textContent='(GIFs)';eye.onclick=()=>WorkoutVideoPreview.open(asset);row.append(choose,eye);if(chosen?.id===asset.id)row.append(node('small',{class:'gif-previous-choice'},'Sua escolha atual'));
+        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+themes[asset.collection].name+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:''));choose.disabled=asset.removed;choose.onclick=()=>{if(onSelect)onSelect(asset,card.row.nome);else selectAsset(card,asset);picker.close();};const eye=node('button',{type:'button',class:'gif-preview-eye','aria-label':'Ver movimento: '+asset.name+' · '+themes[asset.collection].name+(asset.gender?' · '+asset.gender:''),title:'Ver movimento antes de escolher'},'◉');if(previewIcon)eye.innerHTML=WorkoutVideoPreview.eye;else eye.textContent='(GIFs)';eye.onclick=()=>WorkoutVideoPreview.open(asset);row.append(choose,eye);if(!asset.removed){const quickRename=node('button',{type:'button',class:'gif-quick-rename','aria-label':'Renomear vídeo: '+asset.name,title:'Renomear'},'✎');quickRename.onclick=()=>renameForm(row,asset);row.append(quickRename);}if(chosen?.id===asset.id)row.append(node('small',{class:'gif-previous-choice'},'Sua escolha atual'));
         if(asset.name!==asset.originalName)row.append(node('small',{},'Nome original: '+asset.originalName));
         const actions=node('div',{class:'gif-library-row-tools'});actions.hidden=!editing;
-        if(asset.removed){const restore=node('button',{type:'button'},'Restaurar');restore.onclick=()=>act(()=>{library().restore(asset.id);notice='Vídeo restaurado.';});actions.append(restore);}
+        if(asset.removed){const restore=node('button',{type:'button'},'Restaurar');restore.onclick=()=>act(()=>{library().restore(asset.id);notice='Vídeo restaurado.';});actions.append(restore);const purge=node('button',{type:'button',class:'gif-library-remove gif-library-purge'},'Apagar definitivamente');purge.onclick=async()=>{purge.disabled=true;try{if(await library().purge(asset)){if(lastRemoved===asset.id)lastRemoved=null;notice='Vídeo apagado definitivamente desta biblioteca.';update();}}catch(error){notice=error.message;update();}finally{purge.disabled=false;}};actions.append(purge);}
         else{
-          const rename=node('button',{type:'button'},'Renomear'),erase=node('button',{type:'button',class:'gif-library-remove'},'Apagar');rename.onclick=()=>renameForm(row,asset);erase.onclick=()=>act(()=>{library().remove(asset.id);lastRemoved=asset.id;notice='Vídeo apagado da sua lista.';});actions.append(rename,erase);
+          const erase=node('button',{type:'button',class:'gif-library-remove'},'Apagar');erase.onclick=()=>act(()=>{library().remove(asset.id);lastRemoved=asset.id;notice='Vídeo apagado da sua lista.';});actions.append(erase);
           if(asset.name!==asset.originalName){const reset=node('button',{type:'button'},'Restaurar nome');reset.onclick=()=>act(()=>{library().resetName(asset.id);notice='Nome original restaurado.';});actions.append(reset);}
         }
         row.append(actions);list.append(row);
-      });list.scrollTop=scroll;
+      });browser.scrollTop=scroll;
     }
     manage.onclick=()=>{editing=!editing;tools.hidden=!editing;manage.textContent=editing?'Concluir edição':'Editar biblioteca';manage.setAttribute('aria-pressed',String(editing));if(!editing)showRemoved=false;update();};
     removed.onclick=()=>{showRemoved=!showRemoved;search.value='';group.value='';gender.value='';update();};
     undo.onclick=()=>act(()=>{if(lastRemoved){library().restore(lastRemoved);lastRemoved=null;notice='Exclusão desfeita.';}});
-    all.onclick=()=>{showRemoved=false;browseAll=true;search.value='';group.value='';gender.value='';list.scrollTop=0;update();};search.oninput=()=>{browseAll=false;list.scrollTop=0;update();};source.onchange=refreshFilters;group.onchange=update;gender.onchange=update;close.onclick=()=>picker.close();
-    tools.append(help,removed,undo);filters.append(group,gender);top.append(title,addVideo,manage);picker.append(top,search,source,filters,status,all,tools,list,close);document.body.append(picker);picker.onclose=()=>{picker.remove();refreshLibraryState();};refreshFilters();picker.showModal();return picker;
+    all.onclick=()=>{showRemoved=false;browseAll=true;search.value='';group.value='';gender.value='';browser.scrollTop=0;update();};search.oninput=()=>{browseAll=false;browser.scrollTop=0;update();};source.onchange=refreshFilters;group.onchange=update;gender.onchange=update;close.onclick=()=>picker.close();
+    tools.append(help,removed,undo);filters.append(group,gender);top.append(title,addVideo,manage);const browser=node('div',{class:'video-browser-scroll'});browser.append(top,search,source,filters,status,all,tools,list);picker.append(browser,close);document.body.append(picker);picker.onclose=()=>{picker.remove();refreshLibraryState();};refreshFilters();picker.showModal();return picker;
   }
 
   async function loadCatalogs(){videos=await WorkoutCatalog.load();return videos;}
