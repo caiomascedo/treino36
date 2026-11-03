@@ -54,6 +54,14 @@ window.WorkoutVideoMatch = (() => {
       .filter(item=>item.score>=0.60)
       .sort((a,b)=>b.score-a.score || Number(b.video.collection===preferred)-Number(a.video.collection===preferred) || Number(b.video.gender==='Feminino')-Number(a.video.gender==='Feminino'));
   }
+  function related(name,videos,preferred){
+    const query=canonical(name),terms=query.split(' ').filter(word=>word!=='c'&&word!=='peso'),size=['cadeira','mesa','leg','elevacao','mobilidade','alongamento'].includes(terms[0])?2:1,head=terms.slice(0,size).join(' '),ranked=rank(name,videos,preferred);
+    const family=videos.filter(video=>head&&canonical(video.name).split(' ').slice(0,size).join(' ')===head);
+    const weight=video=>{const candidate=canonical(video.name).split(' ');return Math.max(...names(video).map(n=>n===query?10:0))+terms.reduce((sum,word)=>sum+(candidate.includes(word)?1:0),0)/Math.max(1,terms.length);};
+    family.sort((a,b)=>weight(b)-weight(a)||Number(b.collection===preferred)-Number(a.collection===preferred));
+    let fallback=ranked.map(item=>item.video);if(!family.length&&!fallback.length){const shortened=terms.slice();while(shortened.length>1&&!fallback.length){shortened.pop();fallback=rank(shortened.join(' '),videos,preferred).map(item=>item.video);}}
+    const seen=new Set();return (family.length?family:fallback).filter(video=>{if(seen.has(video.id))return false;seen.add(video.id);return true;});
+  }
   function resolve(row, videos, preferred, remembered) {
     const saved=videos.find(v=>(v.id===remembered||(v.sourceIds||[]).includes(remembered)));
     if(saved)return {video:saved,reason:'Sua escolha anterior',suggestions:[]};
@@ -65,5 +73,5 @@ window.WorkoutVideoMatch = (() => {
     const suggestions=ranked.filter(item=>{const key=item.video.collection+':'+canonical(item.video.name);if(seen.has(key))return false;seen.add(key);return true;}).slice(0,3).map(item=>item.video);
     return {video:null,reason:suggestions.length?'Confira a variação sugerida':'Nenhuma demonstração equivalente encontrada',suggestions};
   }
-  return {canonical,parts,rank,resolve,driveID};
+  return {canonical,parts,rank,related,resolve,driveID};
 })();
