@@ -28,7 +28,7 @@ window.WorkoutPDFReview=(()=>{
     tracking.value=preferences.tracking==='direct'?'direct':'tracked';includeStart.checked=typeof preferences.start==='boolean'?preferences.start:tracking.value!=='direct';
     const compoundLabel=node('label'),separate=node('input',{type:'checkbox','aria-label':'Vídeos individuais nos conjugados'}),colorLabel=node('label'),colors=node('input',{type:'checkbox','aria-label':'Cores nos conjugados do PDF'});
     separate.checked=preferences.compounds===true;colors.checked=preferences.colors===true;compoundLabel.append(separate,document.createTextNode('Vídeos individuais nos conjugados'));colorLabel.append(colors,document.createTextNode('Cores nos conjugados do PDF'));const simpleLabel=node('label'),simpleColors=node('input',{type:'checkbox','aria-label':'Colorir também YouTube simples'});simpleColors.checked=preferences.simpleColors===true;simpleLabel.append(simpleColors,document.createTextNode('Colorir também YouTube simples'));linkOptions.append(compoundLabel,colorLabel,simpleLabel);
-    const colorEditor=WorkoutExportColors.create({label:'PDF',palette:preferences.palette,onChange:()=>{saveLinkOptions();applyModel();}});
+    const colorEditor=WorkoutExportColors.create({label:'PDF',palette:preferences.palette,onChange:()=>{saveLinkOptions();applyModel();}});linkOptions.after(colorEditor.element);
     const colorFor=index=>colorEditor.color(index);
     function compoundNames(entry){return WorkoutVideoMatch.parts(entry.title.textContent);}
     function refreshCompound(entry){
