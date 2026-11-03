@@ -1502,18 +1502,20 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="obs-notes.css?v=5">
 <script src="pdf-viewer.js?v=5"></script>
 <script src="video-library-preferences.js?v=4"></script>
-<script src="gymfaster-library.js?v=15"></script>
-<script src="workout-video-match.js?v=unified-3"></script>
+<script src="gymfaster-library.js?v=16"></script>
+<script src="workout-video-match.js?v=unified-4"></script>
 <script src="video-preview.js?v=3"></script>
 <script src="video-catalog.js?v=3"></script>
 <script src="export-colors.js?v=1"></script>
-<script src="workout-gif.js?v=23"></script>
+<script src="video-link-tools.js?v=1"></script>
+<script src="demo-prompt.js?v=1"></script>
+<script src="workout-gif.js?v=24"></script>
 <script src="workout-media-text.js?v=2"></script>
 <script src="media-visibility.js?v=2"></script>
 <script src="compound-colors.js?v=2"></script>
-<link rel="stylesheet" href="workout-gif.css?v=unified-17">
+<link rel="stylesheet" href="workout-gif.css?v=unified-18">
 <link rel="stylesheet" href="gymfaster-library.css?v=7">
-<script src="pdf-review.js?v=20"></script>
+<script src="pdf-review.js?v=21"></script>
 <script src="diet-calculations.js?v=7"></script>
 <script src="diet-photo-viewer.js?v=1"></script>
 <script src="diet-tools.js?v=3"></script>
@@ -1525,7 +1527,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=21">
+<link rel="stylesheet" href="pdf-review.css?v=22">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -8423,9 +8425,9 @@ window.AvaliacaoTreinoSync = (function () {
   var exerciseEditor=criarDialogo('exerciseEditDialog','Editar exercício','<label for="exerciseEditText">Nome e prescrição</label><textarea id="exerciseEditText"></textarea><label for="exerciseEditYoutube">Vídeo / YouTube (opcional)</label><input id="exerciseEditYoutube" type="url" placeholder="https://www.youtube.com/…"><p id="exerciseEditVideoStatus"></p><div id="exerciseGifChoices"></div><p id="exerciseEditStatus" role="status"></p><div class="dialog-actions"><button type="button" id="exerciseEditSave">Salvar alterações</button><button type="button" id="exerciseEditDelete">Apagar exercício</button><button data-close>Cancelar</button></div>');
   var exerciseEditContext=null,exerciseEditGifs=[],exerciseEditVideos=[];
   function atualizarGIFEditor(){var text=document.getElementById('exerciseEditText').value;document.getElementById('exerciseEditVideoStatus').textContent=document.getElementById('exerciseEditYoutube').value?'(Vídeo) e (GIFs) podem aparecer juntos.':'Associe um GIF a cada exercício, inclusive nos conjugados.';renderAmostrasEditor(document.getElementById('exerciseGifChoices'),text+vinculosTexto({gifs:exerciseEditGifs}),function(part,url){while(exerciseEditGifs.length<=part.part)exerciseEditGifs.push('');exerciseEditGifs[part.part]=url;atualizarGIFEditor();});}
-  var chooseEditVideo=document.createElement('button');chooseEditVideo.type='button';chooseEditVideo.id='exerciseEditChooseVideo';chooseEditVideo.textContent='Escolher outro vídeo';document.getElementById('exerciseEditYoutube').after(chooseEditVideo);
+  var chooseEditVideo=document.createElement('button');chooseEditVideo.type='button';chooseEditVideo.id='exerciseEditChooseVideo';chooseEditVideo.textContent='Escolher outro vídeo';var editVideoInput=document.getElementById('exerciseEditYoutube'),editVideoRow=document.createElement('div'),editVideoActions=document.createElement('div'),pasteEditVideo=document.createElement('button'),searchEditVideo=document.createElement('a');editVideoRow.className='pdf-video-url-row';editVideoActions.className='exercise-video-actions';pasteEditVideo.type='button';pasteEditVideo.textContent='Colar';pasteEditVideo.setAttribute('aria-label','Colar link');searchEditVideo.textContent='Buscar vídeo';searchEditVideo.target='_blank';searchEditVideo.rel='noopener';editVideoInput.replaceWith(editVideoRow);editVideoRow.append(editVideoInput,pasteEditVideo);editVideoRow.after(editVideoActions);editVideoActions.append(searchEditVideo,chooseEditVideo);function updateEditVideoSearch(){searchEditVideo.href='https://www.youtube.com/results?search_query='+encodeURIComponent(separarExercicio(document.getElementById('exerciseEditText').value).nome+' academia como fazer');}document.getElementById('exerciseEditText').addEventListener('input',updateEditVideoSearch);WorkoutVideoLinks.attach({input:editVideoInput,search:searchEditVideo,paste:pasteEditVideo,context:function(){return document.getElementById('exerciseEditText').value;},notify:function(text){document.getElementById('exerciseEditStatus').textContent=text;}});
   chooseEditVideo.onclick=function(){var name=separarExercicio(document.getElementById('exerciseEditText').value).nome;GymFasterWorkout.pick({name:name,video:document.getElementById('exerciseEditYoutube').value,persistChoice:false,onSelect:function(asset,partName){try{var url=WorkoutPDFReview.videoURL(asset.url),parts=WorkoutVideoMatch.parts(name),index=Math.max(0,parts.findIndex(function(part){return WorkoutVideoMatch.canonical(part)===WorkoutVideoMatch.canonical(partName);}));exerciseEditVideos[index]=url;if(index===0)document.getElementById('exerciseEditYoutube').value=url;document.getElementById('exerciseEditStatus').textContent='Vídeo escolhido: '+asset.name;}catch(error){document.getElementById('exerciseEditStatus').textContent='Escolha um vídeo com link público para este campo.';}}});};
-  document.getElementById('editExerciseBtn').onclick=function(){if(!menuContext?.row.isConnected)return;exerciseEditContext=menuContext;var holder=menuContext.config.main?menuContext.row:menuContext.row.querySelector('.exercise-text');exerciseEditGifs=gifsCadastrados(holder);exerciseEditVideos=videosDoExercicio(holder);document.getElementById('exerciseEditText').value=textoDoExercicio(holder,false);document.getElementById('exerciseEditYoutube').value=videoDoExercicio(holder);document.getElementById('exerciseEditStatus').textContent='';atualizarGIFEditor();exerciseMenu.close();exerciseEditor.showModal();};
+  document.getElementById('editExerciseBtn').onclick=function(){if(!menuContext?.row.isConnected)return;exerciseEditContext=menuContext;var holder=menuContext.config.main?menuContext.row:menuContext.row.querySelector('.exercise-text');exerciseEditGifs=gifsCadastrados(holder);exerciseEditVideos=videosDoExercicio(holder);document.getElementById('exerciseEditText').value=textoDoExercicio(holder,false);document.getElementById('exerciseEditYoutube').value=videoDoExercicio(holder);document.getElementById('exerciseEditStatus').textContent='';atualizarGIFEditor();updateEditVideoSearch();exerciseMenu.close();exerciseEditor.showModal();};
   document.getElementById('exerciseEditText').addEventListener('input',atualizarGIFEditor);document.getElementById('exerciseEditYoutube').addEventListener('input',atualizarGIFEditor);
   document.getElementById('exerciseEditSave').onclick=function(){var ctx=exerciseEditContext,text=document.getElementById('exerciseEditText').value.trim(),url='';if(!ctx?.row.isConnected)return;try{url=WorkoutPDFReview.videoURL(document.getElementById('exerciseEditYoutube').value);}catch(e){document.getElementById('exerciseEditStatus').textContent=e.message;return;}if(!text){document.getElementById('exerciseEditStatus').textContent='Preencha o nome do exercício.';return;}var holder=document.createElement('div');exerciseEditVideos[0]=url;holder.innerHTML=formatExerciseLine(text+vinculosTexto({url:url,videos:exerciseEditVideos,gifs:exerciseEditGifs}));if(ctx.config.main||zoomMode!=='paste')pushState();var target=ctx.config.main?ctx.row:ctx.row.querySelector('.exercise-text');target.innerHTML=holder.firstElementChild.innerHTML;ctx.config.commit([ctx.config.sec(ctx.row.parentElement)]);concluirAutoSave();exerciseEditor.close();};
   document.getElementById('exerciseEditDelete').onclick=function(){if(!exerciseEditContext?.row.isConnected)return;menuContext=exerciseEditContext;executarAcaoExercicio('delete');concluirAutoSave();exerciseEditor.close();};

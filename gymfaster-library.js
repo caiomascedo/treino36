@@ -15,7 +15,7 @@ window.GymFasterLibrary = (() => {
   }
   function create() {
     dialog = el('dialog', {id: 'gymfasterLibrary', 'aria-labelledby': 'gymfasterTitle'});
-    const heading = el('h3', {id: 'gymfasterTitle'}, 'Biblioteca de vídeos · Lyfta + GymFaster');
+    const heading = el('h3', {id: 'gymfasterTitle'}, 'Biblioteca de vídeos');
     const help = el('p', {class: 'gym-help'});
     const search = el('input', {type: 'search', placeholder: 'Buscar exercício ou equipamento', 'aria-label': 'Buscar na biblioteca de vídeos'});
     const searchRow=el('div',{class:'video-search-row'}),clearSearch=el('button',{type:'button',class:'video-search-clear','aria-label':'Limpar pesquisa',title:'Limpar pesquisa'},'×');searchRow.append(search,clearSearch);

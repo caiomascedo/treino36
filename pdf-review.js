@@ -68,7 +68,9 @@ window.WorkoutPDFReview=(()=>{
         try{const names=compoundNames(entry),part=index===null?Math.max(0,names.findIndex(name=>WorkoutVideoMatch.canonical(name)===WorkoutVideoMatch.canonical(partName))):index;assign(asset.url,part);message.textContent='Vídeo escolhido: '+asset.name;}catch(error){message.textContent='Este arquivo é pessoal deste aparelho. Para o PDF, escolha um vídeo com link público.';}
       }});
       view.onclick=()=>{if(!input.value){message.textContent='Toque em Automático ou escolha um vídeo primeiro.';return;}try{const url=directVideoURL(input.value);if(!WorkoutVideoMatch.driveID(url)){window.open(url,'_blank','noopener');return;}GymFasterWorkout.pick({name:nameFor(),video:url,previewOnly:true});}catch(error){message.textContent=error.message;}};
-      input.after(message);reset.after(change,view);
+      const urlRow=input.closest('.pdf-video-url-row')||input;urlRow.after(message);reset.after(change,view);
+      let paste=input.closest('label').querySelector('.pdf-paste-video');if(!paste){paste=node('button',{type:'button',class:'pdf-paste-video','aria-label':'Colar link'},'Colar');const row=node('div',{class:'pdf-video-url-row'});input.replaceWith(row);row.append(input,paste);}
+      const search=reset.parentElement.querySelector('a');WorkoutVideoLinks.attach({input,search,paste,context:nameFor,notify:text=>{message.textContent=text;}});
     }
     function setupCompound(entry,number,item){
       entry.number=number;entry.urls=[];try{entry.urls=JSON.parse(entry.row.dataset.videoUrls||'[]');}catch(error){}if(!entry.urls.length&&entry.input.value)entry.urls=[entry.input.value];
@@ -94,18 +96,18 @@ window.WorkoutPDFReview=(()=>{
     for(const field of fields)field.addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,event.clipboardData.getData('text/plain'));});
     for(const row of body.querySelectorAll('.pdf-ex-row')){
       const section=row.closest('.pdf-sec'),heading=section.querySelector('.pdf-sec-title');let group=groups.get(section);if(!group){const panel=node('details',{class:'pdf-video-section'}),title=node('summary',{},heading.textContent),list=node('div');panel.append(title,list);rows.append(panel);group={panel,list,count:0};groups.set(section,group);heading.addEventListener('input',()=>{title.textContent=heading.textContent;});}const number=++group.count;
-      const title=row.querySelector('.pdf-ex-title'),link=row.querySelector('.yt-link'),original=title.textContent,label=node('label'),name=node('span',{},original),input=node('input',{type:'url',placeholder:'Automático · cole um link para trocar','aria-label':'Vídeo de '+original}),search=node('a',{target:'_blank',rel:'noopener'},'Buscar vídeo'),reset=node('button',{type:'button'},'Automático'),paste=node('button',{type:'button'},'Colar link'),item=node('div',{class:'pdf-video-choice'});label.append(name,input);item.append(label,paste,search,reset);group.list.append(item);
+      const title=row.querySelector('.pdf-ex-title'),link=row.querySelector('.yt-link'),original=title.textContent,label=node('label'),name=node('span',{},original),input=node('input',{type:'url',placeholder:'Automático · cole um link para trocar','aria-label':'Vídeo de '+original}),search=node('a',{target:'_blank',rel:'noopener'},'Buscar vídeo'),reset=node('button',{type:'button'},'Automático'),paste=node('button',{type:'button'},'Colar'),item=node('div',{class:'pdf-video-choice'});paste.className='pdf-paste-video';paste.setAttribute('aria-label','Colar link');const urlRow=node('div',{class:'pdf-video-url-row'}),actions=node('div',{class:'pdf-video-actions'});urlRow.append(input,paste);actions.append(search,reset);label.append(name,urlRow,actions);item.append(label);group.list.append(item);
       input.value=row.dataset.videoUrl||'';
       const entry={input,link,title,row,gifLinks:[...row.querySelectorAll('.pdf-gif-link')],custom:'',valid:true};entries.push(entry);
       function update(){const exercise=title.textContent.trim()||original;name.textContent=number+'. '+exercise;search.href='https://www.youtube.com/results?search_query='+encodeURIComponent(exercise+' academia como fazer');try{entry.custom=videoURL(input.value);entry.valid=true;input.setCustomValidity('');const tracked=makeURL(exercise,entry.custom,row.dataset.sectionTitle);link.href=tracking.value==='direct'?directVideoURL(tracked):tracked;status.textContent='';}catch(error){entry.valid=false;input.setCustomValidity(error.message);status.textContent=error.message+' Corrija o campo ou toque em Automático.';}}
       function remember(){update();if(!entry.valid)return;if(entry.urls){entry.urls[0]=entry.custom;row.dataset.videoUrls=JSON.stringify(entry.urls);if(entry.parts[0])entry.parts[0].input.value=entry.custom;}if(onVideoChange)onVideoChange(row,entry.custom,0);}
-      paste.onclick=async()=>{try{input.value=await navigator.clipboard.readText();input.dispatchEvent(new Event('input',{bubbles:true}));}catch(error){videos.open=true;group.panel.open=true;input.focus();status.textContent='Toque e segure no campo para colar o link; o navegador não liberou a colagem rápida.';}};
+
       entry.update=update;input.oninput=remember;videoControls(entry,input,reset,()=>title.textContent.trim()||original);title.addEventListener('input',update);update();setupCompound(entry,number,item);
     }
     if(window.GymFasterLibrary){
       for(const entry of entries){
         if(!samples){GymFasterLibrary.addChoice({item:entry.input.closest('.pdf-video-choice'),input:entry.input,title:entry.title});continue;}
-        const area=node('div',{class:'pdf-gif-controls'}),choose=node('button',{type:'button',class:'pdf-gif-choice'},'GIFs'),count=node('small',{class:'pdf-gif-count'}),previews=node('div',{class:'pdf-gif-previews'});area.append(choose,count,previews);entry.gifArea=area;entry.input.after(area);
+        const area=node('div',{class:'pdf-gif-controls'}),choose=node('button',{type:'button',class:'pdf-gif-choice'},'GIFs'),count=node('small',{class:'pdf-gif-count'}),previews=node('div',{class:'pdf-gif-previews'});area.append(choose,count,previews);entry.gifArea=area;(entry.input.closest('label').querySelector('.pdf-video-actions')||entry.input).after(area);
         function eyeButton(name,url){const button=node('button',{type:'button',class:'pdf-gif-eye','aria-label':'Ver GIF de '+name,title:'Ver GIF de '+name});button.innerHTML=WorkoutVideoPreview.eye;button.onclick=()=>GymFasterWorkout.pick({name,video:url,previewOnly:true});return button;}
         function refresh(){
           const urls=samples.read(entry.row),names=WorkoutVideoMatch.parts(entry.title.textContent),compound=names.length>1,extra=urls.slice(names.length).filter(Boolean).length;
@@ -115,7 +117,7 @@ window.WorkoutPDFReview=(()=>{
         }
         entry.refreshGifs=refresh;choose.onclick=()=>samples.choose(entry.row,entry.title.textContent,refresh);entry.title.addEventListener('input',refresh);refresh();
       }
-      const prepare=node("button",{type:"button",class:"gym-prepare-a"},"Preparar treino A · GymFaster");prepare.onclick=()=>GymFasterLibrary.prepareA();tools.prepend(prepare);
+      const prepare=node("button",{type:"button",class:"gym-prepare-a"},"Preparar treino A");prepare.onclick=()=>GymFasterLibrary.prepareA();tools.prepend(prepare);
     }
     applyModel();applyLinkOptions();
     current={finish,refreshMedia(){for(const entry of entries){const found=[...entry.row.querySelectorAll('.pdf-gif-link')],byPart=new Map();for(const a of found){const key=a.dataset.gifPart||'0';if(byPart.has(key))byPart.get(key).remove();byPart.set(key,a);}if(found.length)entry.gifLinks=[...byPart.values()];}applyModel();},validate(){if(!sectionInputs.some(input=>input.checked)){status.textContent='Selecione pelo menos uma seção para gerar o PDF.';sectionBox.scrollIntoView({block:'nearest'});return false;}const invalid=includeVideos.checked&&entries.find(entry=>(separate.checked&&compoundNames(entry).length>1?!entry.partValid:!entry.valid)&&!entry.row.closest('.pdf-sec').hidden);if(invalid){videos.open=true;invalid.input.closest('.pdf-video-section').open=true;const field=separate.checked?invalid.parts.find(p=>!p.input.validity.valid)?.input||invalid.input:invalid.input;field.reportValidity();field.focus();return false;}finish();return true;}};

@@ -67,7 +67,7 @@ with sync_playwright() as p:
     main.get_by_role('button',name='Escolher outro vídeo',exact=True).click();picker=page.locator('.gif-video-picker')
     picker.get_by_role('combobox',name='Biblioteca da demonstração').select_option('both')
     picker.get_by_role('button',name='Ver todos os vídeos',exact=True).click()
-    expect(picker.locator('button[data-video-id]')).to_have_count(844)
+    expect(picker.locator('button[data-video-id]')).to_have_count(page.evaluate('WorkoutVideoLibrary.apply(WorkoutCatalog.current()).length'))
     assert picker.evaluate('e=>e.scrollWidth<=e.clientWidth')
     picker.get_by_role('button',name='Fechar',exact=True).click()
     main.locator('.gif-primary').click()
