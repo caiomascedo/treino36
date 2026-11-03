@@ -18,6 +18,7 @@ window.GymFasterLibrary = (() => {
     const heading = el('h3', {id: 'gymfasterTitle'}, 'Biblioteca de vídeos · Lyfta + GymFaster');
     const help = el('p', {class: 'gym-help'});
     const search = el('input', {type: 'search', placeholder: 'Buscar exercício ou equipamento', 'aria-label': 'Buscar na biblioteca de vídeos'});
+    const searchRow=el('div',{class:'video-search-row'}),clearSearch=el('button',{type:'button',class:'video-search-clear','aria-label':'Limpar pesquisa',title:'Limpar pesquisa'},'×');searchRow.append(search,clearSearch);
     const filters = el('div', {class: 'gym-filters'});
     const group = el('select', {'aria-label': 'Categoria dos vídeos'});
     const gender = el('select', {'aria-label': 'Versão dos vídeos'});
@@ -32,10 +33,12 @@ window.GymFasterLibrary = (() => {
     const close = el('button', {type: 'button', class: 'gym-close'}, 'Fechar');
     function clearPreview() { preview.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('src'); video.load(); }); preview.replaceChildren(); preview.hidden = true; }
     close.onclick = () => dialog.close();
-    const browser=el('div',{class:'video-browser-scroll'});browser.append(heading,help,drive,search,filters,status,addVideo,libraryTools,preview,list);dialog.append(browser,close);
+    const browser=el('div',{class:'video-browser-scroll'});browser.append(heading,help,drive,searchRow,filters,status,addVideo,libraryTools,preview,list);dialog.append(browser,close);
     document.body.append(dialog);
     document.addEventListener('click', event => { if (dialog.open && !preview.hidden && !preview.contains(event.target)) clearPreview(); }, true);
-    dialog.addEventListener('close', () => { clearPreview(); selection = null; if (previousFocus?.isConnected) previousFocus.focus(); });
+    dialog.addEventListener('close', () => { clearTimeout(searchTimer);rememberSearch(true);clearPreview(); selection = null; if (previousFocus?.isConnected) previousFocus.focus(); });
+    function rememberSearch(force=false){if(selection||(!dialog.open&&!force))return;try{localStorage.setItem('treinoGeneralVideoSearchV1',JSON.stringify({query:search.value,group:group.value,gender:gender.value,scroll:browser.scrollTop}));}catch(e){}}
+    let searchTimer;browser.addEventListener('scroll',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(rememberSearch,120);},{passive:true});
     function render() {
       const scroll=browser.scrollTop;list.replaceChildren(); clearPreview();
       if (!catalog) return;
@@ -70,18 +73,20 @@ window.GymFasterLibrary = (() => {
           actions.append(use);
         }
         row.append(title, meta, actions); list.append(row);
-      });browser.scrollTop=scroll;
+      });browser.scrollTop=scroll;rememberSearch();
     }
-    removed.onclick=()=>{showDeleted=!showDeleted;search.value='';group.value='';gender.value='';notice='';render();};undo.onclick=()=>{if(!lastRemoved)return;const id=lastRemoved;lastRemoved=null;notice='Exclusão desfeita.';try{WorkoutVideoLibrary.restore(id);}catch(error){lastRemoved=id;notice=error.message;render();}};
+    removed.onclick=()=>{showDeleted=!showDeleted;notice='';browser.scrollTop=0;render();};undo.onclick=()=>{if(!lastRemoved)return;const id=lastRemoved;lastRemoved=null;notice='Exclusão desfeita.';try{WorkoutVideoLibrary.restore(id);}catch(error){lastRemoved=id;notice=error.message;render();}};
+    clearSearch.onclick=()=>{search.value='';filter();search.focus();};
     function filter(){notice='';browser.scrollTop=0;render();}search.oninput = filter; group.onchange = filter; gender.onchange = filter;
-    return {help, search, group, gender, status, render};
+    return {help, search, group, gender, status, browser, render};
   }
   let controls;
   async function open(options) {
     if (!controls) controls = create();
     previousFocus = document.activeElement; selection = options || null;showDeleted=false;notice='';
     controls.help.textContent = options ? 'Escolha o vídeo de “' + options.name + '”. A escolha fica salva neste exercício. ' + (options.context === 'gif' ? 'O movimento aparecerá na ficha em GIF.' : 'O PDF abre o vídeo por link.') : 'Vídeos organizados por categoria, com uma demonstração por exercício e variação. Use Adicionar vídeo para incluir um arquivo deste aparelho.';
-    controls.search.value = options ? options.name : ''; controls.group.value = ''; controls.gender.value = '';
+    let saved={};if(!options)try{saved=JSON.parse(localStorage.getItem('treinoGeneralVideoSearchV1')||'{}')||{};}catch(e){}
+    controls.search.value=options?options.name:typeof saved.query==='string'?saved.query:'';controls.group.value='';controls.gender.value='';
     controls.status.textContent = 'Carregando catálogo…';
     dialog.querySelector('.gym-results').replaceChildren();
     if (!dialog.open) dialog.showModal();
@@ -92,7 +97,7 @@ window.GymFasterLibrary = (() => {
         [...new Set(data.videos.map(video => video.group))].sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(value => controls.group.append(el('option', {value}, value)));
         [...new Set(data.videos.map(video => video.gender))].sort().forEach(value => controls.gender.append(el('option', {value}, value)));
       }
-      if (dialog.open) controls.render();
+      if(dialog.open){controls.group.value=saved.group||'';controls.gender.value=saved.gender||'';controls.render();controls.browser.scrollTop=Math.max(0,Number(saved.scroll)||0);}
     } catch (error) {
       controls.status.textContent = 'Não foi possível carregar a biblioteca. Feche e tente novamente; seus vídeos atuais foram mantidos.';
     }
