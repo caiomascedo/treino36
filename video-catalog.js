@@ -89,5 +89,6 @@ window.WorkoutCatalog = (() => {
     form.onsubmit=async event=>{event.preventDefault();save.disabled=true;close.disabled=true;status.textContent='Verificando vídeo e repetições…';try{const asset=await add(file.files[0],name.value,category.value);onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;}finally{save.disabled=false;close.disabled=false;}};
     dialog.showModal();name.focus();return dialog;
   }
-  return {load,current,add,openAdd,deleteLocal,key,get folderURL(){return folderURL;}};
+  function lookup(id){return [...base,...custom].find(video=>video.id===id||(video.sourceIds||[]).includes(id));}
+  return {load,current,add,openAdd,deleteLocal,lookup,key,get folderURL(){return folderURL;}};
 })();

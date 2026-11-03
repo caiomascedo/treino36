@@ -27,7 +27,7 @@ window.GymFasterLibrary = (() => {
     const status = el('p', {role: 'status'}), list = el('div', {class: 'gym-results'});
     const preview = el('div', {class: 'gym-preview', hidden: ''});
     const addVideo=el('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await load();controls.search.value=asset.name;controls.group.value='';controls.gender.value='';controls.render();},{name:selection?.name||search.value,group:group.value});
-    const libraryTools=el('div',{class:'gym-library-tools'}),removed=el('button',{type:'button'},'Ver apagados'),undo=el('button',{type:'button',hidden:''},'Desfazer exclusão'),libraryHint=el('small',{},'Em Ver apagados, restaure ou apague definitivamente desta biblioteca neste navegador.');libraryTools.append(removed,undo,libraryHint);
+    const libraryTools=el('div',{class:'gym-library-tools'}),removed=el('button',{type:'button'},'Ver apagados'),undo=el('button',{type:'button',hidden:''},'Desfazer exclusão'),libraryHint=el('small',{},'Em Ver apagados, restaure ou apague definitivamente desta biblioteca neste navegador.');libraryTools.append(removed,undo,WorkoutVideoLibrary.reviewButton(),libraryHint);
     const drive = el('a', {target:'_blank',rel:'noopener noreferrer'}, 'Abrir coleção unificada no Drive');
     const close = el('button', {type: 'button', class: 'gym-close'}, 'Fechar');
     function clearPreview() { preview.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('src'); video.load(); }); preview.replaceChildren(); preview.hidden = true; }

@@ -2,13 +2,14 @@
    equipment and movement variants remain explicit choices. */
 window.WorkoutVideoMatch = (() => {
   const stop = new Set('de do da dos das no na nos nas com para ao a o em e'.split(' '));
-  const words = {ag:'agachamento',agach:'agachamento',sup:'supino',elev:'elevacao',elevancao:'elevacao',desenv:'desenvolvimento',rem:'remada',unil:'unilateral',uni:'unilateral',alt:'alternado',alternada:'alternado',alternadas:'alternado',halteres:'halter',pes:'pe',bracos:'braco',joelhos:'joelho',inclinada:'inclinado',sentada:'sentado',deitada:'deitado',cad:'cadeira',maquinas:'maquina',polias:'polia',steps:'step',adutor:'adutora',abdutor:'abdutora'};
+  const words = {ag:'agachamento',agach:'agachamento',sup:'supino',elev:'elevacao',elevancao:'elevacao',desenv:'desenvolvimento',rem:'remada',unil:'unilateral',uni:'unilateral',alt:'alternado',alternada:'alternado',alternadas:'alternado',halteres:'halter',pes:'pe',bracos:'braco',joelhos:'joelho',inclinada:'inclinado',sentada:'sentado',deitada:'deitado',cad:'cadeira',maquinas:'maquina',polias:'polia',steps:'step',adutor:'adutora',abdutor:'abdutora',puxador:'puxada'};
   function clean(text) {
     return String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(\d+)\s*(graus?|°)/g,'$1').replace(/[^a-z0-9]+/g,' ').trim();
   }
   function canonical(text) {
     let value = clean(text).split(' ').filter(Boolean).map(w=>Object.prototype.hasOwnProperty.call(words,w)?words[w]:w).filter(w=>!stop.has(w)).join(' ');
     const aliases = {
+      'puxada frente barra pegada aberta':'puxada frontal pegada aberta polia','puxada alta pegada aberta':'puxada frontal pegada aberta polia',
       'extensora':'cadeira extensora','adutora':'cadeira adutora','abdutora':'cadeira abdutora',
       'cadeira extensora maquina':'cadeira extensora','cadeira adutora maquina':'cadeira adutora','cadeira abdutora maquina':'cadeira abdutora',
       'stepup':'subida step','step up':'subida step','subida step':'subida step',
