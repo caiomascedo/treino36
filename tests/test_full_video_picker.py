@@ -28,7 +28,7 @@ with sync_playwright() as p:
  picker.get_by_role('combobox',name='Grupo muscular da demonstração').select_option('Glúteos e Quadril');assert picker.locator('.gif-picker-results button[data-video-id]').count()==sum(v['gender']=='Masculino' and v['group']=='Glúteos e Quadril' for v in videos)
  picker.get_by_role('searchbox',name='Buscar demonstração').fill('extensora');expect(picker.locator('.gif-picker-results button[data-video-id]')).to_have_count(1)
  picker.locator('[data-video-id="'+male['id']+'"]').click();expect(picker).not_to_be_visible();expect(main.locator('.gif-card small').last).to_contain_text('Masculino')
- main.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();page.wait_for_function("/GIF pronto|Não foi possível|não pôde|demorou demais/.test(document.querySelector('#workoutGifDialog [role=status]').textContent)",timeout=120000);expect(main.locator('[role=status]')).to_contain_text('GIF pronto')
+ main.locator('.gif-primary').click();page.wait_for_function("/GIF pronto|Não foi possível|não pôde|demorou demais/.test(document.querySelector('#workoutGifDialog [role=status]').textContent)",timeout=120000);expect(main.locator('[role=status]')).to_contain_text('GIF pronto')
  with page.expect_download() as download:main.get_by_role('button',name='Baixar GIF',exact=True).click()
  out=Path('/tmp/new-male-library-'+ENGINE+'.gif');download.value.save_as(str(out));im=Image.open(out);assert im.n_frames==100;duration=0;frames=[]
  for n in range(im.n_frames):

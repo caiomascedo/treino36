@@ -70,7 +70,7 @@ with sync_playwright() as p:
     expect(picker.locator('button[data-video-id]')).to_have_count(844)
     assert picker.evaluate('e=>e.scrollWidth<=e.clientWidth')
     picker.get_by_role('button',name='Fechar',exact=True).click()
-    main.get_by_role('button',name='Gerar GIF Lyfta + GymFaster',exact=True).click()
+    main.locator('.gif-primary').click()
     expect(main.locator('[role=status]')).to_contain_text('GIF pronto',timeout=180000)
     page.screenshot(path=str(Path(fixture_dir.name)/'library-tested.png'))
     assert not errors,errors

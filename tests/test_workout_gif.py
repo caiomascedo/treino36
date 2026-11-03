@@ -71,7 +71,7 @@ with sync_playwright() as p:
   texts=pair.locator('.gif-card-text').evaluate_all('items=>items.map(i=>i.getBoundingClientRect().y)')
   assert texts[0]<texts[1],texts
  page.screenshot(path='/tmp/two-gif-'+ENGINE+'-preview.png')
- dialog.get_by_role('button',name='Gerar GIF CM',exact=True).click();expect(dialog.get_by_role('button',name='Cancelar geração',exact=True)).to_be_visible()
+ dialog.locator('.gif-primary').click();expect(dialog.get_by_role('button',name='Cancelar geração',exact=True)).to_be_visible()
  page.wait_for_function("/GIF pronto|Não foi possível|não pôde|demorou demais|não foi reconhecida/.test(document.querySelector('#workoutGifDialog [role=status]').textContent)",timeout=240000)
  expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=1000)
  with page.expect_download() as download:dialog.get_by_role('button',name='Baixar GIF',exact=True).click()
@@ -103,7 +103,7 @@ with sync_playwright() as p:
  page.evaluate('(people)=>localStorage.setItem("treinoAlunos",JSON.stringify(people))',data);page.reload();page.locator('#workoutGifsBtn').click();page.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('gymfaster')
  expect(dialog).to_have_attribute('data-library','gymfaster');expect(dialog.locator('.gif-card video.cm-ink-on-white')).to_have_count(0);expect(dialog.locator('[role=status]')).to_contain_text(str(len(ids))+'/'+str(len(ids)))
  before=page.evaluate('localStorage.getItem("treinoAlunos")')
- dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=240000)
+ dialog.locator('.gif-primary').click();expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=240000)
  with page.expect_download() as dl:dialog.get_by_role('button',name='Baixar GIF',exact=True).click()
  path=Path('/tmp/treino-a-gym-'+ENGINE+'.gif');dl.value.save_as(str(path));gym_bytes=inspect(path,len(ids));assert '_gymfaster_' in dl.value.suggested_filename
  assert page.evaluate('localStorage.getItem("treinoAlunos")')==before
@@ -111,16 +111,16 @@ with sync_playwright() as p:
  with page.expect_download() as fallback:dialog.get_by_role('button',name='Compartilhar GIF').click()
  assert fallback.value.suggested_filename==dl.value.suggested_filename
  # Cancellation must release the decoder and allow another generation.
- dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();dialog.get_by_role('button',name='Cancelar geração',exact=True).click();expect(dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True)).to_be_enabled(timeout=10000)
+ dialog.locator('.gif-primary').click();dialog.get_by_role('button',name='Cancelar geração',exact=True).click();expect(dialog.locator('.gif-primary')).to_be_enabled(timeout=10000)
  fail_media=True
- dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('Não foi possível carregar',timeout=20000);expect(dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True)).to_be_enabled()
+ dialog.locator('.gif-primary').click();expect(dialog.locator('[role=status]')).to_contain_text('Não foi possível carregar',timeout=20000);expect(dialog.locator('.gif-primary')).to_be_enabled()
  expect(dialog.get_by_role('button',name='Baixar GIF',exact=True)).not_to_be_visible()
  fail_media=False
  dialog.get_by_role('combobox',name='Treino para o GIF').select_option('B');expect(dialog.get_by_role('button',name='Revisar 1 exercício',exact=True)).to_be_visible()
  # A file supplied by the user allows an exercise outside both libraries without changing saved links.
  local=next(v for v in cm if v['name']=='Cadeira extensora');dialog.locator('input[type=file]').set_input_files(str(ROOT/'cmfit-media'/(local['id']+'.mp4')))
  expect(dialog.locator('.gif-card small').last).to_contain_text('Arquivo local')
- before=page.evaluate('localStorage.getItem("treinoAlunos")');dialog.get_by_role('button',name='Gerar GIF GymFaster',exact=True).click();expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=120000);assert page.evaluate('localStorage.getItem("treinoAlunos")')==before
+ before=page.evaluate('localStorage.getItem("treinoAlunos")');dialog.locator('.gif-primary').click();expect(dialog.locator('[role=status]')).to_contain_text('GIF pronto',timeout=120000);assert page.evaluate('localStorage.getItem("treinoAlunos")')==before
  dialog.get_by_role('button',name='Fechar',exact=True).click()
  assert not errors,errors
  browser.close();print('PASS',ENGINE,': both independent libraries, smart default A and bi-sets, real 100-frame 5-second moving CM/Gym GIFs, sharing/download, cancellation, local video, no Range support, original workout preserved; bytes',cm_bytes,gym_bytes)

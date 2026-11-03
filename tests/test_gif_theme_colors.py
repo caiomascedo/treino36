@@ -23,7 +23,7 @@ with sync_playwright() as p:
   d.locator('.gif-card').nth(index).get_by_role('button',name='Escolher outro vídeo',exact=True).click();picker=page.locator('.gif-video-picker');picker.get_by_role('combobox',name='Biblioteca da demonstração').select_option(source);picker.locator('[data-video-id="'+id+'"]').click()
  choose(1,'gymfaster',gym['id']);expect(d.locator('video.gym-ink-on-black')).to_have_count(1);expect(d.locator('video.cm-ink-on-white')).to_have_count(0)
  assert d.locator('video.gym-ink-on-black').evaluate("v=>getComputedStyle(v).filter.includes('invert(1)')")
- d.get_by_role('button',name='Gerar GIF CM',exact=True).click();expect(d.locator('[role=status]')).to_contain_text('GIF pronto',timeout=180000)
+ d.locator('.gif-primary').click();expect(d.locator('[role=status]')).to_contain_text('GIF pronto',timeout=180000)
  with page.expect_download() as dl:d.get_by_role('button',name='Baixar GIF',exact=True).click()
  out=Path('/tmp/mixed-dark-'+ENGINE+'.gif');dl.value.save_as(str(out));im=Image.open(out);assert im.n_frames==100
  slots=d.locator('.gif-card').evaluate_all('items=>items.map(i=>JSON.parse(i.dataset.gifSlot))')
