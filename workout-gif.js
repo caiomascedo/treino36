@@ -144,12 +144,21 @@ window.GymFasterWorkout = (() => {
     const filters=node('div',{class:'gif-picker-filters'}),status=node('p',{class:'gif-picker-count',role:'status'}),all=node('button',{type:'button'},'Ver todos os vídeos'),list=node('div',{class:'gif-picker-results'}),close=node('button',{type:'button'},'Fechar');
     const addVideo=node('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await loadCatalogs();source.value='both';search.value=asset.name;refreshFilters();});
     const manage=node('button',{type:'button','aria-pressed':'false'},'Editar biblioteca'),tools=node('div',{class:'gif-library-tools',hidden:''}),help=node('small',{},'As alterações ficam salvas neste navegador. Apagar remove o vídeo da sua lista, com opção de restaurar.'),removed=node('button',{type:'button'},'Ver apagados'),undo=node('button',{type:'button',hidden:''},'Desfazer exclusão');
-    let editing=false,showRemoved=false,lastRemoved=null,notice='';
-    source.append(node('option',{value:'both'},'Catálogo unificado'),node('option',{value:'gymfaster'},'Lyfta + GymFaster'),node('option',{value:'cm'},'CM'));source.value=initialSource;search.value=card.row.nome;
+    const initialName=card.row.nome;let editing=false,showRemoved=false,lastRemoved=null,notice='',browseAll=false;
+    source.append(node('option',{value:'both'},'Catálogo unificado'),node('option',{value:'gymfaster'},'Lyfta + GymFaster'),node('option',{value:'cm'},'CM'));source.value=card.asset?.collection||initialSource;search.value=card.row.nome;
     function refreshFilters(){
       const pool=videos.filter(v=>source.value==='both'?v.collection!=='cm':v.collection===source.value);group.replaceChildren(node('option',{value:''},'Todos os grupos'));gender.replaceChildren(node('option',{value:''},'Todas as versões'));
       [...new Set(pool.map(v=>v.group))].sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(value=>group.append(node('option',{value},value)));
       [...new Set(pool.map(v=>v.gender))].sort().forEach(value=>gender.append(node('option',{value},value)));gender.hidden=source.value==='cm';showRemoved=false;update();
+    }
+    function related(name,pool){
+      let ranked=match().rank(name,pool,source.value);const terms=match().canonical(name).split(' ').filter(Boolean),minimum=terms[0]==='cadeira'?2:1;
+      while(!ranked.length&&terms.length>minimum){terms.pop();ranked=match().rank(terms.join(' '),pool,source.value);}
+      return ranked.map(item=>item.video);
+    }
+    function previous(pool){
+      const prefs=preferences(),key=match().canonical(card.row.nome),id=(card.row.nome===initialName?(card.asset?.id||match().driveID(card.row.gifURL)||match().driveID(card.row.video)):null)||prefs[source.value+':'+key]||prefs['gymfaster:'+key]||prefs['cm:'+key];
+      return pool.find(asset=>asset.id===id||(asset.sourceIds||[]).includes(id));
     }
     function act(action){try{action();}catch(error){notice=error.message;}update();}
     function renameForm(row,asset){
@@ -163,14 +172,14 @@ window.GymFasterWorkout = (() => {
       const scroll=list.scrollTop;list.replaceChildren();
       const raw=videos.filter(v=>source.value==='both'?v.collection!=='cm':v.collection===source.value),decorated=library().apply(raw,true),deleted=decorated.filter(v=>v.removed).length,available=decorated.length-deleted;
       const pool=decorated.filter(v=>v.removed===showRemoved&&(!group.value||v.group===group.value)&&(!gender.value||v.gender===gender.value));
-      const query=search.value.trim(),ranked=query?match().rank(query,pool,source.value).map(r=>r.video):pool;
+      const query=search.value.trim(),context=browseAll||query===card.row.nome,chosen=context&&!showRemoved?previous(pool):null,ranked=query?related(query,pool):browseAll?[...related(card.row.nome,pool),...pool]:pool;
       const tokens=match().canonical(query).split(' ').filter(Boolean),remaining=query?pool.filter(v=>tokens.every(word=>match().canonical([v.name,...v.aliases].join(' ')).includes(word))):[];
-      const seen=new Set(),found=[...ranked,...remaining].filter(v=>{const identity=source.value==='both'?(v.exerciseKey||WorkoutCatalog.key(v.name)):v.id;if(seen.has(identity))return false;seen.add(identity);return true;});
+      const seen=new Set(),found=[...(chosen?[chosen]:[]),...ranked,...remaining].filter(v=>{const identity=source.value==='both'?(v.exerciseKey||WorkoutCatalog.key(v.name)):v.id;if(seen.has(identity))return false;seen.add(identity);return true;});
       status.textContent=(notice?notice+' ':'')+found.length+(showRemoved?' apagados encontrados':' resultados')+' · '+available+' disponíveis de '+raw.length+' vídeos';notice='';
       removed.textContent=showRemoved?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showRemoved;undo.hidden=!lastRemoved;
       if(!found.length)list.append(node('p',{},showRemoved?'Nenhum vídeo apagado nesta biblioteca.':'Tente menos palavras, outro grupo ou Ver todos os vídeos.'));
       found.forEach(asset=>{
-        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+themes[asset.collection].name+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:''));choose.disabled=asset.removed;choose.onclick=()=>{if(onSelect)onSelect(asset,card.row.nome);else selectAsset(card,asset);picker.close();};const eye=node('button',{type:'button',class:'gif-preview-eye','aria-label':'Ver movimento: '+asset.name+' · '+themes[asset.collection].name+(asset.gender?' · '+asset.gender:''),title:'Ver movimento antes de escolher'},'◉');if(previewIcon)eye.innerHTML=WorkoutVideoPreview.eye;else eye.textContent='(GIFs)';eye.onclick=()=>WorkoutVideoPreview.open(asset);row.append(choose,eye);
+        const row=node('article',{class:'gif-library-row'}),choose=node('button',{type:'button','data-video-id':asset.id},asset.name+' · '+themes[asset.collection].name+(asset.gender&&asset.gender!=='CM'?' · '+asset.gender:''));choose.disabled=asset.removed;choose.onclick=()=>{if(onSelect)onSelect(asset,card.row.nome);else selectAsset(card,asset);picker.close();};const eye=node('button',{type:'button',class:'gif-preview-eye','aria-label':'Ver movimento: '+asset.name+' · '+themes[asset.collection].name+(asset.gender?' · '+asset.gender:''),title:'Ver movimento antes de escolher'},'◉');if(previewIcon)eye.innerHTML=WorkoutVideoPreview.eye;else eye.textContent='(GIFs)';eye.onclick=()=>WorkoutVideoPreview.open(asset);row.append(choose,eye);if(chosen?.id===asset.id)row.append(node('small',{class:'gif-previous-choice'},'Sua escolha atual'));
         if(asset.name!==asset.originalName)row.append(node('small',{},'Nome original: '+asset.originalName));
         const actions=node('div',{class:'gif-library-row-tools'});actions.hidden=!editing;
         if(asset.removed){const restore=node('button',{type:'button'},'Restaurar');restore.onclick=()=>act(()=>{library().restore(asset.id);notice='Vídeo restaurado.';});actions.append(restore);}
@@ -184,7 +193,7 @@ window.GymFasterWorkout = (() => {
     manage.onclick=()=>{editing=!editing;tools.hidden=!editing;manage.textContent=editing?'Concluir edição':'Editar biblioteca';manage.setAttribute('aria-pressed',String(editing));if(!editing)showRemoved=false;update();};
     removed.onclick=()=>{showRemoved=!showRemoved;search.value='';group.value='';gender.value='';update();};
     undo.onclick=()=>act(()=>{if(lastRemoved){library().restore(lastRemoved);lastRemoved=null;notice='Exclusão desfeita.';}});
-    all.onclick=()=>{showRemoved=false;search.value='';group.value='';gender.value='';update();};search.oninput=update;source.onchange=refreshFilters;group.onchange=update;gender.onchange=update;close.onclick=()=>picker.close();
+    all.onclick=()=>{showRemoved=false;browseAll=true;search.value='';group.value='';gender.value='';list.scrollTop=0;update();};search.oninput=()=>{browseAll=false;list.scrollTop=0;update();};source.onchange=refreshFilters;group.onchange=update;gender.onchange=update;close.onclick=()=>picker.close();
     tools.append(help,removed,undo);filters.append(group,gender);top.append(title,addVideo,manage);picker.append(top,search,source,filters,status,all,tools,list,close);document.body.append(picker);picker.onclose=()=>{picker.remove();refreshLibraryState();};refreshFilters();picker.showModal();return picker;
   }
 
@@ -327,7 +336,7 @@ window.GymFasterWorkout = (() => {
       await loadCatalogs();
       const text=String(options.name||''),linked=match().driveID(options.video||text.match(/\[v[ií]deo:\s*([^\]]+)\]/i)?.[1]||''),saved=videos.find(v=>(v.id===linked||(v.sourceIds||[]).includes(linked)));
       if(options.previewOnly&&saved){WorkoutVideoPreview.open(library().decorate(saved));return;}
-      const parts=text.split(/\r?\n/).flatMap(line=>match().parts(line.replace(/\[v[ií]deo:[^\]]+\]/gi,'').split(/\s+[—–]\s+|\s+\d+\s*[x×]\s*\d/i)[0].trim())).filter(Boolean),card={row:{nome:parts[0]||''}};
+      const parts=text.split(/\r?\n/).flatMap(line=>match().parts(line.replace(/\[v[ií]deo:[^\]]+\]/gi,'').split(/\s+[—–]\s+|\s+\d+\s*[x×]\s*\d/i)[0].trim())).filter(Boolean),card={row:{nome:parts[0]||'',video:options.video||''},asset:saved?library().decorate(saved):null};
       const picker=openPicker(card,(asset,name)=>{if(options.persistChoice!==false){try{const prefs=preferences();prefs[asset.collection+':'+match().canonical(name)]=asset.id;localStorage.setItem(prefKey,JSON.stringify(prefs));}catch(error){}}options.onSelect?.(asset,name);WorkoutVideoPreview.open(asset,button);},'both',!!options.previewIcon);
       if(parts.length>1){const group=node('div',{class:'gif-picker-parts','aria-label':'Exercícios do conjugado'});parts.forEach(name=>{const b=node('button',{type:'button'},name);b.onclick=()=>{card.row.nome=name;picker.querySelector('h3').textContent=name;const search=picker.querySelector('input[type=search]');search.value=name;search.dispatchEvent(new Event('input'));};group.append(b);});picker.querySelector('.gif-picker-top').after(group);}
       picker.addEventListener('close',()=>{if(button?.isConnected)button.focus();},{once:true});
