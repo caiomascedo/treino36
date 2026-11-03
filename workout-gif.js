@@ -7,7 +7,7 @@ window.GymFasterWorkout = (() => {
   const workingCards=()=>batchState?.cards||cards;
   let presentation={style:'detailed',colors:false};try{presentation={...presentation,...JSON.parse(localStorage.getItem('treinoGifPresentationV1')||'{}')};}catch(e){}
   const colors=['#b91c1c','#15803d','#ca8a04','#111111','#1d4ed8','#9333ea','#c2410c','#0f766e','#be185d','#4338ca'];
-  const colorFor=index=>colors[index]||'hsl('+Math.round(index*137.5%360)+' 70% 32%)';
+  const colorFor=index=>(/^#[0-9a-f]{6}$/i.test(presentation.palette?.[index]||'')?presentation.palette[index]:colors[index])||'hsl('+Math.round(index*137.5%360)+' 70% 32%)';
   const match=()=>window.WorkoutVideoMatch;
   const library=()=>window.WorkoutVideoLibrary;
   const availableVideos=()=>library().apply(videos);
@@ -27,8 +27,8 @@ window.GymFasterWorkout = (() => {
     const section=node('select',{'aria-label':'Treino para o GIF'}),status=node('p',{role:'status','aria-live':'polite'}),list=node('div',{class:'gif-cards'}),result=node('div',{class:'gif-result',hidden:''});
     const accept=node('button',{type:'button',class:'gif-accept-suggestions',hidden:''},'Usar sugestões mostradas');
     const actions=node('div',{class:'gif-actions'}),generate=node('button',{type:'button',class:'gif-primary'}),share=node('button',{type:'button',hidden:''},'Compartilhar GIF'),download=node('button',{type:'button',hidden:''},'Baixar GIF'),stop=node('button',{type:'button',hidden:''},'Cancelar geração'),close=node('button',{type:'button'},'Fechar');
-    const presentationBox=node('div',{class:'gif-presentation'}),style=node('select',{'aria-label':'Prescrição dos conjugados'}),colorLabel=node('label'),colorCheck=node('input',{type:'checkbox','aria-label':'Cores nos conjugados'});style.append(node('option',{value:'detailed'},'Prescrição em cada exercício'),node('option',{value:'simplified'},'Nomes + prescrição única'));style.value=presentation.style;colorCheck.checked=presentation.colors;colorLabel.append(colorCheck,document.createTextNode(' Cores nos conjugados'));presentationBox.append(style,colorLabel);style.onchange=colorCheck.onchange=()=>{presentation={style:style.value,colors:colorCheck.checked};try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();readiness();};actions.append(generate,share,download,stop,close);dialog.append(heading,help,student,library,section,status,accept,presentationBox,list,result,actions);document.body.append(dialog);
-    controls={heading,student,library,section,status,list,result,accept,generate,share,download,stop,presentationFields:[style,colorCheck]};
+    const presentationBox=node('div',{class:'gif-presentation'}),style=node('select',{'aria-label':'Prescrição dos conjugados'}),colorLabel=node('label'),colorCheck=node('input',{type:'checkbox','aria-label':'Cores nos conjugados'});style.append(node('option',{value:'detailed'},'Prescrição em cada exercício'),node('option',{value:'simplified'},'Nomes + prescrição única'));style.value=presentation.style;colorCheck.checked=presentation.colors;colorLabel.append(colorCheck,document.createTextNode(' Cores nos conjugados'));const colorEditor=WorkoutExportColors.create({label:'GIF',palette:presentation.palette,onChange:()=>{presentation.palette=colorEditor.values();try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();readiness();}});presentationBox.append(style,colorLabel,colorEditor.element);style.onchange=colorCheck.onchange=()=>{presentation={...presentation,style:style.value,colors:colorCheck.checked};try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();readiness();};actions.append(generate,share,download,stop,close);dialog.append(heading,help,student,library,section,status,accept,presentationBox,list,result,actions);document.body.append(dialog);
+    controls={heading,student,library,section,status,list,result,accept,generate,share,download,stop,colorEditor,presentationFields:[style,colorCheck]};
     library.onchange=()=>{mode=library.value;render();};section.onchange=()=>{selected=section.value==='ALL'?completeWorkout():workout.sections.find(s=>s.id===section.value);render();};
     accept.onclick=()=>{cards.filter(c=>!c.asset&&c.suggestions.length).forEach(c=>selectAsset(c,c.suggestions[0]));readiness();};
     generate.onclick=()=>selected?.id==='ALL'?generateCompleteWorkout():generateGIF();stop.onclick=cancel;close.onclick=()=>dialog.close();
@@ -36,7 +36,7 @@ window.GymFasterWorkout = (() => {
     download.onclick=()=>{for(const item of files){const url=URL.createObjectURL(item),link=node('a',{href:url,download:item.name});document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}};
     share.onclick=async()=>{if(!files.length)return;try{if(navigator.canShare?.({files}))await navigator.share({files,title:(selected.id==='ALL'?'Treino completo A–F':'Treino '+selected.id)+' · '+themes[mode].name});else{controls.status.textContent=files.length>1?'Este navegador não permite enviar os GIFs juntos. Baixe os arquivos e anexe na conversa do aluno.':'Baixe o GIF e anexe a imagem na conversa do aluno.';download.click();}}catch(error){if(error.name!=='AbortError')controls.status.textContent='Não foi possível compartilhar. Use Baixar GIF e anexe a imagem na conversa.';}};
   }
-  function setBusy(busy){busy=busy||!!batchState;controls.presentationFields.forEach(e=>e.disabled=busy);controls.library.disabled=busy;controls.section.disabled=busy;controls.generate.disabled=busy||!cards.length;controls.accept.disabled=busy;controls.stop.hidden=!busy;workingCards().forEach(c=>{c.choose.disabled=busy;c.upload.disabled=busy;c.suggestionBox.querySelectorAll('button').forEach(b=>b.disabled=busy);});}
+  function setBusy(busy){busy=busy||!!batchState;controls.colorEditor.setDisabled(busy);controls.presentationFields.forEach(e=>e.disabled=busy);controls.library.disabled=busy;controls.section.disabled=busy;controls.generate.disabled=busy||!cards.length;controls.accept.disabled=busy;controls.stop.hidden=!busy;workingCards().forEach(c=>{c.choose.disabled=busy;c.upload.disabled=busy;c.suggestionBox.querySelectorAll('button').forEach(b=>b.disabled=busy);});}
   function readiness(){
     if(job||batchState)return;
     const missing=cards.filter(c=>!c.asset),ready=cards.length-missing.length,suggested=missing.filter(c=>c.suggestions.length).length;
@@ -97,6 +97,7 @@ window.GymFasterWorkout = (() => {
     });updatePresentation();readiness();
   }
   function updatePresentation(){
+    controls.colorEditor.refresh(presentation.colors,Math.max(0,...cards.filter(card=>card.row.compound).map(card=>Math.max(card.row.partCount,summaryDoses(card.row.fullDetails,card.row.partCount)?.length||0))));
     controls.list.querySelectorAll('.gif-compound-summary,.gif-dose-warning').forEach(n=>n.remove());
     for(const card of cards){
       if(!card.row.compound)continue;
