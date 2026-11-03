@@ -34,6 +34,7 @@ window.GymFasterLibrary = (() => {
     close.onclick = () => dialog.close();
     dialog.append(heading, help, drive, search, filters, status, addVideo, libraryTools, preview, list, close);
     document.body.append(dialog);
+    document.addEventListener('click', event => { if (dialog.open && !preview.hidden && !preview.contains(event.target)) clearPreview(); }, true);
     dialog.addEventListener('close', () => { clearPreview(); selection = null; if (previousFocus?.isConnected) previousFocus.focus(); });
     function render() {
       list.replaceChildren(); clearPreview();
