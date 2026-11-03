@@ -5,7 +5,7 @@ window.GymFasterWorkout = (() => {
   let integration,dialog,controls,videos=[],catalogPromise,workout,selected,cards=[],mode='gymfaster',file,blobURL,observer,job=null,sequence=0,layoutHeader=HEADER,layoutBlocks=[],focusReturn,libraryDirty=false;
   let batchState=null,files=[],resultURLs=[];
   const workingCards=()=>batchState?.cards||cards;
-  let presentation={style:'detailed',colors:false};try{presentation={...presentation,...JSON.parse(localStorage.getItem('treinoGifPresentationV1')||'{}')};}catch(e){}
+  let presentation={style:'detailed',colors:false,largeVideos:false,stackCompounds:false};try{presentation={...presentation,...JSON.parse(localStorage.getItem('treinoGifPresentationV1')||'{}')};}catch(e){}
   const colors=['#b91c1c','#15803d','#ca8a04','#111111','#1d4ed8','#9333ea','#c2410c','#0f766e','#be185d','#4338ca'];
   const colorFor=index=>(/^#[0-9a-f]{6}$/i.test(presentation.palette?.[index]||'')?presentation.palette[index]:colors[index])||'hsl('+Math.round(index*137.5%360)+' 70% 32%)';
   const match=()=>window.WorkoutVideoMatch;
@@ -27,9 +27,9 @@ window.GymFasterWorkout = (() => {
     const section=node('select',{'aria-label':'Treino para o GIF'}),status=node('p',{role:'status','aria-live':'polite'}),list=node('div',{class:'gif-cards'}),result=node('div',{class:'gif-result',hidden:''});
     const accept=node('button',{type:'button',class:'gif-accept-suggestions',hidden:''},'Usar sugestões mostradas');
     const actions=node('div',{class:'gif-actions'}),generate=node('button',{type:'button',class:'gif-primary'}),share=node('button',{type:'button',hidden:''},'Compartilhar GIF'),download=node('button',{type:'button',hidden:''},'Baixar GIF'),stop=node('button',{type:'button',hidden:''},'Cancelar geração'),close=node('button',{type:'button'},'Fechar');
-    const presentationBox=node('div',{class:'gif-presentation'}),style=node('select',{'aria-label':'Prescrição dos conjugados'}),colorLabel=node('label'),colorCheck=node('input',{type:'checkbox','aria-label':'Cores nos conjugados'});style.append(node('option',{value:'detailed'},'Prescrição em cada exercício'),node('option',{value:'simplified'},'Nomes + prescrição única'));style.value=presentation.style;colorCheck.checked=presentation.colors;colorLabel.append(colorCheck,document.createTextNode(' Cores nos conjugados'));const colorEditor=WorkoutExportColors.create({label:'GIF',palette:presentation.palette,onChange:()=>{presentation.palette=colorEditor.values();try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();readiness();}});const colorControls=node('div',{class:'gif-color-controls'});colorControls.append(colorLabel,colorEditor.element);presentationBox.append(style,colorControls);style.onchange=colorCheck.onchange=()=>{presentation={...presentation,style:style.value,colors:colorCheck.checked};try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();readiness();};actions.append(generate,share,download,stop,close);dialog.append(heading,help,student,library,section,status,accept,presentationBox,list,result,actions);document.body.append(dialog);
-    controls={heading,student,library,section,status,list,result,accept,generate,share,download,stop,colorEditor,presentationFields:[style,colorCheck]};
-    library.onchange=()=>{mode=library.value;render();};section.onchange=()=>{selected=section.value==='ALL'?completeWorkout():workout.sections.find(s=>s.id===section.value);render();};
+    const presentationBox=node('div',{class:'gif-presentation'}),style=node('select',{'aria-label':'Prescrição dos conjugados'}),colorLabel=node('label'),colorCheck=node('input',{type:'checkbox','aria-label':'Cores nos conjugados'});style.append(node('option',{value:'detailed'},'Prescrição em cada exercício'),node('option',{value:'simplified'},'Nomes + prescrição única'));style.value=presentation.style;colorCheck.checked=presentation.colors;colorLabel.append(colorCheck,document.createTextNode(' Cores nos conjugados'));const colorEditor=WorkoutExportColors.create({label:'GIF',palette:presentation.palette,onChange:()=>{presentation.palette=colorEditor.values();try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();readiness();}});const colorControls=node('div',{class:'gif-color-controls'});colorControls.append(colorLabel,colorEditor.element);const sizeLabel=node('label'),large=node('input',{type:'checkbox','aria-label':'Aumentar demonstrações'}),stackLabel=node('label'),stack=node('input',{type:'checkbox','aria-label':'Conjugados um abaixo do outro'});large.checked=presentation.largeVideos===true;stack.checked=presentation.stackCompounds===true;sizeLabel.append(large,document.createTextNode(' Aumentar demonstrações'));stackLabel.append(stack,document.createTextNode(' Conjugados um abaixo do outro'));presentationBox.append(style,colorControls,sizeLabel,stackLabel);style.onchange=colorCheck.onchange=large.onchange=stack.onchange=()=>{presentation={...presentation,style:style.value,colors:colorCheck.checked,largeVideos:large.checked,stackCompounds:stack.checked};try{localStorage.setItem('treinoGifPresentationV1',JSON.stringify(presentation));}catch(e){}clearResult();updatePresentation();readiness();};actions.append(generate,share,download,stop,close);dialog.append(heading,help,student,library,section,status,accept,presentationBox,list,result,actions);document.body.append(dialog);
+    controls={heading,student,library,section,status,list,result,accept,generate,share,download,stop,colorEditor,presentationFields:[style,colorCheck,large,stack]};
+    library.onchange=()=>{mode=library.value;applyTheme();clearResult();updatePresentation();readiness();};section.onchange=()=>{selected=section.value==='ALL'?completeWorkout():workout.sections.find(s=>s.id===section.value);render();};
     accept.onclick=()=>{cards.filter(c=>!c.asset&&c.suggestions.length).forEach(c=>selectAsset(c,c.suggestions[0]));readiness();};
     generate.onclick=()=>selected?.id==='ALL'?generateCompleteWorkout():generateGIF();stop.onclick=cancel;close.onclick=()=>dialog.close();
     dialog.addEventListener('close',()=>{sequence++;cancel();disposeCards();clearResult();if(focusReturn?.isConnected)focusReturn.focus();});
@@ -45,13 +45,20 @@ window.GymFasterWorkout = (() => {
     controls.accept.hidden=!suggested;controls.accept.textContent='Usar sugestões mostradas ('+suggested+')';
     controls.status.textContent=cards.length?ready+'/'+cards.length+' demonstrações prontas. '+(missing.length?'Confira as sugestões destacadas; conjugados aparecem lado a lado no mesmo bloco.':'Confira os movimentos e gere o GIF.'): 'Este treino está vazio. Adicione os exercícios na ficha.';
   }
-  function invertInk(asset){return !asset.localURL&&((mode==='cm')!==(asset.collection==='cm'));}
+  function sourceInk(asset){return asset.inkTheme||asset.collection;}
+  function invertInk(asset){return (mode==='cm')!==(sourceInk(asset)==='cm');}
+  function applyVideoInk(card){const asset=card.asset,ink=asset&&sourceInk(asset);card.video.classList.toggle('cm-ink-on-white',!!asset&&invertInk(asset)&&ink==='cm');card.video.classList.toggle('gym-ink-on-black',!!asset&&invertInk(asset)&&ink!=='cm');if(asset)card.video.style.background=ink==='cm'?'#000':'#fff';}
+  function applyTheme(){dialog.dataset.library=mode;cards.forEach(applyVideoInk);}
+  function detectPersonalInk(video,asset){
+    if(asset.inkTheme||!(asset.localURL||asset.url?.startsWith('local-video:'))||video.readyState<2)return;
+    try{const canvas=document.createElement('canvas');canvas.width=canvas.height=12;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(video,0,0,12,12);const data=ctx.getImageData(0,0,12,12).data,points=[0,11,132,143],light=points.reduce((sum,index)=>sum+(data[index*4]+data[index*4+1]+data[index*4+2])/3,0)/4;if(light>200)asset.inkTheme='gymfaster';else if(light<55)asset.inkTheme='cm';}catch(error){}
+  }
   function assetURL(asset){return asset.localURL||asset.media||(asset.collection==='cm'?'cmfit-media/':'gymfaster-media/')+asset.id+'.mp4';}
   function playVisible(card){if(card.visible&&card.asset&&!job&&!batchState){if(!card.video.getAttribute('src'))card.video.src=assetURL(card.asset);card.video.play().catch(()=>{});}else card.video.pause();}
   function videoCaption(asset,reason){return asset.name+' · '+(asset.localURL?'Arquivo local · reenvie ao reabrir a ficha':asset.kind==='created-example'?'Exemplo criado':themes[asset.collection].name)+(asset.collection==='gymfaster'&&asset.gender&&!asset.kind?' · '+asset.gender:'')+(reason?' · '+reason:'');}
   function setVideo(card,asset,reason){
     if(card.localURL&&card.localURL!==asset?.localURL)URL.revokeObjectURL(card.localURL);
-    card.localURL=asset?.localURL||null;card.asset=asset;card.video.classList.toggle('cm-ink-on-white',!!asset&&invertInk(asset)&&asset.collection==='cm');card.video.classList.toggle('gym-ink-on-black',!!asset&&invertInk(asset)&&asset.collection==='gymfaster');
+    card.localURL=asset?.localURL||null;card.asset=asset;card.article.dataset.videoId=asset?.id||'';applyVideoInk(card);
     card.video.pause();card.video.removeAttribute('src');card.video.load();card.video.hidden=!asset;if(card.options)card.options.open=!asset;
     card.article.classList.toggle('gif-missing',!asset);
     card.caption.textContent=asset?videoCaption(asset,reason):'Escolha a demonstração deste exercício.';
@@ -59,7 +66,7 @@ window.GymFasterWorkout = (() => {
   }
   function selectAsset(card,asset){
     remember(card.row.nome,asset);
-    integration.save(card.row.source,asset.url,workout.student,card.row.partIndex);card.row.video=asset.url;card.row.gifURL=asset.url;
+    integration.save(card.row.source,asset.url,workout.student,card.row.partIndex);for(const section of workout.sections)for(const original of section.rows)if(original.source===card.row.source){original.gifs=[...(original.gifs||[])];original.gifs[card.row.partIndex]=asset.url;}card.row.video=asset.url;card.row.gifURL=asset.url;
     setVideo(card,asset,'Escolhido por você');readiness();
   }
   function useTemporaryVideo(card,chosen){
@@ -93,6 +100,7 @@ window.GymFasterWorkout = (() => {
       choose.onclick=()=>openPicker(card);
       upload.onclick=()=>input.click();input.onchange=()=>useTemporaryVideo(card,input.files?.[0]);
       const create=node('button',{type:'button',class:'gif-create-demo'},'Criar demonstração');create.onclick=()=>WorkoutDemoPrompt.open({name:card.row.nome,style:mode,onFile:file=>useTemporaryVideo(card,file)});
+      video.onloadeddata=()=>{if(card.asset&&video.currentSrc===new URL(assetURL(card.asset),document.baseURI).href){detectPersonalInk(video,card.asset);applyVideoInk(card);}};
       video.onerror=()=>{if(card.asset&&!job&&!batchState)card.caption.textContent='A prévia não carregou. Você pode tentar Gerar GIF para carregar a demonstração novamente.';};
       if(row.compound){
         const options=node('details',{class:'gif-card-options'}),summary=node('summary',{},'Vídeo / editar');const cardActions=node('div',{class:'gif-card-actions'});cardActions.append(choose,upload,create,input);options.append(summary,caption,cardActions);card.options=options;
@@ -103,6 +111,8 @@ window.GymFasterWorkout = (() => {
     });updatePresentation();readiness();
   }
   function updatePresentation(){
+    dialog.dataset.largeVideos=String(presentation.largeVideos===true);dialog.dataset.stackCompounds=String(presentation.stackCompounds===true);
+    for(const card of cards)if(card.row.compound){const i=card.row.partIndex;card.article.querySelector('.gif-card-text').style.gridColumn=presentation.largeVideos&&!presentation.stackCompounds?'1 / -1':'1';if(presentation.stackCompounds){card.article.querySelector('.gif-card-text').style.gridRow=String(i*2+1);card.video.style.gridColumn='1';card.video.style.gridRow=String(i*2+2);}else if(presentation.largeVideos){card.article.querySelector('.gif-card-text').style.gridRow=String(Math.floor(i/2)*4+i%2+1);card.video.style.gridColumn=i===card.row.partCount-1&&card.row.partCount%2?'1 / -1':String(i%2+1);card.video.style.gridRow=String(Math.floor(i/2)*4+3);}else{card.article.querySelector('.gif-card-text').style.gridRow=String(i+1);card.video.style.gridColumn=String(i%2+2);card.video.style.gridRow=(Math.floor(i/2)*2+1)+' / span '+Math.min(2,card.row.partCount-Math.floor(i/2)*2);}}
     controls.colorEditor.refresh(presentation.colors,Math.max(0,...cards.filter(card=>card.row.compound).map(card=>Math.max(card.row.partCount,summaryDoses(card.row.fullDetails,card.row.partCount)?.length||0))));
     controls.list.querySelectorAll('.gif-compound-summary,.gif-dose-warning').forEach(n=>n.remove());
     for(const card of cards){
@@ -117,9 +127,9 @@ window.GymFasterWorkout = (() => {
         if(presentation.style==='simplified'){
           const summary=node('p',{class:'gif-compound-summary'});
           if(presentation.colors&&split)split.forEach((dose,i)=>{if(i)summary.append(document.createTextNode(' + '));const badge=node('span',{},'• '+dose);badge.style.color=colorFor(i);badge.style.background='#fff';summary.append(badge);});
-          else summary.textContent=gifText(card.row.fullDetails);text.append(summary);
+          else summary.textContent=gifText(card.row.fullDetails);if(presentation.stackCompounds||presentation.largeVideos){summary.style.gridColumn='1 / -1';summary.style.gridRow=String((presentation.stackCompounds?card.row.partCount*2:Math.ceil(card.row.partCount/2)*4)+1);card.article.closest('.gif-compound-grid').append(summary);}else text.append(summary);
         }
-        if(split&&split.length!==card.row.partCount){const warning=node('small',{class:'gif-dose-warning'},card.row.partCount+' exercícios e '+split.length+' prescrições: confira a associação. Todos os valores foram mantidos.');text.append(warning);}
+        if(split&&split.length!==card.row.partCount){const warning=node('small',{class:'gif-dose-warning'},card.row.partCount+' exercícios e '+split.length+' prescrições: confira a associação. Todos os valores foram mantidos.');if(presentation.stackCompounds||presentation.largeVideos){warning.style.gridColumn='1 / -1';warning.style.gridRow=String((presentation.stackCompounds?card.row.partCount*2:Math.ceil(card.row.partCount/2)*4)+2);card.article.closest('.gif-compound-grid').append(warning);}else text.append(warning);}
       }
     }
   }
@@ -219,6 +229,35 @@ window.GymFasterWorkout = (() => {
   function gifText(text){return String(text).replace(/(\d)\s*—\s*(?=\d)/g,'$1-').replace(/—/g,' ').replace(/\s+/g,' ').trim();}
   function wrap(ctx,text,x,y,width,step){text=gifText(text);let line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){ctx.fillText(line,x,y);y+=step;line=word;}else line=next;}if(line)ctx.fillText(line,x,y);return y+step;}
   function lineCount(ctx,text,width){text=gifText(text);let n=1,line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(ctx.measureText(next).width>width&&line){n++;line=word;}else line=next;}return n;}
+  function layoutOptional(ctx,block,top){
+    block.optional=true;let cursor=top+(block.compound?36:0);
+    const showDetails=!block.compound||presentation.style!=='simplified';
+    if(block.compound&&presentation.stackCompounds&&!presentation.largeVideos){
+      for(const card of block.members){
+        card.nameX=presentation.colors?56:36;card.nameY=cursor+34;card.nameWidth=presentation.colors?338:358;card.detailsWidth=358;
+        ctx.font='bold 23px Arial';const nameHeight=lineCount(ctx,card.row.label+'. '+card.row.nome,card.nameWidth)*26;card.detailsY=card.nameY+nameHeight+5;
+        ctx.font='20px Arial';const textBottom=showDetails?card.detailsY+lineCount(ctx,card.row.detalhes,358)*24:card.nameY+nameHeight;
+        const height=Math.max(CARD,textBottom-cursor+20);card.slotX=410;card.slotY=cursor+5;card.slotWidth=SLOT_W;card.slotHeight=SLOT_H;cursor+=height;
+      }
+    }else{
+      const size=block.compound&&!presentation.stackCompounds?2:1;
+      for(let i=0;i<block.members.length;i+=size){
+        const pair=block.members.slice(i,i+size);
+        for(const card of pair){
+          card.nameX=block.compound&&presentation.colors?56:36;card.nameWidth=block.compound&&presentation.colors?708:728;card.detailsWidth=728;card.nameY=cursor+32;
+          ctx.font='bold 23px Arial';cursor=card.nameY+lineCount(ctx,card.row.label+'. '+card.row.nome,card.nameWidth)*26;
+          card.detailsY=cursor+3;if(showDetails){ctx.font='20px Arial';cursor=card.detailsY+lineCount(ctx,card.row.detalhes,728)*24;}cursor+=8;
+        }
+        const slotY=cursor+8,height=pair.length===2?270:360;
+        pair.forEach((card,column)=>{card.slotX=column?414:36;card.slotY=slotY;card.slotWidth=pair.length===2?350:728;card.slotHeight=height;});block.pairs.push(pair);cursor=slotY+height+16;
+      }
+    }
+    if(block.compound&&presentation.style==='simplified'){
+      block.summaryY=cursor+20;block.summaryWidth=728;ctx.font='20px Arial';const doses=summaryDoses(block.members[0].row.fullDetails,block.members.length);
+      cursor=presentation.colors&&doses?paintDoses(ctx,doses,36,block.summaryY,0,true,728):block.summaryY+lineCount(ctx,block.members[0].row.fullDetails,728)*24;
+    }
+    block.height=cursor-top+16;
+  }
   function layout(ctx){
     ctx.font='bold 29px Arial';layoutHeader=Math.max(HEADER,88+lineCount(ctx,selected.title,744)*32+55);
     let top=layoutHeader;layoutBlocks=[];
@@ -229,7 +268,8 @@ window.GymFasterWorkout = (() => {
     }
     for(const block of layoutBlocks){
       block.top=top;
-      if(!block.compound){
+      if(presentation.largeVideos||block.compound&&presentation.stackCompounds){layoutOptional(ctx,block,top);}
+      else if(!block.compound){
         const c=block.members[0];ctx.font='bold 23px Arial';const names=lineCount(ctx,c.row.label+'. '+c.row.nome,358);ctx.font='20px Arial';
         c.top=top;c.height=Math.max(CARD,Math.max(38+names*28+13,120)+lineCount(ctx,c.row.detalhes,358)*26+25);c.slotX=410;c.slotY=top+5;c.slotWidth=SLOT_W;c.slotHeight=SLOT_H;block.height=c.height;
       }else if(presentation.style==='simplified'){
@@ -262,6 +302,17 @@ window.GymFasterWorkout = (() => {
     ctx.font='bold 23px Arial';ctx.fillText('CAIO MACÊDO · PERSONAL TRAINER',28,43);ctx.fillStyle=t.ink;ctx.font='bold 29px Arial';wrap(ctx,selected.title,28,88,744,32);ctx.font='19px Arial';ctx.fillText(gifText(workout.student).slice(0,65),28,layoutHeader-29);
     for(const block of layoutBlocks){
       ctx.fillStyle=t.card;ctx.fillRect(20,block.top,760,block.height-12);
+      if(block.optional){
+        if(block.compound){ctx.fillStyle=t.green;ctx.font='bold 18px Arial';ctx.fillText((block.members[0].row.sectionIndex??block.sourceIndex)+1+'. CONJUGADO',36,block.top+28);}
+        for(const card of block.members){
+          ctx.fillStyle=t.ink;ctx.font='bold 23px Arial';wrap(ctx,card.row.label+'. '+card.row.nome,card.nameX,card.nameY,card.nameWidth,26);
+          if(block.compound&&presentation.colors){dot(ctx,43,card.nameY-8,card.row.partIndex);dot(ctx,card.slotX+8,card.slotY-8,card.row.partIndex);}
+          if(!block.compound||presentation.style!=='simplified'){ctx.font='20px Arial';ctx.fillStyle=t.green;if(block.compound&&presentation.colors)paintDoses(ctx,[card.row.detalhes],card.nameX,card.detailsY,card.row.partIndex,false,card.detailsWidth);else wrap(ctx,card.row.detalhes,card.nameX,card.detailsY,card.detailsWidth,24);}
+        }
+        for(const pair of block.pairs)if(pair.length===2){ctx.fillStyle=t.green;ctx.font='bold 28px Arial';ctx.textAlign='center';ctx.fillText('+',400,pair[0].slotY+pair[0].slotHeight/2+8);ctx.textAlign='start';}
+        if(block.summaryY){ctx.font='20px Arial';ctx.fillStyle=t.green;const details=block.members[0].row.fullDetails,split=summaryDoses(details,block.members.length);if(presentation.colors&&split)paintDoses(ctx,split,36,block.summaryY,0,false,728);else wrap(ctx,details,36,block.summaryY,728,24);}
+        continue;
+      }
       if(block.compound){
         ctx.fillStyle=t.green;ctx.font='bold 18px Arial';ctx.fillText((block.members[0].row.sectionIndex??block.sourceIndex)+1+'. CONJUGADO',36,block.top+28);
         if(presentation.style==='simplified'){const text=block.members[0].row.fullDetails,split=summaryDoses(text,block.members.length);ctx.font='20px Arial';ctx.fillStyle=t.green;if(presentation.colors&&split)paintDoses(ctx,split,36,block.summaryY,0);else wrap(ctx,text,36,block.summaryY,358,24);}
@@ -275,10 +326,10 @@ window.GymFasterWorkout = (() => {
     }
   }
   function dot(ctx,x,y,index){ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=colorFor(index);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();}
-  function paintDoses(ctx,values,x,y,start,measureOnly=false){const origin=x;values.forEach((text,i)=>{const label='• '+gifText(text),width=ctx.measureText(label).width+12;if(x+width>origin+358){x=origin;y+=28;}if(!measureOnly){ctx.fillStyle='#fff';ctx.fillRect(x-2,y-19,width,24);ctx.fillStyle=colorFor(start+i);ctx.fillText(label,x+3,y);}x+=width;if(i<values.length-1){if(!measureOnly){ctx.fillStyle=themes[mode].green;ctx.fillText('+',x,y);}x+=18;}});return y+28;}
+  function paintDoses(ctx,values,x,y,start,measureOnly=false,availableWidth=358){const origin=x;values.forEach((text,i)=>{const label='• '+gifText(text),width=ctx.measureText(label).width+12;if(x+width>origin+availableWidth){x=origin;y+=28;}if(!measureOnly){ctx.fillStyle='#fff';ctx.fillRect(x-2,y-19,width,24);ctx.fillStyle=colorFor(start+i);ctx.fillText(label,x+3,y);}x+=width;if(i<values.length-1){if(!measureOnly){ctx.fillStyle=themes[mode].green;ctx.fillText('+',x,y);}x+=18;}});return y+28;}
   function drawSlot(ctx,video,asset){
     const width=ctx.canvas.width,height=ctx.canvas.height;
-    ctx.fillStyle=asset.collection==='cm'?'#000':'#fff';ctx.fillRect(0,0,width,height);
+    detectPersonalInk(video,asset);ctx.fillStyle=sourceInk(asset)==='cm'?'#000':'#fff';ctx.fillRect(0,0,width,height);
     const scale=Math.min(width/video.videoWidth,height/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;ctx.drawImage(video,(width-w)/2,(height-h)/2,w,h);
     if(invertInk(asset)){
       const frame=ctx.getImageData(0,0,width,height),pixels=frame.data;

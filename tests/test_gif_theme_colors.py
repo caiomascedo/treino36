@@ -6,7 +6,7 @@ from PIL import Image
 from playwright.sync_api import sync_playwright,expect
 ROOT=Path(__file__).resolve().parents[1];ENGINE=os.getenv('GIF_TEST_BROWSER','chromium')
 cm=next(v for v in json.loads((ROOT/'cmfit-catalog.json').read_text())['videos'] if v['name']=='Agachamento no smith')
-gym=next(v for v in json.loads((ROOT/'gymfaster-catalog.json').read_text())['videos'] if v['name']=='Cadeira Extensora' and v['gender']=='Masculino')
+gym=next(v for v in json.loads((ROOT/'gymfaster-catalog.json').read_text())['videos'] if ('Cadeira Extensora' in [v['name'],*v.get('aliases',[])]) and v['gender']=='Masculino')
 with sync_playwright() as p:
  b=p.webkit.launch(executable_path=os.environ['PLAYWRIGHT_WEBKIT_EXECUTABLE']) if ENGINE=='webkit' else p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
  c=b.new_context(viewport={'width':390,'height':844},accept_downloads=True)
@@ -18,10 +18,10 @@ with sync_playwright() as p:
   if u.hostname=='colors.test' and f.is_file():r.fulfill(body=f.read_bytes(),content_type={'.js':'application/javascript','.css':'text/css','.json':'application/json','.mp4':'video/mp4'}.get(f.suffix,'text/html'))
   else:r.fulfill(status=404)
  c.route('**/*',route);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.goto('http://colors.test/');page.evaluate('TreinoStorage.ready');page.evaluate('(d)=>localStorage.setItem("treinoAlunos",JSON.stringify(d))',[{'student_id':'mixed-color','nome':'Teste cores','treino':{'A':['Agachamento Smith — 3x8 [Vídeo: '+cm['url']+']','Cadeira Extensora — 3x10 [Vídeo: '+gym['url']+']']},'titulos':{'A':'A. Pernas'}}]);page.reload();page.locator('#workoutGifsBtn').click();d=page.locator('#workoutGifDialog');d.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('cm')
+ page.goto('http://colors.test/');page.evaluate('TreinoStorage.ready');cm=page.evaluate('async()=>{await WorkoutCatalog.load();return WorkoutCatalog.current().find(v=>v.collection==="cm"&&v.name.toLowerCase().startsWith("agachamento"))}');page.evaluate('(d)=>localStorage.setItem("treinoAlunos",JSON.stringify(d))',[{'student_id':'mixed-color','nome':'Teste cores','treino':{'A':['Agachamento Smith — 3x8 [Vídeo: '+cm['url']+']','Cadeira Extensora — 3x10 [Vídeo: '+gym['url']+']']},'titulos':{'A':'A. Pernas'}}]);page.reload();page.locator('#workoutGifsBtn').click();d=page.locator('#workoutGifDialog');d.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('cm')
  def choose(index,source,id):
   d.locator('.gif-card').nth(index).get_by_role('button',name='Escolher outro vídeo',exact=True).click();picker=page.locator('.gif-video-picker');picker.get_by_role('combobox',name='Biblioteca da demonstração').select_option(source);picker.locator('[data-video-id="'+id+'"]').click()
- choose(1,'gymfaster',gym['id']);expect(d.locator('video.gym-ink-on-black')).to_have_count(1);expect(d.locator('video.cm-ink-on-white')).to_have_count(0)
+ choose(0,'cm',cm['id']);choose(1,'gymfaster',gym['id']);expect(d.locator('video.gym-ink-on-black')).to_have_count(1);expect(d.locator('video.cm-ink-on-white')).to_have_count(0)
  assert d.locator('video.gym-ink-on-black').evaluate("v=>getComputedStyle(v).filter.includes('invert(1)')")
  d.locator('.gif-primary').click();expect(d.locator('[role=status]')).to_contain_text('GIF pronto',timeout=180000)
  with page.expect_download() as dl:d.get_by_role('button',name='Baixar GIF',exact=True).click()
