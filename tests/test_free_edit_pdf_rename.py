@@ -1,0 +1,17 @@
+from pathlib import Path
+from urllib.parse import urlparse
+import os
+from playwright.sync_api import sync_playwright,expect
+ROOT=Path(__file__).resolve().parents[1]
+with sync_playwright() as p:
+ b=p.webkit.launch(executable_path=os.environ['PLAYWRIGHT_WEBKIT_EXECUTABLE']) if os.getenv('GIF_TEST_BROWSER')=='webkit' else p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ c=b.new_context(viewport={'width':390,'height':844})
+ def route(r):
+  u=urlparse(r.request.url);f=ROOT/u.path.lstrip('/')
+  if f.is_dir():f/='index.html'
+  if u.hostname=='edit.test' and f.is_file():r.fulfill(body=f.read_bytes(),content_type={'.js':'application/javascript','.css':'text/css','.json':'application/json'}.get(f.suffix,'text/html'))
+  else:r.fulfill(status=404)
+ c.route('**/*',route);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.goto('https://edit.test/');page.evaluate('TreinoStorage.ready');page.evaluate('localStorage.setItem("treinoAlunos",JSON.stringify([{nome:"Teste edição",student_id:"edit",treino:{A:["Glúteo Na Polia — 3×12 Cada Perna [Vídeo: https://youtu.be/KeepTEST123] [GIFs: https://drive.google.com/file/d/keepGIF/view]"]},titulos:{A:"A. Glúteos"}}]))');page.reload();page.evaluate('TreinoStorage.ready');row=page.locator('.sec-a ol>li').first;bold=row.locator('.bold').first;bold.evaluate("e=>{e.focus();const s=getSelection(),r=document.createRange();r.selectNodeContents(e);r.collapse(false);s.removeAllRanges();s.addRange(r)}");page.keyboard.press('Backspace');page.keyboard.insert_text('a livre');assert 'Glúteo Na Polia livre' in row.inner_text();assert row.locator('.bold').first.inner_text().endswith('a livre');assert '3×12' in row.inner_text()
+ for width in [390,320]:
+  page.set_viewport_size({'width':width,'height':844});buttons=page.locator('.sec-a .action-buttons');rects=buttons.locator('button').evaluate_all('es=>es.filter(e=>e.getClientRects().length).map(e=>e.getBoundingClientRect().y)');assert max(rects)-min(rects)<3;assert buttons.evaluate('e=>e.scrollWidth<=e.clientWidth');assert buttons.locator('.section-zoom-btn').inner_text()=='⛶';expect(buttons.locator('.section-undo-btn')).to_have_text('↩️')
+ page.set_viewport_size({'width':390,'height':844});page.locator('#pdfBtn').click();tools=page.locator('#pdfReviewTools');tools.locator('summary').filter(has_text='Vídeos · opcional').click();tools.get_by_role('button',name='Expandir todos',exact=True).click();page.once('dialog',lambda d:d.accept('Glúteo Renomeado Livre'));tools.get_by_role('button',name='✏️ Renomear na ficha',exact=True).first.click();expect(page.locator('#pdfBody .pdf-ex-title').first).to_have_text('Glúteo Renomeado Livre');assert 'Glúteo Renomeado Livre' in row.inner_text();assert '3×12 Cada Perna' in row.inner_text();page.wait_for_function('JSON.parse(localStorage.getItem("treinoAlunos"))[0].treino.A[0].includes("Glúteo Renomeado Livre")');raw=page.evaluate('JSON.parse(localStorage.getItem("treinoAlunos"))[0].treino.A[0]');assert 'KeepTEST123' in raw and 'keepGIF' in raw;page.locator('#closePdfViewer').click();assert 'Glúteo Renomeado Livre' in row.inner_text();page.locator('.sec-a .section-undo-btn').click();assert 'Glúteo Renomeado Livre' not in row.inner_text();assert '3×12' in row.inner_text();assert not errors,errors;b.close();print('PASS: free bold-name editing/deletion, compact 320px controls, explicit PDF/main rename preserves prescription and media')
