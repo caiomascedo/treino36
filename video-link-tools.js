@@ -1,16 +1,19 @@
-/* Explicit paste is always available. Return-paste runs only for a changed YouTube clipboard. */
+/* Shared YouTube choices by exercise name. Clipboard access requires an explicit paste click. */
 window.WorkoutVideoLinks=(()=>{
-  let pending=null;
+  const bindings=new Set();let applying=false;
+  const key=name=>String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const youtube=value=>{try{const u=new URL(value.trim());return u.protocol==='https:'&&(/(^|\.)youtube\.com$/.test(u.hostname)&&(u.pathname==='/watch'&&!!u.searchParams.get('v')||/^\/(shorts|embed)\/[^/]+/.test(u.pathname))||u.hostname==='youtu.be'&&u.pathname.length>1);}catch(e){return false;}};
-  function apply(input,value,notify){if(!input.isConnected)return;input.value=value.trim();input.dispatchEvent(new Event('input',{bubbles:true}));notify?.('Link colado.');}
-  async function resume(){
-    const request=pending;if(!request||request.before===null||Date.now()-request.at>600000||!request.input.isConnected||!request.input.getClientRects().length||request.input.value!==request.value||request.context?.()!==request.contextValue)return;
-    try{const value=await navigator.clipboard.readText();if(pending===request&&value!==request.before&&youtube(value)){pending=null;apply(request.input,value,request.notify);}}catch(e){}
-  }
-  window.addEventListener('focus',resume);document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume();});
+  function read(){try{return JSON.parse(localStorage.getItem('treinoYouTubeLinksV1')||'{}')||{};}catch(e){return {};}}
+  function apply(input,value,notify){if(!input.isConnected||input.value===value.trim())return;input.value=value.trim();input.dispatchEvent(new Event('input',{bubbles:true}));notify?.('Link preenchido para este exercício.');}
+  function broadcast(name,value){applying=true;try{for(const binding of bindings){if(!binding.input.isConnected){bindings.delete(binding);continue;}if(key(binding.context?.())===name)apply(binding.input,value,binding.notify);}}finally{applying=false;}}
   function attach({input,search,paste,notify,context}){
-    paste.onclick=async()=>{try{const text=await navigator.clipboard.readText(),url=new URL(text.trim());if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw Error();pending=null;apply(input,url.href,notify);}catch(e){input.focus();notify?.('Copie o link do vídeo e cole neste campo (toque e segure, se necessário).');}};
-    search.addEventListener('click',()=>{const request={input,value:input.value,before:null,at:Date.now(),notify,context,contextValue:context?.()};pending=request;try{navigator.clipboard.readText().then(text=>{if(pending===request)request.before=text;}).catch(()=>{});}catch(e){}});
+    for(const binding of bindings)if(!binding.input.isConnected)bindings.delete(binding);
+    bindings.add({input,context,notify});
+    input.addEventListener('input',()=>{if(applying||!youtube(input.value))return;const name=key(context?.());if(!name)return;const value=input.value.trim(),saved=read();saved[name]=value;try{localStorage.setItem('treinoYouTubeLinksV1',JSON.stringify(saved));}catch(e){}broadcast(name,value);});
+    // Run after the PDF has finished creating all part fields and handlers.
+    queueMicrotask(()=>{if(!input.isConnected)return;const name=key(context?.());if(!name)return;const saved=read();if(youtube(saved[name]||'')){applying=true;try{apply(input,saved[name],notify);}finally{applying=false;}}else if(youtube(input.value))input.dispatchEvent(new Event('input',{bubbles:true}));});
+    paste.onclick=async()=>{try{const text=await navigator.clipboard.readText(),url=new URL(text.trim());if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw Error();apply(input,url.href,notify);}catch(e){input.focus();notify?.('Copie o link do vídeo e cole neste campo (toque e segure, se necessário).');}};
+    // Buscar vídeo is a normal link: never inspect the clipboard on search or return.
   }
   return {attach};
 })();
