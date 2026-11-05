@@ -1,0 +1,14 @@
+from pathlib import Path
+from urllib.parse import urlparse
+import os
+from playwright.sync_api import sync_playwright,expect
+ROOT=Path(__file__).resolve().parents[1]
+with sync_playwright() as p:
+ b=p.webkit.launch(executable_path=os.environ['PLAYWRIGHT_WEBKIT_EXECUTABLE']) if os.getenv('GIF_TEST_BROWSER')=='webkit' else p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ c=b.new_context(viewport={'width':390,'height':844})
+ def route(r):
+  u=urlparse(r.request.url);f=ROOT/u.path.lstrip('/')
+  if f.is_dir():f/='index.html'
+  if u.hostname=='edit.test' and f.is_file():r.fulfill(body=f.read_bytes(),content_type={'.js':'application/javascript','.css':'text/css','.json':'application/json'}.get(f.suffix,'text/html'))
+  else:r.fulfill(status=404)
+ c.route('**/*',route);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.goto('https://edit.test/');page.evaluate('TreinoStorage.ready');page.evaluate('localStorage.setItem("treinoAlunos",JSON.stringify([{nome:"Teste edição",student_id:"edit",treino:{A:["Glúteo Na Polia — 3×12 Cada Perna [Vídeo: https://youtu.be/KeepTEST123] [GIFs: https://drive.google.com/file/d/keepGIF/view]"]},titulos:{A:"A. Glúteos"}}]))');page.reload();page.evaluate('TreinoStorage.ready');page.evaluate('GymFasterLibrary.open()');lib=page.locator('#gymfasterLibrary');lib.get_by_role('searchbox').fill('Afundo');row=lib.locator('.gym-result').first;name=row.locator('strong').inner_text();identifier=row.get_attribute('data-video-id');row.locator('.video-favorite').click();expect(lib.locator('[data-video-id="'+identifier+'"] .video-favorite')).to_have_attribute('aria-pressed','true');lib.get_by_role('checkbox',name='Somente favoritos',exact=True).check();assert lib.locator('.gym-result').count()==1;lib.get_by_role('button',name='Fechar',exact=True).click();page.locator('#workoutGifsBtn').click();main=page.locator('#workoutGifDialog');main.get_by_role('button',name='Escolher outro vídeo',exact=True).first.click();picker=page.locator('.gif-video-picker');picker.get_by_role('button',name='Limpar pesquisa',exact=True).click();picker.get_by_role('checkbox',name='Somente favoritos',exact=True).check();assert picker.locator('.gif-library-row').count()==1;expect(picker.locator('.video-favorite')).to_have_attribute('aria-pressed','true');picker.locator('.video-favorite').click();assert picker.locator('.gif-library-row').count()==0;page.evaluate('(id)=>WorkoutVideoLibrary.toggleFavorite(id)',identifier);page.reload();page.evaluate('TreinoStorage.ready');assert page.evaluate('(id)=>WorkoutVideoLibrary.isFavorite(id)',identifier);assert not errors,errors;b.close();print('PASS: favorite from general library, filter in both browsers, remove favorite without deleting clip, preference persists after reload')

@@ -24,7 +24,7 @@ window.GymFasterLibrary = (() => {
     const gender = el('select', {'aria-label': 'Versão dos vídeos'});
     group.append(el('option', {value: ''}, 'Todos os grupos'));
     gender.append(el('option', {value: ''}, 'Todas as versões'));
-    filters.append(group, gender);
+    const favoriteLabel=el('label',{class:'video-favorites-filter'}),favoriteOnly=el('input',{type:'checkbox','aria-label':'Somente favoritos'});favoriteLabel.append(favoriteOnly,document.createTextNode(' ★ Favoritos'));favoriteOnly.onchange=()=>{browser.scrollTop=0;render();};filters.append(group,gender,favoriteLabel);
     const status = el('p', {role: 'status'}), list = el('div', {class: 'gym-results'});
     const preview = el('div', {class: 'gym-preview', hidden: ''});
     const addVideo=el('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await load();controls.search.value=asset.name;controls.group.value='';controls.gender.value='';controls.render();},{name:selection?.name||search.value,group:group.value});
@@ -45,7 +45,7 @@ window.GymFasterLibrary = (() => {
       drive.href=WorkoutCatalog.folderURL;drive.hidden=!WorkoutCatalog.folderURL;
       const words = normalize(search.value).split(' ').filter(Boolean);
       const all=WorkoutVideoLibrary.apply(catalog.videos,true),available=all.filter(v=>!v.removed),deleted=all.length-available.length;removed.textContent=showDeleted?'Voltar aos disponíveis':'Ver apagados ('+deleted+')';removed.disabled=!deleted&&!showDeleted;undo.hidden=!all.some(v=>v.id===lastRemoved&&v.removed);
-      const matches = all.filter(video => video.removed===showDeleted && (!group.value || video.group === group.value) && (!gender.value || video.gender === gender.value) && words.every(word => normalize([video.name,...(video.aliases||[])].join(' ')).includes(word)));
+      const matches = all.filter(video => (!favoriteOnly.checked||WorkoutVideoLibrary.isFavorite(video.id)) && video.removed===showDeleted && (!group.value || video.group === group.value) && (!gender.value || video.gender === gender.value) && words.every(word => normalize([video.name,...(video.aliases||[])].join(' ')).includes(word)));
       status.textContent = (notice?notice+' ':'')+matches.length + ' de ' + (showDeleted?deleted:available.length) + (showDeleted?' vídeos apagados. ':' vídeos disponíveis. ') + (deleted?'('+deleted+' apagados da sua lista) ':'') + (matches.length ? 'Confira o aparelho e a variação antes de escolher.' : 'Tente menos palavras ou outro grupo. Sem essa variação, mantenha o vídeo atual ou cole outro link.');
       matches.sort((a,b)=>a.group.localeCompare(b.group,'pt-BR')||a.name.localeCompare(b.name,'pt-BR'));
       let category='';
@@ -61,7 +61,7 @@ window.GymFasterLibrary = (() => {
           preview.hidden = false; preview.scrollIntoView({block: 'nearest'});
           if (motion.tagName === 'VIDEO') { motion.muted = true; motion.play().catch(() => {}); }
         };
-        if(video.url.startsWith('local-video:'))original.hidden=true;actions.append(watch);
+        if(video.url.startsWith('local-video:'))original.hidden=true;actions.append(watch,WorkoutVideoLibrary.favoriteButton(video));
         if(!video.removed){const rename=el('button',{type:'button',class:'gym-rename','aria-label':'Renomear vídeo: '+video.name,title:'Renomear'},'✎');rename.onclick=()=>{
           row.querySelector('form')?.remove();const form=el('form',{class:'video-rename-form'}),input=el('input',{type:'text',value:selection?.name||video.name,maxlength:'160','aria-label':'Novo nome do vídeo'}),save=el('button',{type:'submit'},'Salvar nome'),cancel=el('button',{type:'button'},'Cancelar');form.append(input,save,cancel);row.append(form);input.focus();input.select();cancel.onclick=()=>{form.remove();rename.focus();};form.onsubmit=event=>{event.preventDefault();try{WorkoutVideoLibrary.rename(video.id,input.value);notice='Nome atualizado na sua biblioteca.';render();}catch(error){let message=form.querySelector('[role=status]');if(!message){message=el('small',{role:'status'});form.append(message);}message.textContent=error.message;}};
         };actions.append(rename);}actions.append(original);
