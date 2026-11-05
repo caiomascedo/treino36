@@ -4,6 +4,10 @@ window.WorkoutVideoLibrary = (() => {
   const key='treinoVideoLibraryV1',eventName='workout-video-library-change';
   function read(){try{const value=JSON.parse(localStorage.getItem(key)||'{}');return {names:value?.names&&typeof value.names==='object'&&!Array.isArray(value.names)?value.names:{},removed:value?.removed&&typeof value.removed==='object'&&!Array.isArray(value.removed)?value.removed:{},purged:value?.purged&&typeof value.purged==='object'&&!Array.isArray(value.purged)?value.purged:{},review:value?.review&&typeof value.review==='object'&&!Array.isArray(value.review)?value.review:{}};}catch(error){return {names:{},removed:{},purged:{},review:{}};}}
   function save(state,id,action){try{localStorage.setItem(key,JSON.stringify(state));}catch(error){throw Error('Não foi possível salvar a biblioteca neste navegador.');}window.dispatchEvent(new CustomEvent(eventName,{detail:{id,action}}));}
+  function favorites(){try{return JSON.parse(localStorage.getItem('treinoFavoriteVideosV1')||'{}')||{};}catch(e){return {};}}
+  function isFavorite(id){return favorites()[id]===true;}
+  function toggleFavorite(id){const state=favorites();if(state[id])delete state[id];else state[id]=true;try{localStorage.setItem('treinoFavoriteVideosV1',JSON.stringify(state));}catch(e){throw Error('Não foi possível salvar os favoritos.');}window.dispatchEvent(new CustomEvent(eventName,{detail:{id,action:'favorite'}}));}
+  function favoriteButton(video,after){const button=document.createElement('button');button.type='button';button.className='video-favorite';const selected=isFavorite(video.id);button.textContent=selected?'★':'☆';button.setAttribute('aria-label',(selected?'Remover dos favoritos: ':'Favoritar vídeo: ')+video.name);button.setAttribute('aria-pressed',String(selected));button.title=selected?'Remover dos favoritos':'Favoritar vídeo';button.onclick=()=>{try{toggleFavorite(video.id);after?.();}catch(e){alert(e.message);}};return button;}
   function decorate(video,state=read()){
     const originalName=video.originalName||video.name,custom=typeof state.names[video.id]==='string'?state.names[video.id].trim():'';
     return {...video,name:custom||originalName,originalName,removed:state.removed[video.id]===true||state.purged[video.id]===true,purged:state.purged[video.id]===true,aliases:[...new Set([...(video.aliases||[]),originalName])]};
@@ -43,6 +47,6 @@ window.WorkoutVideoLibrary = (() => {
     renderReview();reviewDialog.querySelector('textarea')?.remove();reviewDialog.querySelector('[role=status]').textContent='';if(!reviewDialog.open)reviewDialog.showModal();
   }
   function reviewButton(){const button=document.createElement('button');button.type='button';button.textContent='Lista de apagados';button.onclick=()=>openReview();return button;}
-  window.addEventListener('storage',event=>{if(event.key===key)window.dispatchEvent(new CustomEvent(eventName,{detail:{action:'storage'}}));});
-  return {apply,decorate,rename,remove,restore,resetName,purge,registerUpload,review,openReview,reviewButton,eventName};
+  window.addEventListener('storage',event=>{if(event.key===key||event.key==='treinoFavoriteVideosV1')window.dispatchEvent(new CustomEvent(eventName,{detail:{action:'storage'}}));});
+  return {isFavorite,toggleFavorite,favoriteButton,apply,decorate,rename,remove,restore,resetName,purge,registerUpload,review,openReview,reviewButton,eventName};
 })();
