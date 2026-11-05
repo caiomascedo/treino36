@@ -5660,7 +5660,11 @@ window.AvaliacaoTreinoSync = (function () {
   
   function limparSecao(secId) {
     var ol = sections[secId];
-    if (ol) { ol.innerHTML = '<li><span class="bold">⚠️</span> Seção vazia</li>'; pushState(); }
+    if (!ol || !confirm('Limpar todos os exercícios da seção ' + secId + '?')) return;
+    pushState();
+    ol.innerHTML = '<li><span class="bold">⚠️</span> Seção vazia</li>';
+    pushState();
+    concluirAutoSave();
   }
 
   /* ===== COPIAR ===== */
