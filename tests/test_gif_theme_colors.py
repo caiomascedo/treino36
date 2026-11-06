@@ -1,4 +1,4 @@
-"""Mixed CM/Gym demonstration backgrounds follow the selected output theme."""
+"""Keep footage original by default; per-video optional inversion matches GIF exports."""
 import os,json
 from pathlib import Path
 from urllib.parse import urlparse
@@ -21,8 +21,11 @@ with sync_playwright() as p:
  page.goto('http://colors.test/');page.evaluate('TreinoStorage.ready');cm=page.evaluate('async()=>{await WorkoutCatalog.load();return WorkoutCatalog.current().find(v=>v.collection==="cm"&&v.name.toLowerCase().startsWith("agachamento"))}');page.evaluate('(d)=>localStorage.setItem("treinoAlunos",JSON.stringify(d))',[{'student_id':'mixed-color','nome':'Teste cores','treino':{'A':['Agachamento Smith — 3x8 [Vídeo: '+cm['url']+']','Cadeira Extensora — 3x10 [Vídeo: '+gym['url']+']']},'titulos':{'A':'A. Pernas'}}]);page.reload();page.locator('#workoutGifsBtn').click();d=page.locator('#workoutGifDialog');d.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('cm')
  def choose(index,source,id):
   d.locator('.gif-card').nth(index).get_by_role('button',name='Escolher outro vídeo',exact=True).click();picker=page.locator('.gif-video-picker');picker.get_by_role('combobox',name='Biblioteca da demonstração').select_option(source);picker.locator('[data-video-id="'+id+'"]').click()
- choose(0,'cm',cm['id']);choose(1,'gymfaster',gym['id']);expect(d.locator('video.gym-ink-on-black')).to_have_count(1);expect(d.locator('video.cm-ink-on-white')).to_have_count(0)
- assert d.locator('video.gym-ink-on-black').evaluate("v=>getComputedStyle(v).filter.includes('invert(1)')")
+ choose(0,'cm',cm['id']);choose(1,'gymfaster',gym['id'])
+ assert d.locator('video').evaluate_all('vs=>vs.every(v=>getComputedStyle(v).filter==="none")')
+ d.locator('.gif-card').nth(1).get_by_label('Cor deste vídeo',exact=True).select_option('theme')
+ expect(d.locator('video[data-video-invert=true]')).to_have_count(1)
+ assert d.locator('video[data-video-invert=true]').evaluate("v=>getComputedStyle(v).filter.includes('invert(1)')")
  d.locator('.gif-primary').click();expect(d.locator('[role=status]')).to_contain_text('GIF pronto',timeout=180000)
  with page.expect_download() as dl:d.get_by_role('button',name='Baixar GIF',exact=True).click()
  out=Path('/tmp/mixed-dark-'+ENGINE+'.gif');dl.value.save_as(str(out));im=Image.open(out);assert im.n_frames==100
@@ -31,5 +34,11 @@ with sync_playwright() as p:
   im.seek(frame);rgb=im.convert('RGB')
   for slot in slots:
    pixels=list(rgb.crop((slot['x'],slot['y'],slot['x']+slot['width'],slot['y']+slot['height'])).get_flattened_data());assert sum(max(pixel)<40 for pixel in pixels)>len(pixels)*.55
- d.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('gymfaster');choose(0,'cm',cm['id']);expect(d.locator('video.cm-ink-on-white')).to_have_count(1);expect(d.locator('video.gym-ink-on-black')).to_have_count(0);assert not errors,errors;b.close()
- print('PASS',ENGINE,': mixed CM/Gym footage has black backgrounds in dark preview/export, real 100-frame GIF; source inversion updates for light theme')
+ d.get_by_role('combobox',name='Biblioteca dos GIFs').select_option('gymfaster');choose(0,'cm',cm['id'])
+ expect(d.locator('video[data-video-invert=true]')).to_have_count(0)
+ d.locator('.gif-card').nth(0).get_by_label('Cor deste vídeo',exact=True).select_option('invert')
+ expect(d.locator('video[data-video-invert=true]')).to_have_count(1)
+ d.locator('.gif-card').nth(0).get_by_label('Cor deste vídeo',exact=True).select_option('original')
+ expect(d.locator('video[data-video-invert=true]')).to_have_count(0)
+ assert not errors,errors;b.close()
+ print('PASS',ENGINE,': original footage by default; independent optional per-video inversion; matching real 100-frame GIF output')
