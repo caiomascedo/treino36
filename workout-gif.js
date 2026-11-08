@@ -22,7 +22,8 @@ window.GymFasterWorkout = (() => {
   function rememberView(){
     if(!dialog?.open||!selected||restoringView||job||batchState)return;
     const states=viewStates(),key=contextKey(),state=states[key]||{},top=dialog.getBoundingClientRect().top;
-    const anchor=cards.find(card=>{const r=card.title.parentElement.getBoundingClientRect();return r.bottom>top+2&&r.top<top+dialog.clientHeight;});
+    const bottom=dialog.getBoundingClientRect().bottom-(dialog.querySelector('.gif-actions')?.offsetHeight||0);
+    const anchor=cards.find(card=>{const r=card.title.getBoundingClientRect();return r.top>=top+2&&r.bottom<bottom;})||cards.find(card=>{const r=card.title.parentElement.getBoundingClientRect();return r.bottom>top+2&&r.top<bottom;});
     const position={scroll:dialog.scrollTop,options:cards.filter(c=>c.options?.open).map(rowKey)};
     if(anchor)position.anchor={key:rowKey(anchor),name:match().canonical(anchor.row.nome),section:anchor.row.sectionID||selected.id,index:anchor.row.sourceIndex,part:anchor.row.partIndex,offset:anchor.title.parentElement.getBoundingClientRect().top-top};
     states[key]={...state,section:selected.id,mode,updated:Date.now(),positions:{...state.positions,[selected.id]:position}};
