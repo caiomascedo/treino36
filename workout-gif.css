@@ -59,6 +59,12 @@ a.exercise-video{display:inline-block;user-select:none;-webkit-user-select:none;
 .gif-video-add form {display:grid;gap:12px;}
 .gif-video-add input,.gif-video-add select {min-width:0;width:100%;box-sizing:border-box;padding:10px;}
 .gif-video-add p {line-height:1.5;}
+.gif-video-add .video-save-actions{display:grid;gap:10px;position:sticky;bottom:0;background:white;padding:10px 0 2px}
+.gif-video-add .video-save-actions>button{box-sizing:border-box;display:block;width:100%;min-height:52px;padding:14px 18px;border:0;border-radius:12px;font:600 17px/1.3 Arial;cursor:pointer}
+.gif-video-add .video-save-primary{background:#087ef5;color:#fff}
+.gif-video-add .video-save-cancel{background:#e8edf1;color:#233744}
+.gif-video-add .video-save-actions>button:disabled{opacity:.6;cursor:wait}
+.gif-video-add [hidden]{display:none!important}
 .gif-picker-top {flex-wrap:wrap;}
 .video-category-title {grid-column:1/-1;padding:10px 0 5px;border-bottom:1px solid #b7c9bf;}
 
@@ -95,3 +101,28 @@ a.exercise-video{display:inline-block;user-select:none;-webkit-user-select:none;
 
 .video-favorites-filter{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font:12px Arial;color:#805b00}.video-favorites-filter input{width:auto!important;margin:0}.gif-video-picker .gif-library-row>.video-favorite,#gymfasterLibrary .video-favorite{display:inline-flex;align-items:center;justify-content:center;width:30px;min-height:28px;padding:4px;margin:0;color:#a66b00;background:#fff8dc;font-size:19px}.video-favorite[aria-pressed=true]{color:#8a5a00!important;background:#ffec9c!important}
 .gif-video-picker .gif-library-row{grid-template-columns:minmax(0,1fr) repeat(4,30px);gap:4px}.gif-video-picker .gif-library-row>.gif-preview-eye,.gif-video-picker .gif-library-row>.gif-quick-rename,.gif-video-picker .gif-library-row>.gif-quick-delete{width:30px;padding:4px}
+
+/* A compact player without the large native iOS transport overlay. */
+#movementPreview{width:min(92vw,520px);max-height:90dvh;padding:12px;border-radius:16px}
+#movementPreview .movement-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+#movementPreview h3{flex:1;min-width:0;margin:0;font:600 14px/1.4 Arial;overflow-wrap:anywhere;outline:none}
+#movementPreview .movement-close{flex:0 0 40px;min-height:40px;padding:4px;font-size:24px;border-radius:50%}
+.movement-player{display:flex;flex-direction:column;gap:7px;min-width:0}
+.movement-frame{min-height:0;overflow:hidden;border:1px solid #dce4ea;border-radius:12px;background:#f6f8fa}
+#movementPreview .movement-player video,#gymfasterLibrary .movement-player video{display:block;width:100%;height:min(44dvh,330px);max-height:none;object-fit:contain;border:0;outline:none;cursor:pointer}
+#gymfasterLibrary .movement-player video{height:min(30dvh,230px)}
+.movement-player .movement-progress{box-sizing:border-box;width:100%;margin:0;min-width:0;accent-color:#176b43;cursor:pointer}
+.movement-time{color:#64748b;font:11px Arial;text-align:right}
+.movement-controls{display:flex;gap:6px;flex-wrap:wrap}
+#movementPreview .movement-controls button,#gymfasterLibrary .movement-controls button{flex:1 1 auto;min-height:36px;padding:8px;font:12px Arial;border-radius:8px;white-space:nowrap}
+#movementPreview .movement-options{font:12px Arial;margin-top:8px;color:#526675}
+#movementPreview .movement-options>summary{cursor:pointer;padding:6px 0}
+#movementPreview [role=status]:empty{display:none}
+#movementPreview.movement-expanded{position:fixed;inset:0;margin:0;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;border:0;border-radius:0;display:flex;flex-direction:column}
+#movementPreview.movement-expanded .movement-host,#movementPreview.movement-expanded .movement-player,#movementPreview.movement-expanded .movement-frame{display:flex;flex:1;min-height:0;flex-direction:column}
+#movementPreview.movement-expanded .movement-player video{height:100%;min-height:0;flex:1}
+#movementPreview.movement-expanded .movement-heading,#movementPreview.movement-expanded .movement-controls,#movementPreview.movement-expanded .movement-progress,#movementPreview.movement-expanded .movement-time,#movementPreview.movement-expanded .movement-options{flex:0 0 auto}
+#workoutGifTitle:focus{outline:none}
+#videoDeletionReview .video-deletion-row-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+#videoDeletionReview .video-deletion-row-actions button{min-height:40px;padding:10px;border:0;border-radius:7px;background:#eaf0f3;color:#29465a;font:13px Arial;cursor:pointer}
+#videoDeletionReview .video-deletion-row-actions .video-deletion-purge{background:#fff0f0;color:#a52b2b}

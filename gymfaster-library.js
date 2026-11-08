@@ -27,7 +27,7 @@ window.GymFasterLibrary = (() => {
     const favoriteLabel=el('label',{class:'video-favorites-filter'}),favoriteOnly=el('input',{type:'checkbox','aria-label':'Somente favoritos'});favoriteLabel.append(favoriteOnly,document.createTextNode(' ★ Favoritos'));favoriteOnly.onchange=()=>{browser.scrollTop=0;render();};filters.append(group,gender,favoriteLabel);
     const status = el('p', {role: 'status'}), list = el('div', {class: 'gym-results'});
     const preview = el('div', {class: 'gym-preview', hidden: ''});
-    const addVideo=el('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await load();controls.search.value=asset.name;controls.group.value='';controls.gender.value='';controls.render();},{name:selection?.name||search.value,group:group.value});
+    const addVideo=el('button',{type:'button'},'Adicionar vídeo');addVideo.onclick=()=>WorkoutCatalog.openAdd(async asset=>{await load();if(selection){selection.apply(asset);dialog.close();return;}controls.search.value=asset.name;controls.group.value='';controls.gender.value='';controls.render();},{name:selection?.name||search.value,group:group.value});
     const libraryTools=el('div',{class:'gym-library-tools'}),removed=el('button',{type:'button'},'Ver apagados'),undo=el('button',{type:'button',hidden:''},'Desfazer exclusão'),libraryHint=el('small',{},'Em Ver apagados, restaure ou apague definitivamente desta biblioteca neste navegador.');libraryTools.append(removed,undo,WorkoutVideoLibrary.reviewButton(),libraryHint);
     const drive = el('a', {target:'_blank',rel:'noopener noreferrer'}, 'Abrir coleção unificada no Drive');
     const close = el('button', {type: 'button', class: 'gym-close'}, 'Fechar');
@@ -56,10 +56,9 @@ window.GymFasterLibrary = (() => {
         const original = el('a', {href: video.driveUrl||video.url, target: '_blank', rel: 'noopener noreferrer'}, 'Abrir no Drive');
         watch.onclick = () => {
           clearPreview();
-          const motion = el('video', {src:video.media||'gymfaster-media/'+video.id+'.mp4', controls:'',loop:'',playsinline:'',muted:'',class:'gym-motion'+(video.collection==='cm'?' cm-ink-on-white':''),'aria-label':video.name});
-          preview.replaceChildren(el('strong', {}, video.name + ' · ' + video.gender), motion);
-          preview.hidden = false; preview.scrollIntoView({block: 'nearest'});
-          if (motion.tagName === 'VIDEO') { motion.muted = true; motion.play().catch(() => {}); }
+          const player=WorkoutVideoPreview.createPlayer(video);
+          preview.replaceChildren(el('strong', {}, video.name + ' · ' + video.gender), player.element);
+          preview.hidden=false;preview.scrollIntoView({block:'nearest'});player.play();
         };
         if(video.url.startsWith('local-video:'))original.hidden=true;actions.append(watch,WorkoutVideoLibrary.favoriteButton(video));
         if(!video.removed){const rename=el('button',{type:'button',class:'gym-rename','aria-label':'Renomear vídeo: '+video.name,title:'Renomear'},'✎');rename.onclick=()=>{

@@ -23,8 +23,17 @@ window.WorkoutCatalog = (() => {
     custom = saved.map(({blob,bytes,mimeType, ...asset}) => { const media = URL.createObjectURL(blob||new Blob([bytes],{type:mimeType||'video/mp4'})); urls.push(media); return {...asset, media}; });
     return custom;
   }
+  function allAssets() {
+    const replacements=new Map(custom.map(asset=>[asset.id,asset]));
+    return [...base.map(asset=>replacements.has(asset.id)?{...asset,...replacements.get(asset.id)}:asset),...custom.filter(asset=>!base.some(original=>original.id===asset.id))];
+  }
+  function matchingName(name) {
+    const identity=key(name);if(!identity)return [];
+    const assets=WorkoutVideoLibrary.apply(allAssets(),true);
+    return assets.filter(asset=>[asset.name,asset.originalName,...(asset.aliases||[])].some(value=>value&&key(value)===identity));
+  }
   function current() {
-    const seen = new Map(),assets=[...base,...custom],visible=window.WorkoutVideoLibrary?new Set(WorkoutVideoLibrary.apply(assets,true).map(video=>video.id)):null;
+    const seen = new Map(),assets=allAssets(),visible=window.WorkoutVideoLibrary?new Set(WorkoutVideoLibrary.apply(assets,true).map(video=>video.id)):null;
     return assets.filter(asset => {
       if(visible&&!visible.has(asset.id))return false;
       const identity = asset.exerciseKey || key(asset.name);
@@ -45,19 +54,23 @@ window.WorkoutCatalog = (() => {
     }).catch(error => { pending = null; throw error; });
     await pending; return current();
   }
-  async function add(file, name, group) {
+  async function add(file, name, group, options={}) {
     await load(); name = String(name).replace(/\s+/g,' ').trim(); group = String(group).trim();
     if (!name || name.length > 160 || !group) throw Error('Informe o nome (até 160 caracteres) e a categoria.');
     if (!file || !/^(video\/)/.test(file.type) || !/\.(mp4|m4v|mov|webm)$/i.test(file.name) || !file.size || file.size > 100*1048576) throw Error('Escolha um vídeo MP4, MOV ou WebM de até 100 MB.');
     const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())), b => b.toString(16).padStart(2,'0')).join('');
     const identity = key(name);
-    const existing = WorkoutVideoLibrary.apply([...base,...custom],true).find(v => v.sha256 === hash || v.id === 'user-'+hash || key(v.name) === identity || (v.exerciseKey || key(v.originalName)) === identity || (v.aliases||[]).some(alias => key(alias) === identity));
-    if (existing) throw Error('Este exercício ou arquivo já está na biblioteca: '+existing.name+'. Use a versão existente; para uma variação diferente, informe o aparelho ou a variação no nome.');
+    const target=options.replaceId?lookup(options.replaceId):null;
+    if(options.replaceId&&!target)throw Error('O vídeo a substituir não está mais disponível. Reabra o formulário.');
+    const duplicate=WorkoutVideoLibrary.apply(allAssets(),true).find(v=>v.id!==target?.id&&(v.sha256===hash||!v.sha256&&v.id==='user-'+hash||[v.name,v.originalName,...(v.aliases||[])].some(value=>value&&key(value)===identity)));
+    if(duplicate)throw Error('Este exercício ou arquivo já está na biblioteca: '+duplicate.name+'. Escolha o vídeo correspondente para substituir ou informe uma variação diferente.');
+    if(target?.sha256===hash)throw Error('Este arquivo já está na biblioteca e já é o vídeo atual. Escolha outro arquivo para substituir.');
     const media = URL.createObjectURL(file), probe = document.createElement('video');
     try { await new Promise((resolve,reject) => { const timer=setTimeout(()=>reject(Error('Não foi possível ler este vídeo.')),15000); probe.onloadedmetadata=()=>{clearTimeout(timer); probe.videoWidth && probe.duration > 0 ? resolve() : reject(Error('Vídeo inválido.'));}; probe.onerror=()=>{clearTimeout(timer);reject(Error('Formato de vídeo não suportado neste navegador.'));};probe.preload='metadata';probe.src=media; }); }
     finally { probe.removeAttribute('src'); probe.load(); URL.revokeObjectURL(media); }
-    const id = 'user-'+hash;
-    const record={id,name,group,gender:'Pessoal',collection:'gymfaster',source:'Meu vídeo',url:'local-video:'+id,sha256:hash,exerciseKey:identity,aliases:[]};
+    const initialId='user-'+hash,collision=allAssets().find(video=>video.id===initialId&&video.sha256!==hash);
+    const id=target?.id||(collision?initialId+'-'+crypto.randomUUID():initialId);
+    const record={id,name,group,gender:target?.gender||'Pessoal',collection:target?.collection||'gymfaster',source:'Meu vídeo',url:target?.url||'local-video:'+id,sha256:hash,exerciseKey:target?.exerciseKey||identity,aliases:[...new Set([...(target?.aliases||[]),target?.originalName,target?.name].filter(Boolean))],sourceIds:target?.sourceIds||[],driveUrl:target?.driveUrl||'',localReplacement:!!target,kind:target?'replacement':'personal',updatedAt:new Date().toISOString()};
     try{await records('put',{...record,blob:file});}
     catch(error){
       // Some WebKit stores reject Blob/File serialization; bytes remain durable.
@@ -65,10 +78,10 @@ window.WorkoutCatalog = (() => {
       await records('put',{...record,bytes:await file.arrayBuffer(),mimeType:file.type});
     }
     // Do not revoke existing URLs: an open preview or GIF can still be using them.
-    const asset={id,name,group,gender:'Pessoal',collection:'gymfaster',source:'Meu vídeo',url:'local-video:'+id,sha256:hash,exerciseKey:identity,media:URL.createObjectURL(file),aliases:[]};
-    urls.push(asset.media);custom.push(asset);
+    const asset={...record,media:URL.createObjectURL(file)};
+    urls.push(asset.media);custom=custom.filter(video=>video.id!==id);custom.push(asset);
     window.WorkoutVideoLibrary?.registerUpload(id);
-    window.dispatchEvent(new CustomEvent('workout-video-library-change',{detail:{action:'add',id}}));
+    window.dispatchEvent(new CustomEvent('workout-video-library-change',{detail:{action:target?'replace':'add',id}}));
     return asset;
   }
   async function deleteLocal(id) {
@@ -79,16 +92,33 @@ window.WorkoutCatalog = (() => {
   function openAdd(onAdded,defaults={}) {
     const dialog=document.createElement('dialog');dialog.className='gif-video-add';dialog.setAttribute('aria-label','Adicionar vídeo à biblioteca');
     const make=(tag,text)=>{const e=document.createElement(tag);if(text)e.textContent=text;return e;};
-    const title=make('h3','Adicionar vídeo'),hint=make('p','O vídeo fica salvo somente neste navegador e aparelho. Ele não será enviado ao Drive nem ficará disponível para outras pessoas pelo PDF. Você pode usá-lo nas prévias e nos GIFs. Guarde também o arquivo original.'),form=make('form'),name=make('input'),category=make('select'),file=make('input'),status=make('p'),save=make('button','Salvar vídeo'),close=make('button','Cancelar');
+    const title=make('h3','Salvar vídeo na biblioteca'),hint=make('p','Use o nome de um exercício existente para substituir o vídeo, ou outro nome para cadastrar uma variação. O arquivo fica salvo somente neste navegador e aparelho; links externos continuam com o vídeo original.'),form=make('form'),name=make('input'),category=make('select'),file=make('input'),status=make('p'),save=make('button','Salvar vídeo'),close=make('button','Cancelar'),targetChoice=make('select'),targetLabel=make('label','Vídeo a substituir');
     name.value=String(defaults.name||'').slice(0,160);name.required=true;name.maxLength=160;name.placeholder='Ex.: Afundo com Halteres';name.setAttribute('aria-label','Nome do exercício');category.required=true;category.setAttribute('aria-label','Categoria do vídeo');
     const placeholder=make('option','Escolha a categoria');placeholder.value='';category.append(placeholder);
     [...new Set(current().map(v=>v.group))].sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(g=>{const option=make('option',g);option.value=g;category.append(option);});
     if(defaults.group)category.value=defaults.group;
-    file.type='file';file.accept='video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm';file.required=true;file.setAttribute('aria-label','Arquivo de vídeo');save.type='submit';close.type='button';status.setAttribute('role','status');close.onclick=()=>dialog.close();
-    form.append(name,category,file,save,close,status);dialog.append(title,hint,form);document.body.append(dialog);dialog.onclose=()=>dialog.remove();
-    form.onsubmit=async event=>{event.preventDefault();save.disabled=true;close.disabled=true;status.textContent='Verificando vídeo e repetições…';try{const asset=await add(file.files[0],name.value,category.value);onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;}finally{save.disabled=false;close.disabled=false;}};
+    targetChoice.setAttribute('aria-label','Vídeo a substituir');targetLabel.append(targetChoice);targetLabel.hidden=true;
+    let candidates=[],targetId='';
+    function updateTarget(){
+      candidates=matchingName(name.value);targetId=candidates.length===1?candidates[0].id:'';
+      targetLabel.hidden=candidates.length<2;targetChoice.required=candidates.length>1;targetChoice.disabled=candidates.length<2;
+      targetChoice.replaceChildren(new Option('Escolha a versão que será substituída',''));
+      candidates.forEach(asset=>targetChoice.add(new Option([asset.name,asset.gender,asset.source].filter(Boolean).join(' · '),asset.id)));
+      if(candidates.length>1&&candidates.some(asset=>asset.id===defaults.replaceId)){targetChoice.value=defaults.replaceId;targetId=defaults.replaceId;}
+      if(targetId&&!category.value)category.value=candidates.find(asset=>asset.id===targetId).group;
+      describeTarget();
+    }
+    function describeTarget(){
+      const target=candidates.find(asset=>asset.id===targetId);
+      status.textContent=target?'Ao salvar, o novo arquivo substituirá “'+target.name+'”. Os vínculos e favoritos serão mantidos.':candidates.length>1?'Escolha qual versão deseja substituir.':'Será cadastrado um novo vídeo.';
+    }
+    name.oninput=updateTarget;targetChoice.onchange=()=>{targetId=targetChoice.value;describeTarget();};
+    file.type='file';file.accept='video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm';file.required=true;file.setAttribute('aria-label','Arquivo de vídeo');save.type='submit';save.className='video-save-primary';close.type='button';close.className='video-save-cancel';status.setAttribute('role','status');close.onclick=()=>dialog.close();
+    const actions=make('div');actions.className='video-save-actions';actions.append(save,close);
+    form.append(name,category,targetLabel,file,status,actions);dialog.append(title,hint,form);document.body.append(dialog);dialog.onclose=()=>dialog.remove();updateTarget();
+    form.onsubmit=async event=>{event.preventDefault();if(candidates.length>1&&!targetId)return;save.disabled=true;close.disabled=true;status.textContent=targetId?'Substituindo vídeo…':'Verificando vídeo e repetições…';try{const asset=await add(file.files[0],name.value,category.value,{replaceId:targetId||undefined});onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;}finally{save.disabled=false;close.disabled=false;}};
     dialog.showModal();name.focus();return dialog;
   }
-  function lookup(id){return [...base,...custom].find(video=>video.id===id||(video.sourceIds||[]).includes(id));}
+  function lookup(id){return allAssets().find(video=>video.id===id||(video.sourceIds||[]).includes(id));}
   return {load,current,add,openAdd,deleteLocal,lookup,key,get folderURL(){return folderURL;}};
 })();
