@@ -26,7 +26,12 @@ apagados pelo navegador.
 
 O formulário mantém os mesmos botões **Salvar vídeo** e **Cancelar**, agora
 maiores. Se o nome corresponder a um vídeo existente, informa que haverá
-substituição. Nomes com mais de uma versão exigem selecionar a versão correta.
+substituição. Mostra o nome, a categoria, a versão e a origem do vídeo encontrado,
+com **Ver vídeo existente** para conferir a prévia. Nomes com mais de uma versão
+exigem selecionar a versão correta. A troca requer escolher explicitamente
+**Sim, substituir pelo novo arquivo**. Com **Não, manter o vídeo existente**,
+Salvar mantém/aplica o vídeo existente, sem substituir bytes nem criar outra
+cópia. Alterar o nome ou a versão limpa a confirmação anterior.
 Ao trocar o arquivo, mantém ID, vínculos, favorito e rótulos personalizados;
 arquivos inválidos e cancelamentos preservam o vídeo anterior. No seletor de
 um exercício, Salvar também aplica o vídeo imediatamente, sem outra escolha.

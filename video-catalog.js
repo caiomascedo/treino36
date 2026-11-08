@@ -98,9 +98,18 @@ window.WorkoutCatalog = (() => {
     [...new Set(current().map(v=>v.group))].sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(g=>{const option=make('option',g);option.value=g;category.append(option);});
     if(defaults.group)category.value=defaults.group;
     targetChoice.setAttribute('aria-label','Vídeo a substituir');targetLabel.append(targetChoice);targetLabel.hidden=true;
+    const existing=make('section');existing.className='video-existing-choice';existing.hidden=true;
+    const existingTitle=make('strong','Já existe um vídeo com este nome'),existingInfo=make('p'),preview=make('button','Ver vídeo existente'),decision=make('fieldset'),legend=make('legend','Deseja substituir este vídeo?');
+    preview.type='button';preview.className='video-existing-preview';decision.append(legend);
+    const radios=[];
+    for(const [value,text]of [['replace','Sim, substituir pelo novo arquivo'],['keep','Não, manter o vídeo existente']]){
+      const label=make('label'),radio=make('input');radio.type='radio';radio.name='videoReplacementDecision';radio.value=value;radio.required=true;label.append(radio,document.createTextNode(text));decision.append(label);radios.push(radio);
+    }
+    existing.append(existingTitle,existingInfo,preview,decision);
     let candidates=[],targetId='';
+    const chosenDecision=()=>radios.find(radio=>radio.checked)?.value;
     function updateTarget(){
-      candidates=matchingName(name.value);targetId=candidates.length===1?candidates[0].id:'';
+      candidates=matchingName(name.value);targetId=candidates.length===1?candidates[0].id:'';radios.forEach(radio=>{radio.checked=false;});
       targetLabel.hidden=candidates.length<2;targetChoice.required=candidates.length>1;targetChoice.disabled=candidates.length<2;
       targetChoice.replaceChildren(new Option('Escolha a versão que será substituída',''));
       candidates.forEach(asset=>targetChoice.add(new Option([asset.name,asset.gender,asset.source].filter(Boolean).join(' · '),asset.id)));
@@ -110,13 +119,22 @@ window.WorkoutCatalog = (() => {
     }
     function describeTarget(){
       const target=candidates.find(asset=>asset.id===targetId);
-      status.textContent=target?'Ao salvar, o novo arquivo substituirá “'+target.name+'”. Os vínculos e favoritos serão mantidos.':candidates.length>1?'Escolha qual versão deseja substituir.':'Será cadastrado um novo vídeo.';
+      existing.hidden=!candidates.length;decision.disabled=!target;preview.disabled=!target;
+      existingTitle.textContent=candidates.length>1?'Existem '+candidates.length+' versões com este nome':'Já existe um vídeo com este nome';
+      existingInfo.textContent=target?[target.name,target.group,target.gender,target.source].filter(Boolean).join(' · '):candidates.map(asset=>[asset.name,asset.gender,asset.source].filter(Boolean).join(' · ')).join('\n');
+      const keeping=!!target&&chosenDecision()==='keep';
+      if(target&&!category.value)category.value=target.group;
+      file.disabled=keeping;file.required=!target||chosenDecision()==='replace';category.disabled=keeping;category.required=!keeping;
+      radios.forEach(radio=>{radio.required=!!target;});
+      status.textContent=target?(chosenDecision()==='replace'?'Ao salvar, o novo arquivo substituirá “'+target.name+'”. Os vínculos e favoritos serão mantidos.':chosenDecision()==='keep'?'O vídeo existente será mantido, sem substituir o arquivo nem criar uma cópia.':'Confira o vídeo existente e escolha se deseja substituí-lo.') :candidates.length>1?'Escolha qual versão deseja conferir.':'Será cadastrado um novo vídeo.';
     }
-    name.oninput=updateTarget;targetChoice.onchange=()=>{targetId=targetChoice.value;describeTarget();};
+    name.oninput=updateTarget;targetChoice.onchange=()=>{targetId=targetChoice.value;radios.forEach(radio=>{radio.checked=false;});describeTarget();};
+    radios.forEach(radio=>{radio.onchange=describeTarget;});
+    preview.onclick=()=>{const asset=candidates.find(asset=>asset.id===targetId);if(asset)WorkoutVideoPreview.open(asset,preview);};
     file.type='file';file.accept='video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm';file.required=true;file.setAttribute('aria-label','Arquivo de vídeo');save.type='submit';save.className='video-save-primary';close.type='button';close.className='video-save-cancel';status.setAttribute('role','status');close.onclick=()=>dialog.close();
     const actions=make('div');actions.className='video-save-actions';actions.append(save,close);
-    form.append(name,category,targetLabel,file,status,actions);dialog.append(title,hint,form);document.body.append(dialog);dialog.onclose=()=>dialog.remove();updateTarget();
-    form.onsubmit=async event=>{event.preventDefault();if(candidates.length>1&&!targetId)return;save.disabled=true;close.disabled=true;status.textContent=targetId?'Substituindo vídeo…':'Verificando vídeo e repetições…';try{const asset=await add(file.files[0],name.value,category.value,{replaceId:targetId||undefined});onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;}finally{save.disabled=false;close.disabled=false;}};
+    form.append(name,category,targetLabel,existing,file,status,actions);dialog.append(title,hint,form);document.body.append(dialog);dialog.onclose=()=>dialog.remove();updateTarget();
+    form.onsubmit=async event=>{event.preventDefault();if(candidates.length>1&&!targetId||targetId&&!chosenDecision())return;save.disabled=true;close.disabled=true;status.textContent=targetId?(chosenDecision()==='keep'?'Mantendo vídeo existente…':'Substituindo vídeo…'):'Verificando vídeo e repetições…';try{const asset=targetId&&chosenDecision()==='keep'?WorkoutVideoLibrary.decorate(lookup(targetId)):await add(file.files[0],name.value,category.value,{replaceId:targetId||undefined});onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;}finally{save.disabled=false;close.disabled=false;}};
     dialog.showModal();name.focus();return dialog;
   }
   function lookup(id){return allAssets().find(video=>video.id===id||(video.sourceIds||[]).includes(id));}

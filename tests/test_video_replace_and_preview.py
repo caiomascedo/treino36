@@ -34,10 +34,14 @@ with sync_playwright() as p:
  page.evaluate("(asset)=>{localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'replace-test',nome:'Teste substituir',treino:{A:['Meu vídeo renomeado — 3×12 [GIFs: '+asset.url+']'],B:['Meu vídeo renomeado — 3×10 [GIFs: '+asset.url+']']},titulos:{A:'A. Primeiro',B:'B. Segundo'}}]));localStorage.setItem('treinoAlunoSelecionado','Teste substituir')}",original)
  page.reload();page.evaluate('TreinoStorage.ready');before=page.evaluate('localStorage.getItem("treinoAlunos")')
  page.evaluate('GymFasterLibrary.open()');library.get_by_role('searchbox').fill('Meu vídeo renomeado');library.get_by_role('button',name='Adicionar vídeo',exact=True).click()
- expect(form.get_by_role('status')).to_contain_text('substituirá')
- form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[1]));form.get_by_role('button',name='Cancelar',exact=True).click()
+ expect(form.locator('.video-existing-choice')).to_contain_text('Já existe')
+ expect(form.locator('.video-existing-choice')).to_contain_text('Meu vídeo renomeado')
+ form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[1]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(1)
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).sha256',original['id'])==original['sha256']
- library.get_by_role('button',name='Adicionar vídeo',exact=True).click();form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[1]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
+ form.get_by_role('button',name='Ver vídeo existente',exact=True).click();old_preview=page.locator('#movementPreview');expect(old_preview).to_contain_text('Meu vídeo renomeado');expect(old_preview.locator('video')).to_be_visible();old_preview.get_by_role('button',name='Fechar prévia',exact=True).click()
+ form.get_by_role('radio',name='Não, manter o vídeo existente',exact=True).check();expect(form.get_by_label('Arquivo de vídeo',exact=True)).to_be_disabled();form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
+ assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).sha256',original['id'])==original['sha256']
+ library.get_by_role('button',name='Adicionar vídeo',exact=True).click();form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[1]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  updated=page.evaluate('(id)=>WorkoutCatalog.lookup(id)',original['id'])
  assert updated['id']==original['id'] and updated['url']==original['url'] and updated['sha256']!=original['sha256']
  assert page.evaluate('(id)=>WorkoutVideoLibrary.isFavorite(id)',original['id'])
@@ -69,7 +73,7 @@ with sync_playwright() as p:
  # A built-in catalog clip can also be replaced without a duplicate or broken ID.
  builtin=page.evaluate("async()=>{await WorkoutCatalog.load();const all=WorkoutCatalog.current();return all.find(v=>v.collection==='gymfaster'&&v.source!=='Meu vídeo'&&all.filter(a=>WorkoutCatalog.key(a.name)===WorkoutCatalog.key(v.name)).length===1)}")
  count=page.evaluate('WorkoutCatalog.current().length');page.evaluate('GymFasterLibrary.open()');library.get_by_role('searchbox').fill(builtin['name']);library.get_by_role('button',name='Adicionar vídeo',exact=True).click()
- expect(form.get_by_role('status')).to_contain_text('substituirá');form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[0]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
+ expect(form.locator('.video-existing-choice')).to_contain_text('Já existe');form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[0]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  assert page.evaluate('WorkoutCatalog.current().length')==count
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).localReplacement',builtin['id'])
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).media.startsWith("blob:")',builtin['id'])
@@ -95,7 +99,7 @@ with sync_playwright() as p:
  version=form.get_by_label('Vídeo a substituir',exact=True);expect(version).to_be_visible();assert version.locator('option').count()>2
  target_id=version.locator('option').nth(1).get_attribute('value');group=page.evaluate('(id)=>WorkoutCatalog.lookup(id).group',target_id)
  form.get_by_label('Categoria do vídeo',exact=True).select_option(group);form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[0]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(1)
- version.select_option(target_id);form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
+ version.select_option(target_id);form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).localReplacement',target_id)
  assert not errors,errors;browser.close()
  print('PASS',ENGINE,': large Save/Cancel; replacements preserve IDs, labels, favorites and prescriptions; compact player; immediate B close and fresh-tab restore; confirmed review-list purge removes private bytes')

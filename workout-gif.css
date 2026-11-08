@@ -65,6 +65,13 @@ a.exercise-video{display:inline-block;user-select:none;-webkit-user-select:none;
 .gif-video-add .video-save-cancel{background:#e8edf1;color:#233744}
 .gif-video-add .video-save-actions>button:disabled{opacity:.6;cursor:wait}
 .gif-video-add [hidden]{display:none!important}
+.gif-video-add .video-existing-choice{padding:12px;border:1px solid #e0bf68;border-radius:10px;background:#fff9e9;color:#304536;min-width:0}
+.gif-video-add .video-existing-choice p{white-space:pre-line;overflow-wrap:anywhere;margin:7px 0;font:13px/1.5 Arial}
+.gif-video-add .video-existing-preview{min-height:40px;padding:9px 12px;border:1px solid #b7c9bf;border-radius:8px;background:#e8f3ed;color:#1d593d;font:13px Arial;cursor:pointer}
+.gif-video-add .video-existing-choice fieldset{min-width:0;margin:12px 0 0;padding:10px;border:1px solid #d6d9c7;border-radius:8px}
+.gif-video-add .video-existing-choice legend{font-weight:600;padding:0 4px}
+.gif-video-add .video-existing-choice label{display:flex;align-items:center;gap:8px;margin:10px 0;font:14px/1.4 Arial;cursor:pointer}
+.gif-video-add .video-existing-choice input[type=radio]{flex:0 0 18px;width:18px;height:18px;padding:0;margin:0;accent-color:#176b43}
 .gif-picker-top {flex-wrap:wrap;}
 .video-category-title {grid-column:1/-1;padding:10px 0 5px;border-bottom:1px solid #b7c9bf;}
 
