@@ -62,7 +62,7 @@ window.WorkoutCatalog = (() => {
     const identity = key(name);
     const target=options.replaceId?lookup(options.replaceId):null;
     if(options.replaceId&&!target)throw Error('O vídeo a substituir não está mais disponível. Reabra o formulário.');
-    const duplicate=WorkoutVideoLibrary.apply(allAssets(),true).find(v=>v.id!==target?.id&&(v.sha256===hash||!v.sha256&&v.id==='user-'+hash||[v.name,v.originalName,...(v.aliases||[])].some(value=>value&&key(value)===identity)));
+    const duplicate=WorkoutVideoLibrary.apply(allAssets(),true).find(v=>v.id!==target?.id&&(v.sha256===hash||!v.sha256&&v.id==='user-'+hash||!target&&[v.name,v.originalName,...(v.aliases||[])].some(value=>value&&key(value)===identity)));
     if(duplicate)throw Error('Este exercício ou arquivo já está na biblioteca: '+duplicate.name+'. Escolha o vídeo correspondente para substituir ou informe uma variação diferente.');
     if(target?.sha256===hash)throw Error('Este arquivo já está na biblioteca e já é o vídeo atual. Escolha outro arquivo para substituir.');
     const media = URL.createObjectURL(file), probe = document.createElement('video');

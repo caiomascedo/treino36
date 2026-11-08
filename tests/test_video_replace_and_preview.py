@@ -90,5 +90,12 @@ with sync_playwright() as p:
  expect(form).to_have_count(0);expect(picker).to_have_count(0);expect(main.locator('.gif-missing')).to_have_count(0)
  chosen=main.locator('.gif-card').get_attribute('data-video-id')
  page.wait_for_function('(id)=>JSON.parse(localStorage.getItem("treinoAlunos"))[0].treino.B[0].includes(id)',arg=chosen)
+ # Existing male/female variants with the same name must be disambiguated, not blocked as duplicates.
+ main.get_by_role('button',name='Fechar',exact=True).click();page.evaluate('GymFasterLibrary.open()');library.get_by_role('searchbox').fill('Cadeira Extensora');library.get_by_role('button',name='Adicionar vídeo',exact=True).click()
+ version=form.get_by_label('Vídeo a substituir',exact=True);expect(version).to_be_visible();assert version.locator('option').count()>2
+ target_id=version.locator('option').nth(1).get_attribute('value');group=page.evaluate('(id)=>WorkoutCatalog.lookup(id).group',target_id)
+ form.get_by_label('Categoria do vídeo',exact=True).select_option(group);form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[0]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(1)
+ version.select_option(target_id);form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
+ assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).localReplacement',target_id)
  assert not errors,errors;browser.close()
  print('PASS',ENGINE,': large Save/Cancel; replacements preserve IDs, labels, favorites and prescriptions; compact player; immediate B close and fresh-tab restore; confirmed review-list purge removes private bytes')
