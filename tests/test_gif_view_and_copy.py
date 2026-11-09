@@ -68,7 +68,22 @@ with sync_playwright() as p:
  page.evaluate("document.execCommand=(command)=>{if(command==='copy')window.__copied=document.activeElement.value;return true}")
  page.locator('#copyFullTreinoBtn').evaluate('b=>b.click()')
  copied=page.evaluate('__copied');assert 'c. pernas' in copied.lower() and 'agachamento sumô' in copied.lower(),copied
+ assert all(value not in copied.lower() for value in ['[gifs:', '[vídeo:', 'https://', '.mp4', '<span', '<a ']),copied
+ assert page.locator('.sec-c .exercise-gifs').count()>0
+ page.locator('.copy-section-btn[data-section=\"C\"]').evaluate('b=>b.click()')
+ section_copy=page.evaluate('__copied');assert 'agachamento sumô' in section_copy.lower() and '[GIFs:' not in section_copy and 'https://' not in section_copy
+ assert page.locator('.sec-c .exercise-gifs').count()>0
  assert all((s+'. Vazio '+s).lower() not in copied.lower() for s in 'DEF')
+ # Section-menu and workout-library copies are plain; internal section paste retains media.
+ page.evaluate("Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>window.__written=text}})")
+ page.locator('#mainContainer .workout-grip[data-section=C]').click();menu=page.locator('#sectionActionsDialog');menu.locator('[data-copy]').click()
+ page.wait_for_function('!!window.__written');assert '[GIFs:' not in page.evaluate('__written') and 'https://' not in page.evaluate('__written')
+ menu.locator('[data-close]').click();page.locator('#mainContainer .workout-grip[data-section=B]').click();menu.locator('[data-paste]').click();expect(menu).not_to_be_visible()
+ assert page.locator('.sec-b .exercise-gifs').count()>1
+ page.locator('#workoutLibraryBtn').evaluate('b=>b.click()');library=page.locator('#workoutLibraryDialog');library.locator('[data-library-id="current-0"]').click();library.locator('#copyLibraryWorkout').click()
+ library_copy=page.evaluate('__written');assert 'agachamento sumô' in library_copy.lower() and '[GIFs:' not in library_copy and 'https://' not in library_copy
+ library.locator('[data-close]').click()
+
  page.locator('.sec-d ol').evaluate("e=>e.innerHTML='<li><span class=bold>Agora existe um exercício D</span> — 3×10</li>'")
  page.locator('#copyFullTreinoBtn').evaluate('b=>b.click()');copied=page.evaluate('__copied');assert 'd. vazio d' in copied.lower() and 'agora existe' in copied.lower()
  assert all((s+'. Vazio '+s).lower() not in copied.lower() for s in 'EF')

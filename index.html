@@ -5669,13 +5669,14 @@ window.AvaliacaoTreinoSync = (function () {
   }
 
   /* ===== COPIAR ===== */
+  function textoCopiaExercicio(row){return WorkoutMediaText.strip(textoDoExercicio(row,false));}
   function copiarSecao(secId) {
     var ol = sections[secId]; if (!ol) return;
     var h2 = document.querySelector('.sec-' + secId.toLowerCase() + ' h2');
     var titulo = h2 ? h2.innerText.trim() : 'Seção ' + secId;
     var txt = titulo + '\n' + '='.repeat(titulo.length) + '\n';
     ol.querySelectorAll('li').forEach(function(li) {
-      var t = textoDoExercicio(li,true);
+      var t = textoCopiaExercicio(li);
       if (t && !t.includes('Seção vazia') && !t.includes('Nenhum exercício')) txt += '• ' + t + '\n';
     });
     var ta = document.createElement('textarea'); ta.value = txt;
@@ -5685,7 +5686,7 @@ window.AvaliacaoTreinoSync = (function () {
   function copiarTreinoCompleto() {
     var txt = '';
     for (var sec of SECOES) {
-      var linhas = getExerciciosSecao(sec).map(function(ex) { return textoDoExercicio(ex.source,true); });
+      var linhas = getExerciciosSecao(sec).map(function(ex) { return textoCopiaExercicio(ex.source); });
       if (!linhas.length) continue;
       var h2 = document.querySelector('.sec-' + sec.toLowerCase() + ' h2');
       var titulo = h2 ? h2.innerText.trim() : 'Seção ' + sec;
@@ -8062,7 +8063,7 @@ window.AvaliacaoTreinoSync = (function () {
     return holder.innerHTML;
   }
   var sectionClipboard=null,sectionMenu=null,sectionMenuContext=null;
-  function sectionPlain(data){var holder=document.createElement('div');return data.titulo+'\n'+data.itens.map(function(html){holder.innerHTML=html;return '• '+textoDoExercicio(holder,true);}).join('\n');}
+  function sectionPlain(data){var holder=document.createElement('div');return data.titulo+'\n'+data.itens.map(function(html){holder.innerHTML=html;return '• '+textoCopiaExercicio(holder);}).join('\n');}
   function abrirAcoesTreino(config,sec){
     if(!sectionMenu){
       sectionMenu=document.createElement('dialog');sectionMenu.id='sectionActionsDialog';sectionMenu.className='app-dialog';sectionMenu.style.cssText='box-sizing:border-box;width:min(94vw,420px);max-height:90dvh;overflow:auto;border:1px solid #cbd5e1;border-radius:12px;padding:16px;color:#29465a;background:white';
@@ -11257,7 +11258,7 @@ window.AvaliacaoTreinoSync = (function () {
     preencherDestinos(document.getElementById('workoutLibraryDestination'));atualizarBibliotecaTreinos();prepararPreviaBiblioteca();workoutLibrary.showModal();
   }
   document.getElementById('workoutLibrarySearch').oninput=atualizarBibliotecaTreinos;document.getElementById('workoutLibraryScope').onchange=atualizarPreviaBiblioteca;
-  document.getElementById('copyLibraryWorkout').onclick=async function(){var area=document.getElementById('workoutLibraryPreview');try{await navigator.clipboard.writeText(textoTreino(librarySelected.data,document.getElementById('workoutLibraryScope').value==='all'?null:document.getElementById('workoutLibraryScope').value,true));document.getElementById('workoutLibraryStatus').textContent='Conteúdo completo copiado.';}catch(e){area.focus();area.select();document.getElementById('workoutLibraryStatus').textContent='Texto selecionado: use Copiar ou Ctrl+C.';}};
+  document.getElementById('copyLibraryWorkout').onclick=async function(){var area=document.getElementById('workoutLibraryPreview');try{await navigator.clipboard.writeText(textoTreino(librarySelected.data,document.getElementById('workoutLibraryScope').value==='all'?null:document.getElementById('workoutLibraryScope').value,false));document.getElementById('workoutLibraryStatus').textContent='Conteúdo completo copiado.';}catch(e){area.focus();area.select();document.getElementById('workoutLibraryStatus').textContent='Texto selecionado: use Copiar ou Ctrl+C.';}};
   document.getElementById('useLibraryWorkout').onclick=function(){
     if(!librarySelected)return;var source=document.getElementById('workoutLibraryScope').value,data=cloneData(librarySelected.data);
     if(source==='all'){aplicarDadosNaTela(data);}else{var dest=document.getElementById('workoutLibraryDestination').value;var target=capturarTreinoAtual()||{treino:{},titulos:{},secaoFAtiva:secaoFAtiva};target.treino[dest]=cloneData(data.treino[source]||[]);target.titulos[dest]=dest+'. '+(data.titulos[source]||'TREINO').replace(/^[A-F][.\-:]\s*/i,'');if(dest==='F')target.secaoFAtiva=true;aplicarDadosNaTela(target,dest);}

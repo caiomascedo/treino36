@@ -43,8 +43,10 @@ e ampliar, com `playsinline` e sem o painel nativo de controles do iOS.
 
 **Copiar Treino**, no início da ficha, copia somente as seções com exercícios.
 D, E ou F vazios não geram títulos em branco. Uma seção volta a participar da
-cópia assim que recebe um exercício. Os nomes, prescrições, links e rodapé
-mantêm o formato existente.
+cópia assim que recebe um exercício. A cópia do treino, por seção e pela
+biblioteca contém nomes e prescrições, sem blocos `[GIFs: …]`, `[Vídeo: …]`,
+endereços de arquivos ou marcação HTML. Os vínculos de mídia continuam nos
+registros e na transferência interna de seções; o rodapé mantém seu formato.
 
 Verificações de navegador com dados isolados e arquivos locais, incluindo GIFs
 reais de 100 quadros e 5 segundos:
