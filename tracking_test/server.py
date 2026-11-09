@@ -249,22 +249,22 @@ def create_app(db_path, password, network_guard=False):
 
     @app.get('/r/yt')
     def track_youtube():
-        aluno = request.args.get('aluno', 'Aluno').strip()[:200] or 'Aluno'
-        treino = request.args.get('treino', 'Treino')[:300]
+        aluno = (request.args.get('aluno') or request.args.get('st') or 'Aluno').strip()[:200] or 'Aluno'
+        treino = (request.args.get('treino') or request.args.get('wk') or 'Treino')[:300]
         ex = request.args.get('ex', 'Exercício')[:300]
         dest = request.args.get('url', 'https://www.youtube.com')
         parsed = urllib.parse.urlsplit(dest)
         if parsed.scheme != 'https' or parsed.hostname not in ('youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'music.youtube.com') or parsed.username or parsed.password:
             abort(400)
         workout_desc = f"{treino} — {ex}" if treino else ex
-        record_custom_event(db_path, aluno, workout_desc, 'Vídeo YouTube', 'youtube', request.remote_addr, request.user_agent.string, whatsapp=request.args.get('whatsapp', ''))
+        record_custom_event(db_path, aluno, workout_desc, 'Vídeo YouTube', 'youtube', request.remote_addr, request.user_agent.string, whatsapp=request.args.get('whatsapp') or request.args.get('wpp', ''))
         return redirect(dest, 302)
 
     @app.get('/r/iniciar')
     def track_iniciar():
-        aluno = request.args.get('aluno', 'Aluno').strip()[:200] or 'Aluno'
-        treino = request.args.get('treino', 'Treino')[:300]
-        record_custom_event(db_path, aluno, treino, 'Treino iniciado', 'iniciar', request.remote_addr, request.user_agent.string, whatsapp=request.args.get('whatsapp', ''))
+        aluno = (request.args.get('aluno') or request.args.get('st') or 'Aluno').strip()[:200] or 'Aluno'
+        treino = (request.args.get('treino') or request.args.get('wk') or 'Treino')[:300]
+        record_custom_event(db_path, aluno, treino, 'Treino iniciado', 'iniciar', request.remote_addr, request.user_agent.string, whatsapp=request.args.get('whatsapp') or request.args.get('wpp', ''))
         return render_template_string('''<!doctype html>
 <html lang="pt-br">
 <head>
@@ -328,6 +328,24 @@ def create_app(db_path, password, network_guard=False):
                 stats = db.execute('SELECT COUNT(*) as tot, MAX(opened_at) as lat FROM pdf_events WHERE student_name=?', (st_name,)).fetchone()
                 db.execute('UPDATE students SET total_accesses=?, latest=? WHERE student_name=?',
                            (stats['tot'] or 0, stats['lat'], st_name))
+        return redirect('/painel/aberturas-pdf')
+
+    @app.post('/painel/editar-nome')
+    @admin
+    def edit_student_name():
+        old = request.form.get('student_name', '').strip()
+        name = request.form.get('new_name', '').strip()
+        if not name or len(name) > 200 or name.casefold() == 'aluno':
+            return 'Informe o nome do aluno (até 200 caracteres).', 400
+        with connect(db_path) as db:
+            db.execute('BEGIN IMMEDIATE')
+            if not db.execute('SELECT 1 FROM students WHERE student_name=?', (old,)).fetchone():
+                abort(404)
+            if old != name:
+                if db.execute('SELECT 1 FROM students WHERE student_name=? COLLATE NOCASE', (name,)).fetchone():
+                    return 'Já existe um aluno com esse nome. Nenhum histórico foi alterado.', 409
+                for table in ('students', 'pdf_events', 'pdf_links'):
+                    db.execute('UPDATE ' + table + ' SET student_name=? WHERE student_name=?', (name, old))
         return redirect('/painel/aberturas-pdf')
 
     @app.post('/painel/apagar-aluno/<student_name>')
@@ -689,7 +707,12 @@ def create_app(db_path, password, network_guard=False):
         <tbody>
           {% for r in students %}
           <tr>
-            <td><strong>{{ r.student_name }}</strong></td>
+            <td><strong>{{ r.student_name }}</strong><details style="margin-top:8px"><summary>✏️ Cadastrar/editar nome</summary>
+            <form action="/painel/editar-nome" method="post" style="margin-top:8px">
+              <input type="hidden" name="student_name" value="{{ r.student_name }}">
+              <input name="new_name" aria-label="Nome do aluno" value="{{ '' if r.student_name == 'Aluno' else r.student_name }}" placeholder="Nome completo" required maxlength="200">
+              <button type="submit">Salvar nome</button>
+            </form></details></td>
             <td>
               {% if r.whatsapp %}
                 <a href="https://wa.me/{{ r.whatsapp }}" target="_blank" rel="noopener" class="btn-wpp">
