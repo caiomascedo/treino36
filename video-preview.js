@@ -32,11 +32,12 @@ window.WorkoutVideoPreview=(()=>{
       colorControl=WorkoutVideoColors.editor(()=>WorkoutVideoColors.apply(player.video,currentAsset));
       options.append(summary,colorControl.element);header.append(title,close);dialog.append(header,host,options,status);document.body.append(dialog);dialog.addEventListener('close',closeVideo);
     }
-    dialog.querySelector('.movement-use')?.remove();if(onSelect){const use=make('button','movement-use','✓ Usar este vídeo');use.type='button';use.onclick=()=>{dialog.close();onSelect(asset);};dialog.querySelector('.movement-host').after(use);}
+
     player?.dispose();returnFocus=focusTarget||document.activeElement;currentAsset=asset;
     dialog.querySelector('h3').textContent=[...new Set([asset.name,asset.source||(asset.collection==='cm'?'CM':'Lyfta + GymFaster'),asset.gender!=='CM'?asset.gender:''].filter(Boolean))].join(' · ');
     dialog.querySelector('[role=status]').textContent='';dialog.classList.remove('movement-expanded');
     player=createPlayer(asset,{onExpand:()=>dialog.classList.toggle('movement-expanded'),onError:()=>{dialog.querySelector('[role=status]').textContent='Não foi possível carregar a prévia. Feche e tente novamente.';}});
+    if(onSelect){const use=make('button','movement-use','✓ Usar este vídeo');use.type='button';use.onclick=()=>{dialog.close();onSelect(asset);};player.element.querySelector('.movement-controls').firstElementChild.replaceWith(use);}
     dialog.querySelector('.movement-host').replaceChildren(player.element);colorControl.setAsset(asset);
     if(!dialog.open)dialog.showModal();dialog.querySelector('h3').focus({preventScroll:true});player.play();
   }
