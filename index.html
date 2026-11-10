@@ -5069,9 +5069,9 @@ window.AvaliacaoTreinoSync = (function () {
     ol.querySelectorAll('li').forEach(li => {
       const txt = textoDoExercicio(li,false);
       if (txt && !txt.includes('Seção vazia') && !txt.includes('Nenhum exercício') && !txt.includes('Sem exercício') && !txt.includes('Sem treino')) {
-        const bold = li.querySelector('.bold');
-        const nome = bold ? bold.textContent.trim() : txt.split(' ').slice(0,3).join(' ');
-        const detalhes = txt.replace(nome, '').trim();
+        const parsed = separarExercicio(txt);
+        const nome = parsed.nome;
+        const detalhes = txt.slice(nome.length).trim();
         result.push({ nome, detalhes, video:videoDoExercicio(li), videos:videosDoExercicio(li), gifs:gifsDoExercicio(li), registeredGifs:gifsCadastrados(li), source:li });
       }
     });
