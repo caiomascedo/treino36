@@ -14,7 +14,7 @@ window.WorkoutVideoColors=(()=>{
     const element=document.createElement('label');element.className='video-color-choice';
     element.append(document.createTextNode('Cor deste vídeo '));
     const select=document.createElement('select');select.setAttribute('aria-label','Cor deste vídeo');
-    for(const [value,text]of [['original','Cores originais'],['theme','Adaptar ao tema'],['invert','Inverter cores']])select.add(new Option(text,value));
+    for(const [value,text]of [['original','Cores originais'],['theme','Tema'],['invert','Inverter cores']])select.add(new Option(text,value));
     element.append(select);
     select.onchange=()=>{
       if(!asset)return;

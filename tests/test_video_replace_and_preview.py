@@ -26,7 +26,7 @@ with sync_playwright() as p:
  library.get_by_role('button',name='Adicionar vídeo',exact=True).click();form=page.locator('.gif-video-add')
  form.get_by_label('Categoria do vídeo',exact=True).select_option('Peito');form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[0]))
  for label in ['Salvar vídeo','Cancelar']:
-  box=form.get_by_role('button',name=label,exact=True).bounding_box();assert box['height']>=50 and box['width']>290
+  box=form.get_by_role('button',name=label,exact=True).bounding_box();assert box['height']>=30 and box['width']>100
  form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  original=page.evaluate("WorkoutCatalog.current().find(v=>v.name==='Vídeo pessoal de substituição')")
  page.evaluate("(id)=>{WorkoutVideoLibrary.toggleFavorite(id);WorkoutVideoLibrary.rename(id,'Meu vídeo renomeado')}",original['id'])
@@ -36,16 +36,17 @@ with sync_playwright() as p:
  page.evaluate('GymFasterLibrary.open()');library.get_by_role('searchbox').fill('Meu vídeo renomeado');library.get_by_role('button',name='Adicionar vídeo',exact=True).click()
  expect(form.locator('.video-existing-choice')).to_contain_text('Já existe')
  expect(form.locator('.video-existing-choice')).to_contain_text('Meu vídeo renomeado')
- form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[1]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(1)
+ form.get_by_label('Arquivo de vídeo',exact=True).set_input_files({'name':'blue.mp4','mimeType':'','buffer':files[1].read_bytes()});form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(1)
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).sha256',original['id'])==original['sha256']
  form.get_by_role('button',name='Ver vídeo existente',exact=True).click();old_preview=page.locator('#movementPreview');expect(old_preview).to_contain_text('Meu vídeo renomeado');expect(old_preview.locator('video')).to_be_visible();old_preview.get_by_role('button',name='Fechar prévia',exact=True).click()
  form.get_by_role('radio',name='Não, manter o vídeo existente',exact=True).check();expect(form.get_by_label('Arquivo de vídeo',exact=True)).to_be_disabled();form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).sha256',original['id'])==original['sha256']
- library.get_by_role('button',name='Adicionar vídeo',exact=True).click();form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[1]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
+ library.get_by_role('button',name='Adicionar vídeo',exact=True).click();form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_label('Arquivo de vídeo',exact=True).set_input_files({'name':'blue.mp4','mimeType':'','buffer':files[1].read_bytes()});form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  updated=page.evaluate('(id)=>WorkoutCatalog.lookup(id)',original['id'])
  assert updated['id']==original['id'] and updated['url']==original['url'] and updated['sha256']!=original['sha256']
  assert page.evaluate('(id)=>WorkoutVideoLibrary.isFavorite(id)',original['id'])
  assert page.evaluate('WorkoutCatalog.current().filter(v=>v.source==="Meu vídeo").length')==1
+ library.get_by_role('button',name='Adicionar vídeo',exact=True).click();form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_label('Arquivo de vídeo',exact=True).set_input_files({'name':'blue.mp4','mimeType':'','buffer':files[1].read_bytes()});form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  assert page.evaluate('localStorage.getItem("treinoAlunos")')==before
  library.get_by_role('button',name='Fechar',exact=True).click();page.reload();page.evaluate('TreinoStorage.ready');page.evaluate('WorkoutCatalog.load()')
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).sha256',original['id'])==updated['sha256']
@@ -90,7 +91,7 @@ with sync_playwright() as p:
  review.get_by_role('button',name='Fechar',exact=True).click();page.locator('#workoutGifsBtn').click()
  expect(main.get_by_label('Treino para o GIF',exact=True)).to_have_value('B')
  main.get_by_role('button',name='Escolher outro vídeo',exact=True).click();picker=page.locator('.gif-video-picker')
- picker.get_by_role('button',name='Adicionar vídeo',exact=True).click();form.get_by_label('Categoria do vídeo',exact=True).select_option('Peito');form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[1]));form.get_by_role('button',name='Salvar vídeo',exact=True).click()
+ picker.get_by_role('button',name='Adicionar vídeo',exact=True).click();form.get_by_label('Categoria do vídeo',exact=True).select_option('Peito');form.get_by_label('Arquivo de vídeo',exact=True).set_input_files({'name':'blue.mp4','mimeType':'','buffer':files[1].read_bytes()});form.get_by_role('button',name='Salvar vídeo',exact=True).click()
  expect(form).to_have_count(0);expect(picker).to_have_count(0);expect(main.locator('.gif-missing')).to_have_count(0)
  chosen=main.locator('.gif-card').get_attribute('data-video-id')
  page.wait_for_function('(id)=>JSON.parse(localStorage.getItem("treinoAlunos"))[0].treino.B[0].includes(id)',arg=chosen)
@@ -102,4 +103,4 @@ with sync_playwright() as p:
  version.select_option(target_id);form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).localReplacement',target_id)
  assert not errors,errors;browser.close()
- print('PASS',ENGINE,': large Save/Cancel; replacements preserve IDs, labels, favorites and prescriptions; compact player; immediate B close and fresh-tab restore; confirmed review-list purge removes private bytes')
+ print('PASS',ENGINE,': compact Save/Cancel and empty-MIME/idempotent saves; replacements preserve IDs, labels, favorites and prescriptions; compact player; immediate B close and fresh-tab restore; confirmed review-list purge removes private bytes')

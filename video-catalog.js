@@ -55,18 +55,18 @@ window.WorkoutCatalog = (() => {
     await pending; return current();
   }
   async function add(file, name, group, options={}) {
-    await load(); name = String(name).replace(/\s+/g,' ').trim(); group = String(group).trim();
+    await load(); if(file&&(!file.type||file.type==='application/octet-stream')&&/\.(mp4|m4v|mov|webm)$/i.test(file.name))file=new File([file],file.name,{type:/\.webm$/i.test(file.name)?'video/webm':/\.mov$/i.test(file.name)?'video/quicktime':'video/mp4'}); name = String(name).replace(/\s+/g,' ').trim(); group = String(group).trim();
     if (!name || name.length > 160 || !group) throw Error('Informe o nome (até 160 caracteres) e a categoria.');
-    if (!file || !/^(video\/)/.test(file.type) || !/\.(mp4|m4v|mov|webm)$/i.test(file.name) || !file.size || file.size > 100*1048576) throw Error('Escolha um vídeo MP4, MOV ou WebM de até 100 MB.');
+    if (!file || !( /^(video\/)/.test(file.type)||!file.type||file.type==='application/octet-stream') || !/\.(mp4|m4v|mov|webm)$/i.test(file.name) || !file.size || file.size > 100*1048576) throw Error('Escolha um vídeo MP4, MOV ou WebM de até 100 MB.');
     const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())), b => b.toString(16).padStart(2,'0')).join('');
     const identity = key(name);
     const target=options.replaceId?lookup(options.replaceId):null;
     if(options.replaceId&&!target)throw Error('O vídeo a substituir não está mais disponível. Reabra o formulário.');
     const duplicate=WorkoutVideoLibrary.apply(allAssets(),true).find(v=>v.id!==target?.id&&(v.sha256===hash||!v.sha256&&v.id==='user-'+hash||!target&&[v.name,v.originalName,...(v.aliases||[])].some(value=>value&&key(value)===identity)));
     if(duplicate)throw Error('Este exercício ou arquivo já está na biblioteca: '+duplicate.name+'. Escolha o vídeo correspondente para substituir ou informe uma variação diferente.');
-    if(target?.sha256===hash)throw Error('Este arquivo já está na biblioteca e já é o vídeo atual. Escolha outro arquivo para substituir.');
+    if(target?.sha256===hash)return WorkoutVideoLibrary.decorate(target);
     const media = URL.createObjectURL(file), probe = document.createElement('video');
-    try { await new Promise((resolve,reject) => { const timer=setTimeout(()=>reject(Error('Não foi possível ler este vídeo.')),15000); probe.onloadedmetadata=()=>{clearTimeout(timer); probe.videoWidth && probe.duration > 0 ? resolve() : reject(Error('Vídeo inválido.'));}; probe.onerror=()=>{clearTimeout(timer);reject(Error('Formato de vídeo não suportado neste navegador.'));};probe.preload='metadata';probe.src=media; }); }
+    try { await new Promise((resolve,reject) => { const timer=setTimeout(()=>reject(Error('Não foi possível ler este vídeo.')),15000); probe.onloadedmetadata=()=>{clearTimeout(timer); probe.videoWidth && probe.duration > 0 ? resolve() : reject(Error('Vídeo inválido.'));}; probe.onerror=()=>{clearTimeout(timer);reject(Error('Formato de vídeo não suportado neste navegador.'));};probe.muted=true;probe.playsInline=true;probe.preload='metadata';probe.src=media; }); }
     finally { probe.removeAttribute('src'); probe.load(); URL.revokeObjectURL(media); }
     const initialId='user-'+hash,collision=allAssets().find(video=>video.id===initialId&&video.sha256!==hash);
     const id=target?.id||(collision?initialId+'-'+crypto.randomUUID():initialId);
@@ -74,7 +74,7 @@ window.WorkoutCatalog = (() => {
     try{await records('put',{...record,blob:file});}
     catch(error){
       // Some WebKit stores reject Blob/File serialization; bytes remain durable.
-      if(error.cause?.name!=='UnknownError')throw error;
+      if(!['UnknownError','DataCloneError'].includes(error.cause?.name||error.name))throw error;
       await records('put',{...record,bytes:await file.arrayBuffer(),mimeType:file.type});
     }
     // Do not revoke existing URLs: an open preview or GIF can still be using them.
@@ -134,7 +134,7 @@ window.WorkoutCatalog = (() => {
     file.type='file';file.accept='video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm';file.required=true;file.setAttribute('aria-label','Arquivo de vídeo');save.type='submit';save.className='video-save-primary';close.type='button';close.className='video-save-cancel';status.setAttribute('role','status');close.onclick=()=>dialog.close();
     const actions=make('div');actions.className='video-save-actions';actions.append(save,close);
     form.append(name,category,targetLabel,existing,file,status,actions);dialog.append(title,hint,form);document.body.append(dialog);dialog.onclose=()=>dialog.remove();updateTarget();
-    form.onsubmit=async event=>{event.preventDefault();if(candidates.length>1&&!targetId||targetId&&!chosenDecision())return;save.disabled=true;close.disabled=true;status.textContent=targetId?(chosenDecision()==='keep'?'Mantendo vídeo existente…':'Substituindo vídeo…'):'Verificando vídeo e repetições…';try{const asset=targetId&&chosenDecision()==='keep'?WorkoutVideoLibrary.decorate(lookup(targetId)):await add(file.files[0],name.value,category.value,{replaceId:targetId||undefined});onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;}finally{save.disabled=false;close.disabled=false;}};
+    form.noValidate=true;form.onsubmit=async event=>{event.preventDefault();if(save.disabled)return;if(!form.checkValidity()||candidates.length>1&&!targetId||targetId&&!chosenDecision()){const invalid=form.querySelector(':invalid');status.textContent=targetId&&!chosenDecision()?'Escolha se deseja substituir ou manter o vídeo.':invalid?.validationMessage||'Confira os campos obrigatórios.';status.scrollIntoView({block:'nearest'});return;}save.disabled=true;close.disabled=true;status.textContent=targetId?(chosenDecision()==='keep'?'Mantendo vídeo existente…':'Substituindo vídeo…'):'Verificando vídeo e repetições…';try{const asset=targetId&&chosenDecision()==='keep'?WorkoutVideoLibrary.decorate(lookup(targetId)):await add(file.files[0],name.value,category.value,{replaceId:targetId||undefined});await onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;status.scrollIntoView({block:'nearest'});}finally{save.disabled=false;close.disabled=false;}};
     dialog.showModal();name.focus();return dialog;
   }
   function lookup(id){return allAssets().find(video=>video.id===id||(video.sourceIds||[]).includes(id));}
