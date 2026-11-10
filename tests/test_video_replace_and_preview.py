@@ -36,7 +36,7 @@ with sync_playwright() as p:
  page.evaluate('GymFasterLibrary.open()');library.get_by_role('searchbox').fill('Meu vídeo renomeado');library.get_by_role('button',name='Adicionar vídeo',exact=True).click()
  expect(form.locator('.video-existing-choice')).to_contain_text('Já existe')
  expect(form.locator('.video-existing-choice')).to_contain_text('Meu vídeo renomeado')
- form.get_by_label('Arquivo de vídeo',exact=True).set_input_files({'name':'blue.mp4','mimeType':'','buffer':files[1].read_bytes()});form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(1)
+ form.get_by_label('Arquivo de vídeo',exact=True).set_input_files({'name':'blue.mp4','mimeType':'','buffer':files[1].read_bytes()});a=form.get_by_role('button',name='Ver vídeo existente',exact=True).bounding_box();z=form.get_by_role('button',name='Ver novo vídeo',exact=True).bounding_box();assert abs(a['y']-z['y'])<2 and z['x']>a['x'];form.get_by_role('button',name='Ver novo vídeo',exact=True).click();page.wait_for_function('document.querySelector("#movementPreview video").videoWidth>0');page.locator('#movementPreview').get_by_role('button',name='Fechar prévia',exact=True).click();form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(1)
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).sha256',original['id'])==original['sha256']
  form.get_by_role('button',name='Ver vídeo existente',exact=True).click();old_preview=page.locator('#movementPreview');expect(old_preview).to_contain_text('Meu vídeo renomeado');expect(old_preview.locator('video')).to_be_visible();old_preview.get_by_role('button',name='Fechar prévia',exact=True).click()
  form.get_by_role('radio',name='Não, manter o vídeo existente',exact=True).check();expect(form.get_by_label('Arquivo de vídeo',exact=True)).to_be_disabled();form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
@@ -74,9 +74,9 @@ with sync_playwright() as p:
  # A built-in catalog clip can also be replaced without a duplicate or broken ID.
  builtin=page.evaluate("async()=>{await WorkoutCatalog.load();const all=WorkoutCatalog.current();return all.find(v=>v.collection==='gymfaster'&&v.source!=='Meu vídeo'&&all.filter(a=>WorkoutCatalog.key(a.name)===WorkoutCatalog.key(v.name)).length===1)}")
  count=page.evaluate('WorkoutCatalog.current().length');page.evaluate('GymFasterLibrary.open()');library.get_by_role('searchbox').fill(builtin['name']);library.get_by_role('button',name='Adicionar vídeo',exact=True).click()
- expect(form.locator('.video-existing-choice')).to_contain_text('Já existe');form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[0]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
+ expect(form.locator('.video-existing-choice')).to_contain_text('Já existe');form.get_by_role('radio',name='Sim, substituir pelo novo arquivo',exact=True).check();form.get_by_label('Arquivo de vídeo',exact=True).set_input_files(str(files[1]));form.get_by_role('button',name='Salvar vídeo',exact=True).click();expect(form).to_have_count(0)
  assert page.evaluate('WorkoutCatalog.current().length')==count
- assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).localReplacement',builtin['id'])
+ assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).localReplacement',builtin['id']);assert page.evaluate('(ids)=>WorkoutCatalog.lookup(ids[0]).sha256===WorkoutCatalog.lookup(ids[1]).sha256',[builtin['id'],original['id']])
  assert page.evaluate('(id)=>WorkoutCatalog.lookup(id).media.startsWith("blob:")',builtin['id'])
  library.get_by_role('button',name='Fechar',exact=True).click()
  # Both purge buttons work directly in the deletion-review dialog.

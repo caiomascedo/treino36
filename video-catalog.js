@@ -63,7 +63,7 @@ window.WorkoutCatalog = (() => {
     const target=options.replaceId?lookup(options.replaceId):null;
     if(options.replaceId&&!target)throw Error('O vídeo a substituir não está mais disponível. Reabra o formulário.');
     const duplicate=WorkoutVideoLibrary.apply(allAssets(),true).find(v=>v.id!==target?.id&&(v.sha256===hash||!v.sha256&&v.id==='user-'+hash||!target&&[v.name,v.originalName,...(v.aliases||[])].some(value=>value&&key(value)===identity)));
-    if(duplicate)throw Error('Este exercício ou arquivo já está na biblioteca: '+duplicate.name+'. Escolha o vídeo correspondente para substituir ou informe uma variação diferente.');
+    if(duplicate&&!target)throw Error('Este exercício ou arquivo já está na biblioteca: '+duplicate.name+'. Escolha o vídeo correspondente para substituir ou informe uma variação diferente.');
     if(target?.sha256===hash)return WorkoutVideoLibrary.decorate(target);
     const media = URL.createObjectURL(file), probe = document.createElement('video');
     try { await new Promise((resolve,reject) => { const timer=setTimeout(()=>reject(Error('Não foi possível ler este vídeo.')),15000); probe.onloadedmetadata=()=>{clearTimeout(timer); probe.videoWidth && probe.duration > 0 ? resolve() : reject(Error('Vídeo inválido.'));}; probe.onerror=()=>{clearTimeout(timer);reject(Error('Formato de vídeo não suportado neste navegador.'));};probe.muted=true;probe.playsInline=true;probe.preload='metadata';probe.src=media; }); }
@@ -105,7 +105,7 @@ window.WorkoutCatalog = (() => {
     for(const [value,text]of [['replace','Sim, substituir pelo novo arquivo'],['keep','Não, manter o vídeo existente']]){
       const label=make('label'),radio=make('input');radio.type='radio';radio.name='videoReplacementDecision';radio.value=value;radio.required=true;label.append(radio,document.createTextNode(text));decision.append(label);radios.push(radio);
     }
-    existing.append(existingTitle,existingInfo,preview,decision);
+    const previewActions=make('div'),newPreview=make('button','Ver novo vídeo');previewActions.className='video-compare-actions';newPreview.type='button';newPreview.disabled=true;previewActions.append(preview,newPreview);existing.append(existingTitle,existingInfo,previewActions,decision);let previewURL=null;const releasePreview=()=>{if(!previewURL)return;const openPreview=document.querySelector('#movementPreview');if(openPreview?.querySelector('video')?.getAttribute('src')===previewURL)openPreview.close();URL.revokeObjectURL(previewURL);previewURL=null;};newPreview.onclick=()=>{if(!file.files[0])return;if(!previewURL)previewURL=URL.createObjectURL(file.files[0].type?file.files[0]:new Blob([file.files[0]],{type:/\.webm$/i.test(file.files[0].name)?'video/webm':/\.mov$/i.test(file.files[0].name)?'video/quicktime':'video/mp4'}));WorkoutVideoPreview.open({name:name.value+' · Novo arquivo',collection:'gymfaster',source:'Arquivo escolhido',localURL:previewURL},newPreview);};file.onchange=()=>{releasePreview();newPreview.disabled=!file.files.length;};
     let candidates=[],targetId='';
     const chosenDecision=()=>radios.find(radio=>radio.checked)?.value;
     function updateTarget(){
@@ -133,7 +133,7 @@ window.WorkoutCatalog = (() => {
     preview.onclick=()=>{const asset=candidates.find(asset=>asset.id===targetId);if(asset)WorkoutVideoPreview.open(asset,preview);};
     file.type='file';file.accept='video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm';file.required=true;file.setAttribute('aria-label','Arquivo de vídeo');save.type='submit';save.className='video-save-primary';close.type='button';close.className='video-save-cancel';status.setAttribute('role','status');close.onclick=()=>dialog.close();
     const actions=make('div');actions.className='video-save-actions';actions.append(save,close);
-    form.append(name,category,targetLabel,existing,file,status,actions);dialog.append(title,hint,form);document.body.append(dialog);dialog.onclose=()=>dialog.remove();updateTarget();
+    form.append(name,category,targetLabel,existing,file,status,actions);dialog.append(title,hint,form);document.body.append(dialog);dialog.onclose=()=>{releasePreview();dialog.remove();};updateTarget();
     form.noValidate=true;form.onsubmit=async event=>{event.preventDefault();if(save.disabled)return;if(!form.checkValidity()||candidates.length>1&&!targetId||targetId&&!chosenDecision()){const invalid=form.querySelector(':invalid');status.textContent=targetId&&!chosenDecision()?'Escolha se deseja substituir ou manter o vídeo.':invalid?.validationMessage||'Confira os campos obrigatórios.';status.scrollIntoView({block:'nearest'});return;}save.disabled=true;close.disabled=true;status.textContent=targetId?(chosenDecision()==='keep'?'Mantendo vídeo existente…':'Substituindo vídeo…'):'Verificando vídeo e repetições…';try{const asset=targetId&&chosenDecision()==='keep'?WorkoutVideoLibrary.decorate(lookup(targetId)):await add(file.files[0],name.value,category.value,{replaceId:targetId||undefined});await onAdded?.(asset);dialog.close();}catch(error){status.textContent=error.message;status.scrollIntoView({block:'nearest'});}finally{save.disabled=false;close.disabled=false;}};
     dialog.showModal();name.focus();return dialog;
   }
