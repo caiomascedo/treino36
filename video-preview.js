@@ -24,7 +24,7 @@ window.WorkoutVideoPreview=(()=>{
     return {element,video,play(){video.play().catch(()=>{});},dispose(){video.pause();video.removeAttribute('src');video.load();}};
   }
   function closeVideo(){player?.dispose();dialog.classList.remove('movement-expanded');if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});}
-  function open(asset,focusTarget){
+  function open(asset,focusTarget,onSelect){
     if(!dialog){
       dialog=document.createElement('dialog');dialog.id='movementPreview';dialog.setAttribute('aria-labelledby','movementPreviewTitle');
       const header=make('div','movement-heading'),title=make('h3'),close=make('button','movement-close','×'),host=make('div','movement-host'),status=make('p'),options=make('details','movement-options'),summary=make('summary','','Cor do vídeo');
@@ -32,6 +32,7 @@ window.WorkoutVideoPreview=(()=>{
       colorControl=WorkoutVideoColors.editor(()=>WorkoutVideoColors.apply(player.video,currentAsset));
       options.append(summary,colorControl.element);header.append(title,close);dialog.append(header,host,options,status);document.body.append(dialog);dialog.addEventListener('close',closeVideo);
     }
+    dialog.querySelector('.movement-use')?.remove();if(onSelect){const use=make('button','movement-use','✓ Usar este vídeo');use.type='button';use.onclick=()=>{dialog.close();onSelect(asset);};dialog.querySelector('.movement-host').after(use);}
     player?.dispose();returnFocus=focusTarget||document.activeElement;currentAsset=asset;
     dialog.querySelector('h3').textContent=[...new Set([asset.name,asset.source||(asset.collection==='cm'?'CM':'Lyfta + GymFaster'),asset.gender!=='CM'?asset.gender:''].filter(Boolean))].join(' · ');
     dialog.querySelector('[role=status]').textContent='';dialog.classList.remove('movement-expanded');

@@ -1504,18 +1504,18 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="video-library-preferences.js?v=6"></script>
 <script src="gymfaster-library.js?v=18"></script>
 <script src="workout-video-match.js?v=unified-4"></script>
-<script src="video-colors.js?v=1"></script>
-<script src="video-preview.js?v=5"></script>
-<script src="video-catalog.js?v=6"></script>
+<script src="video-colors.js?v=compact-edit-save-1"></script>
+<script src="video-preview.js?v=compact-edit-save-1"></script>
+<script src="video-catalog.js?v=compact-edit-save-1"></script>
 <script src="export-colors.js?v=1"></script>
 <script src="video-link-tools.js?v=2"></script>
 <script src="live-exercise-format.js?v=2"></script>
 <script src="demo-prompt.js?v=4"></script>
-<script src="workout-gif.js?v=31"></script>
+<script src="workout-gif.js?v=compact-edit-save-1"></script>
 <script src="workout-media-text.js?v=2"></script>
 <script src="media-visibility.js?v=3"></script>
 <script src="compound-colors.js?v=2"></script>
-<link rel="stylesheet" href="workout-gif.css?v=unified-26">
+<link rel="stylesheet" href="workout-gif.css?v=compact-edit-save-1">
 <link rel="stylesheet" href="gymfaster-library.css?v=7">
 <script src="pdf-review.js?v=22"></script>
 <script src="diet-calculations.js?v=7"></script>
@@ -7343,6 +7343,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('pdfBtn').addEventListener('click', gerarPDFViewer);
   if(window.GymFasterWorkout)GymFasterWorkout.configure({
     read:function(){var nome=document.getElementById('searchName').value.trim()||'Aluno',aluno=buscarAluno(nome);return {student:nome,contextKey:(aluno?.student_id||nome)+'|'+(mainArchiveEdit?(mainArchiveEdit.baseline.workout_id||'anterior-'+mainArchiveEdit.index):'atual'),sections:SECOES.map(function(id){return {id:id,title:getTituloSecao(id),rows:getExerciciosSecao(id)};})};},
+    edit:function(source,name,dose,student){if(!source?.isConnected||(document.getElementById('searchName').value.trim()||'Aluno')!==student)return false;var holder=document.createElement('ol');holder.innerHTML=formatExerciseLine(name+(dose?' — '+dose.replace(/^[\s—–-]+/,''):'')+vinculosTexto({url:videoDoExercicio(source),videos:videosDoExercicio(source),gifs:gifsCadastrados(source)}));if(!holder.firstElementChild)return false;pushState();source.innerHTML=holder.firstElementChild.innerHTML;pushState();concluirAutoSave();return true;},
     save:function(source,url,student,part){if(!source||!source.isConnected||(document.getElementById('searchName').value.trim()||'Aluno')!==student)return;var gifs=gifsDoExercicio(source),registered=gifsCadastrados(source);gifs[part||0]=url;registered[part||0]=url;atribuirGIFExercicio(source,gifs,registered);pushState();concluirAutoSave();}
   });
   document.getElementById('screenshotBtn').addEventListener('click', tirarPrint);
