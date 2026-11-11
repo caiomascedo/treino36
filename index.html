@@ -1361,6 +1361,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 
 #kcalContainer .info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#kcalContainer .info-field{min-width:0}
 #infoSexoCalorico,#infoAtividadeCalorica{width:100%;min-width:0;box-sizing:border-box;padding:8px;border:1px solid #cbd5e1;border-radius:7px;background:white;color:#29465a;font-size:14px}
+
+#genericModal[style*="visibility: visible"] #copyStudentList{visibility:visible}#genericModal[style*="visibility: hidden"] #copyStudentList{visibility:hidden}#copyStudentList{visibility:inherit;max-height:55dvh;overflow:auto;overscroll-behavior:contain}.copy-search-tools{display:flex;gap:5px;margin:8px 0}.copy-search-tools input{width:100%;min-width:0;font:16px Arial;padding:8px}.copy-source-controls{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.copy-source-controls label{display:flex;align-items:center;gap:4px;font:12px Arial;min-width:0;flex:1}.copy-source-controls select{min-width:0;max-width:100%;flex:1;padding:5px;font:12px Arial}#copyStudentList .copy-student-actions{flex-direction:row;justify-content:flex-end;margin-top:6px}#copyStudentList [hidden]{display:none!important}
 </style>
 <script>
 
@@ -5704,81 +5706,23 @@ window.AvaliacaoTreinoSync = (function () {
 
   /* ===== COPIAR TREINO DE OUTRO ALUNO PARA SEÇÃO ===== */
   function copiarTreinoDeOutroAlunoParaSecao(secId) {
-    if (alunos.length === 0) {
-      exibirMensagem('❌ Nenhum aluno cadastrado.', '#b22222', false);
-      return;
-    }
-    
-    var modal = document.getElementById('genericModal');
-    var mc = document.getElementById('modalContent');
-    
-    var html = '<h3>📋 Copiar treino de outro aluno</h3>';
-    html += '<p style="font-size:0.75rem; color:#666;">Selecione um aluno para copiar o treino da <strong>Seção ' + secId + '</strong></p>';
-    html += '<div style="max-height:400px;overflow-y:auto;">';
-    
-    for (var i = 0; i < alunos.length; i++) {
-      var a = alunos[i];
-      var preview = getPreviewSecao(a, secId);
-      var tituloAluno = (a.titulos && a.titulos[secId]) ? a.titulos[secId] : (secId + ". SEM TÍTULO");
-      var versaoHtml = '';
-      if (a.historicoTreinos && a.historicoTreinos.length > 0) {
-        versaoHtml = '<div style="margin-top:4px;"><label style="font-size:0.65rem;color:#666;margin-right:4px;">Versão:</label><select class="copy-version" style="font-size:0.7rem;padding:2px 6px;border-radius:8px;border:1px solid #ccc;"><option value="atual">Versão atual</option>'
-          + a.historicoTreinos.map(function(h) {
-              return '<option value="' + escAttr(h.workout_id) + '">' + escHtml(h.name || h.tituloTreino || h.workout_id) + '</option>';
-            }).join('') + '</select></div>';
-      }
-      html += '<div class="aluno-list-item" style="flex-direction:column; align-items:flex-start;">';
-      html += '<div style="display:flex; justify-content:space-between; width:100%;">';
-      html += '<div class="aluno-info">';
-      html += '<div class="aluno-nome">👤 ' + escHtml(a.nome) + '</div>';
-      html += '<div class="aluno-titulo-preview">📌 Título: ' + escHtml(tituloAluno) + '</div>';
-      html += '<div class="aluno-preview">📋 ' + escHtml(preview) + '</div>';
-      html += versaoHtml;
-      html += '</div>';
-      html += '<div class="copy-student-actions"><button class="select-aluno-btn" data-nome="' + escAttr(a.nome) + '" data-sec="' + secId + '">📋 Selecionar</button><button type="button" class="copy-preview-btn">⛶ Expandir</button></div>';
-      html += '</div></div>';
-    }
-    
-    html += '</div><button id="closeModalBtn" style="margin-top:12px;">Fechar</button>';
-    mc.innerHTML = html;
-    modal.style.visibility = 'visible';
-    
-    mc.querySelectorAll('.copy-preview-btn').forEach(function(btn) {
-      btn.addEventListener('click', function(e) { e.stopPropagation(); expandirTreinoParaCopiar(btn); });
+    var modal=document.getElementById('genericModal'),mc=document.getElementById('modalContent');
+    modal.style.visibility='visible';
+    mc.innerHTML='<h3>📋 Copiar treino de outro aluno</h3><p>Copiar para a seção '+escHtml(secId)+'</p><div class="copy-search-tools"><input type="search" id="copyStudentSearch" aria-label="Buscar aluno para copiar" placeholder="Buscar pessoa pelo nome"><button type="button" id="clearCopySearch" aria-label="Limpar busca de alunos">×</button></div><div id="copyStudentList"></div><p id="copyStudentEmpty" hidden>Nenhum aluno encontrado.</p><button type="button" id="closeModalBtn">Fechar</button>';
+    var list=mc.querySelector('#copyStudentList'),search=mc.querySelector('#copyStudentSearch');
+    alunos.forEach(function(aluno){
+      var item=document.createElement('div');item.className='aluno-list-item';item.dataset.studentName=normalizarNome(aluno.nome);item.style.cssText='display:block';
+      item.innerHTML='<strong class="aluno-nome">👤 '+escHtml(aluno.nome)+'</strong><div class="copy-source-controls"><label>Versão <select class="copy-version" aria-label="Versão de '+escAttr(aluno.nome)+'"><option value="atual">Versão atual</option>'+ (aluno.historicoTreinos||[]).map(function(v){return '<option value="'+escAttr(v.workout_id)+'">'+escHtml(v.name||v.tituloTreino||v.workout_id)+'</option>';}).join('')+'</select></label><label>Treino <select class="copy-source-section" aria-label="Seção de '+escAttr(aluno.nome)+'"></select></label></div><div class="aluno-titulo-preview"></div><div class="aluno-preview"></div><div class="copy-student-actions"><button type="button" class="select-aluno-btn" data-nome="'+escAttr(aluno.nome)+'" data-sec="'+escAttr(secId)+'">📋 Selecionar</button><button type="button" class="copy-preview-btn">👁 Visualizar treino</button></div>';
+      var version=item.querySelector('.copy-version'),source=item.querySelector('.copy-source-section'),select=item.querySelector('.select-aluno-btn');select.dataset.dest=secId;
+      function data(){return version.value==='atual'?aluno:(aluno.historicoTreinos||[]).find(function(v){return v.workout_id===version.value;})||aluno;}
+      function summary(){var record=data(),section=source.value,exs=(record.treino||{})[section]||[];select.dataset.sec=section;select.disabled=!exs.length;item.querySelector('.copy-preview-btn').disabled=!exs.length;item.querySelector('.aluno-titulo-preview').textContent=(record.titulos||{})[section]||'Seção '+section;item.querySelector('.aluno-preview').textContent=getPreviewSecao(record,section);}
+      function sectionsForVersion(){var record=data(),old=source.value;source.replaceChildren();SECOES.filter(function(sec){return Array.isArray((record.treino||{})[sec])&&record.treino[sec].length;}).forEach(function(sec){var option=document.createElement('option');option.value=sec;option.textContent=(record.titulos||{})[sec]||'Treino '+sec;source.append(option);});source.value=[...source.options].some(function(o){return o.value===old;})?old:[...source.options].some(function(o){return o.value===secId;})?secId:source.options[0]?.value||'';summary();}
+      source.onchange=summary;version.onchange=sectionsForVersion;
+      select.onclick=function(){var record=data(),from=source.value,exs=(record.treino||{})[from]||[];if(!exs.length)return;pushState();preencherSecaoComArray(secId,exs.slice());var title=(record.titulos||{})[from]||'Treino';setTituloSecao(secId,secId+'. '+title.replace(/^[A-F]\s*[.:-]\s*/i,''));pushState();concluirAutoSave();modal.style.visibility='hidden';exibirMensagem('📋 Treino '+from+' de '+escHtml(aluno.nome)+' copiado para a seção '+secId+'.','#1e6f3f',false);};
+      item.querySelector('.copy-preview-btn').onclick=function(){expandirTreinoParaCopiar(this);};list.append(item);sectionsForVersion();
     });
-    mc.querySelectorAll('.select-aluno-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var nomeAluno = btn.getAttribute('data-nome');
-        var sec = btn.getAttribute('data-sec');
-        var alunoSelecionado = buscarAluno(nomeAluno);
-        
-        if (alunoSelecionado && alunoSelecionado.treino && alunoSelecionado.treino[sec]) {
-          var exercicios = alunoSelecionado.treino[sec];
-          
-          if (alunoSelecionado.titulos && alunoSelecionado.titulos[sec]) {
-            var novoTituloCompleto = alunoSelecionado.titulos[sec];
-            var h2 = document.querySelector('.sec-' + sec.toLowerCase() + ' h2');
-            if (h2) {
-              h2.innerText = novoTituloCompleto;
-            }
-          }
-          
-          if (exercicios.length > 0) {
-            preencherSecaoComArray(sec, exercicios);
-            exibirMensagem('✅ Treino da seção ' + sec + ' copiado de <strong>' + nomeAluno + '</strong>', '#1e6f3f', false);
-          } else {
-            exibirMensagem('⚠️ Aluno "' + nomeAluno + '" não tem exercícios na seção ' + sec, '#b8860b', false);
-          }
-        } else {
-          exibirMensagem('❌ Aluno "' + nomeAluno + '" não possui treino cadastrado para esta seção.', '#b22222', false);
-        }
-        modal.style.visibility = 'hidden';
-      });
-    });
-    
-    var cb = document.getElementById('closeModalBtn');
-    if (cb) cb.onclick = function() { modal.style.visibility = 'hidden'; };
-    modal.style.visibility = 'visible';
+    function filter(){var term=normalizarNome(search.value.trim()),shown=0;list.querySelectorAll('.aluno-list-item').forEach(function(item){item.hidden=!!term&&!item.dataset.studentName.includes(term);if(!item.hidden)shown++;});mc.querySelector('#copyStudentEmpty').hidden=!!shown;}
+    search.oninput=filter;mc.querySelector('#clearCopySearch').onclick=function(){search.value='';filter();search.focus();};mc.querySelector('#closeModalBtn').onclick=function(){modal.style.visibility='hidden';};filter();modal.style.visibility='visible';search.focus();
   }
 
   /* ===== TREINOS FAVORITOS (GUIAS ESTILO NAVEGADOR COM VETOR) ===== */
@@ -8289,6 +8233,7 @@ window.AvaliacaoTreinoSync = (function () {
     document.getElementById('copyPreviewExercises').innerHTML=linhas.join('');
     document.getElementById('copyPreviewEmpty').hidden=linhas.length>0;
     document.getElementById('copyPreviewConfirm').disabled=!linhas.length;
+    document.getElementById('copyPreviewConfirm').textContent='📋 Copiar para a seção '+(select.dataset.dest||sec);
     copyPreviewDialog.classList.remove('full');
     document.getElementById('copyPreviewFull').textContent='⛶ Tela inteira';
     document.getElementById('copyPreviewFull').setAttribute('aria-pressed','false');
@@ -8300,28 +8245,7 @@ window.AvaliacaoTreinoSync = (function () {
   });
   document.getElementById('copyPreviewClose').addEventListener('click',function(){copyPreviewDialog.close();});
   copyPreviewDialog.addEventListener('close',function(){if(!copyPreviewDialog.open){copyPreviewSelect=null;copyPreviewTargetAluno=null;copyPreviewTargetSec=null;}});
-  document.getElementById('copyPreviewConfirm').addEventListener('click',function(){
-    var original=copyPreviewSelect;
-    var targetSec=copyPreviewTargetSec;
-    var targetAluno=copyPreviewTargetAluno;
-    copyPreviewDialog.close();
-    if(targetAluno && targetSec && targetAluno.treino && targetAluno.treino[targetSec]) {
-      var exs = targetAluno.treino[targetSec];
-      if(exs.length && sections[targetSec]) {
-        pushState();
-        preencherSecaoComArray(targetSec, exs);
-        var tit = (targetAluno.titulos && targetAluno.titulos[targetSec]) || '';
-        if(tit) setTituloSecao(targetSec, tit);
-        pushState();
-        autoSave();
-        exibirMensagem('📋 Seção ' + targetSec + ' copiada com sucesso!', '#1e6f3f', false);
-        var mGeneric = document.getElementById('genericModal');
-        if(mGeneric) mGeneric.style.visibility = 'hidden';
-        return;
-      }
-    }
-    if(original&&original.isConnected)original.click();
-  });
+  document.getElementById('copyPreviewConfirm').addEventListener('click',function(){var original=copyPreviewSelect;copyPreviewDialog.close();if(original?.isConnected)original.click();});
 
   /* Ações por exercício, separadas do conteúdo salvo/copiado. */
   var exerciseMenu = document.getElementById('exerciseActionsDialog');
@@ -8743,9 +8667,8 @@ window.AvaliacaoTreinoSync = (function () {
 
   function mostrarSugestoes() {
     var typed = searchNameInput.value.trim(), termo = baseNomeTreino(typed);
-    if (!termo) { fecharSugestoes(); return; }
     var found = alunos.filter(function(a) {
-      return normalizarNome(a.nome).includes(termo) ||
+      return !termo || normalizarNome(a.nome).includes(termo) ||
              baseNomeTreino(a.nome).includes(termo) ||
              (a.treinoNome && normalizarNome(a.treinoNome).includes(termo)) ||
              (Array.isArray(a.historicoTreinos) && a.historicoTreinos.some(function(v){
