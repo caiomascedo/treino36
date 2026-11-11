@@ -1504,6 +1504,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="obs-notes.js?v=7"></script>
 <script src="obs-autosave.js?v=1"></script>
 <link rel="stylesheet" href="obs-notes.css?v=5">
+<script src="comparison-pdf.js?v=1"></script>
 <script src="pdf-viewer.js?v=5"></script>
 <script src="video-library-preferences.js?v=6"></script>
 <script src="gymfaster-library.js?v=18"></script>
@@ -10731,6 +10732,7 @@ window.AvaliacaoTreinoSync = (function () {
   var previousPickerUI=CompareVersionPicker.mount(document.getElementById('comparePreviousPicker'));
   CompareLayout.mount(compareDialog);
   var editComparedOnMain=document.createElement('button');editComparedOnMain.type='button';editComparedOnMain.id='editComparedPreviousOnMain';editComparedOnMain.textContent='Editar anterior na tela';document.getElementById('comparePreviousPicker').after(editComparedOnMain);editComparedOnMain.onclick=function(){var res=resolverTreinoComparacao(document.getElementById('comparePreviousPicker').value);if(res&&!res.isCapa&&carregarVersaoNaTela(res.student,res.workout)){compareDialog.close();if(historyDialog.open)historyDialog.close();}};
+  var comparePdf=document.createElement('button');comparePdf.id='comparePdfBtn';comparePdf.type='button';comparePdf.textContent='📄 PDF da comparação';compareDialog.querySelector('.dialog-actions').prepend(comparePdf);comparePdf.onclick=async function(){var status=document.getElementById('compareEditStatus');this.disabled=true;status.textContent='Preparando PDF da comparação…';try{await WorkoutComparisonPDF.exportPDF({body:document.getElementById('compareBody'),previousHeading:document.getElementById('comparePreviousHeading').innerText,currentHeading:document.getElementById('compareCurrentHeading').innerText,labels:document.getElementById('compareLabels').textContent,filename:safeFileName('Comparacao Antes Depois '+(compareContext.current.student_name||document.getElementById('searchName').value||'Treino'))+'.pdf',ensureLibrary:ensureHtml2Pdf});status.textContent='PDF da comparação pronto.';}catch(error){status.textContent=error.message||'Não foi possível gerar o PDF da comparação.';}finally{this.disabled=false;}};
   var compareApply=document.createElement('button');compareApply.id='applyCompareEdit';compareApply.className='primary';compareApply.textContent='Aplicar alterações';compareDialog.querySelector('.dialog-actions').prepend(compareApply);
   function estadoComparacao(){return JSON.stringify({current:compareContext.current,previous:compareContext.previous});}
   function rotuloVersao(v,index){return WorkoutHistoryTools.versionLabel(v,index);}
