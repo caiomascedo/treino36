@@ -1363,6 +1363,8 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 #infoSexoCalorico,#infoAtividadeCalorica{width:100%;min-width:0;box-sizing:border-box;padding:8px;border:1px solid #cbd5e1;border-radius:7px;background:white;color:#29465a;font-size:14px}
 
 #genericModal[style*="visibility: visible"] #copyStudentList{visibility:visible}#genericModal[style*="visibility: hidden"] #copyStudentList{visibility:hidden}#copyStudentList{visibility:inherit;max-height:55dvh;overflow:auto;overscroll-behavior:contain}.copy-search-tools{display:flex;gap:5px;margin:8px 0}.copy-search-tools input{width:100%;min-width:0;font:16px Arial;padding:8px}.copy-source-controls{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.copy-source-controls label{display:flex;align-items:center;gap:4px;font:12px Arial;min-width:0;flex:1}.copy-source-controls select{min-width:0;max-width:100%;flex:1;padding:5px;font:12px Arial}#copyStudentList .copy-student-actions{flex-direction:row;justify-content:flex-end;margin-top:6px}#copyStudentList [hidden]{display:none!important}
+
+.compare-cover-filter{display:flex;align-items:center;gap:5px;font:12px Arial;margin:5px 0}.compare-cover-filter input{width:auto!important;margin:0}#searchCompareCurrentCover{font:11px Arial;padding:5px 7px;border:1px solid #b6d6c4;border-radius:6px;background:#e6f3eb;color:#1e6f3f;margin:5px 0}.compare-col-header{flex-wrap:wrap}
 </style>
 <script>
 
@@ -10710,10 +10712,10 @@ window.AvaliacaoTreinoSync = (function () {
   compareHeader.innerHTML='<div class="compare-search-container" id="compareSearchContainer">'+
     '<div class="compare-search-bar">'+
       '<span class="compare-search-icon">🔍</span>'+
-      '<input type="text" id="compareSearchInput" class="compare-search-input" placeholder="Pesquisar aluno por nome..." autocomplete="off">'+
+      '<input type="text" id="compareSearchInput" class="compare-search-input" placeholder="Pesquisar pessoa, capa ou treino..." autocomplete="off">'+
       '<button type="button" id="compareSearchClearBtn" class="compare-search-clear" title="Limpar pesquisa" aria-label="Limpar pesquisa">✕</button>'+
     '</div>'+
-    '<div id="compareSearchResults" class="compare-search-results" hidden></div>'+
+    '<label class="compare-cover-filter"><input type="checkbox" id="compareOnlyCovers"> Somente capas atuais</label><div id="compareSearchResults" class="compare-search-results" hidden></div>'+
   '</div>'+
   '<div class="comparison-columns compare-column-headings">'+
     '<div class="compare-heading-col">'+
@@ -10721,7 +10723,7 @@ window.AvaliacaoTreinoSync = (function () {
       '<select id="comparePreviousPicker" class="compare-picker-select previous-select" aria-label="Selecionar treino anterior"></select>'+
     '</div>'+
     '<div class="compare-heading-col">'+
-      '<div class="compare-col-header"><strong id="compareCurrentHeading">Atual · Principal</strong></div>'+
+      '<div class="compare-col-header"><strong id="compareCurrentHeading">Atual · Capa</strong><button type="button" id="searchCompareCurrentCover">🔎 Buscar capa atual</button></div>'+
       '<select id="compareCurrentPicker" class="compare-picker-select current-select" aria-label="Selecionar treino atual"></select>'+
     '</div>'+
   '</div><select id="compareVersion" hidden></select>';
@@ -10789,7 +10791,7 @@ window.AvaliacaoTreinoSync = (function () {
       if(student){
         var stNovo=(!student.historicoTreinos||!student.historicoTreinos.length);
         var stTexto=normalizarNome((student.nome||'')+' '+(student.treinoNome||''));
-        var matchSt=!q||stTexto.includes(q)||(Array.isArray(student.historicoTreinos)&&student.historicoTreinos.some(function(v){return normalizarNome((v.name||'')+' '+(v.original_student_name||'')).includes(q);}));
+        var matchSt=combinaBuscaComparacao(student,q,false);
         if(matchSt){
           var grpAluno=document.createElement('optgroup');
           grpAluno.label='Treinos de '+(student.nome||'Aluno')+(stNovo?' · 🆕 Novo aluno':' ('+(student.historicoTreinos.length+1)+' ciclos)');
@@ -10815,7 +10817,7 @@ window.AvaliacaoTreinoSync = (function () {
         if(!student||a.student_id!==student.student_id){
           var aNovo=(!a.historicoTreinos||!a.historicoTreinos.length);
           var aTexto=normalizarNome((a.nome||'')+' '+(a.treinoNome||''));
-          var matchA=!q||aTexto.includes(q)||(Array.isArray(a.historicoTreinos)&&a.historicoTreinos.some(function(v){return normalizarNome((v.name||'')+' '+(v.original_student_name||'')).includes(q);}));
+          var matchA=combinaBuscaComparacao(a,q,false);
           if(matchA){
             var oCapa=document.createElement('option');
             oCapa.value='student-'+a.student_id;
@@ -10846,6 +10848,11 @@ window.AvaliacaoTreinoSync = (function () {
     currPicker.hidden=!!compareContext.suggestion;
   }
 
+  function combinaBuscaComparacao(a,q,onlyCovers){
+    var text=normalizarNome((a.nome||'')+' '+(a.treinoNome||'')+' '+WorkoutHistoryTools.coverLabel(a));
+    if(!onlyCovers)text+=' '+normalizarNome((a.historicoTreinos||[]).map(function(v){return [v.name,v.treinoNome,v.original_student_name,v.student_name].filter(Boolean).join(' ');}).join(' '));
+    return !q||q.split(/\s+/).every(function(term){return text.includes(term);});
+  }
   function renderizarBuscaComparacao(termo){
     var host=document.getElementById('compareSearchResults');
     var clearBtn=document.getElementById('compareSearchClearBtn');
@@ -10853,19 +10860,10 @@ window.AvaliacaoTreinoSync = (function () {
     var q=normalizarNome(termo||'');
     if(clearBtn)clearBtn.hidden=false;
     var student=compareContext.studentId?alunos.find(function(x){return x.student_id===compareContext.studentId;}):null;
-    if(!q){
-      host.replaceChildren();host.hidden=true;
-      popularPickersComparacao(student,compareContext.current,compareContext.previous,'');
-      return;
-    }
+    var onlyCovers=document.getElementById('compareOnlyCovers').checked;
     popularPickersComparacao(student,compareContext.current,compareContext.previous,q);
 
-    var encontrados=alunos.filter(function(a){
-      var aTexto=normalizarNome((a.nome||'')+' '+(a.treinoNome||''));
-      return aTexto.includes(q)||(Array.isArray(a.historicoTreinos)&&a.historicoTreinos.some(function(v){
-        return normalizarNome((v.name||'')+' '+(v.original_student_name||'')).includes(q);
-      }));
-    }).slice(0,10);
+    var encontrados=alunos.filter(function(a){return combinaBuscaComparacao(a,q,onlyCovers);}).slice(0,20);
 
     host.replaceChildren();
     if(!encontrados.length){
@@ -10888,14 +10886,14 @@ window.AvaliacaoTreinoSync = (function () {
       var actions=document.createElement('div');actions.className='compare-result-actions';
       var rowCapa=document.createElement('div');rowCapa.className='compare-result-row';
       var capaNome=(a.treinoNome&&!a.treinoNome.toLowerCase().startsWith('treino de '))?a.treinoNome:'Capa';
-      rowCapa.innerHTML='<span class="compare-row-name"><span class="sub-badge capa">⚡ Capa</span> '+escHtml(capaNome)+(aNovo?' <small style="color:#2563eb;font-weight:600;">(Novo)</small>':'')+'</span>'+
+      rowCapa.innerHTML='<span class="compare-row-name"><span class="sub-badge capa">⭐ Capa atual</span> '+escHtml(capaNome)+(aNovo?' <small style="color:#2563eb;font-weight:600;">(Novo)</small>':'')+'</span>'+
         '<div class="compare-row-btns">'+
           '<button type="button" class="compare-pick-btn btn-prev" data-val="student-'+escAttr(a.student_id)+'" title="Comparar como Anterior">← Anterior</button>'+
           '<button type="button" class="compare-pick-btn btn-curr" data-val="student-'+escAttr(a.student_id)+'" title="Carregar no lado Atual">Atual →</button>'+
         '</div>';
       actions.appendChild(rowCapa);
 
-      if(Array.isArray(a.historicoTreinos)&&a.historicoTreinos.length){
+      if(!onlyCovers&&Array.isArray(a.historicoTreinos)&&a.historicoTreinos.length){
         a.historicoTreinos.slice().reverse().forEach(function(v,idx){
           var rowHist=document.createElement('div');rowHist.className='compare-result-row';
           var vNome=(v.name&&!v.name.toLowerCase().startsWith('treino de '))?v.name:(v.treinoNome||v.original_student_name||'Treino');
@@ -10924,7 +10922,8 @@ window.AvaliacaoTreinoSync = (function () {
     side.options[0].textContent=compareContext.suggestion?'Editar Sugestão':'✏️ Editar Ambos (Antigo e Atual)';
     side.options[1].disabled=false;
     side.options[2].disabled=compareContext.suggestion;
-    var sInput=document.getElementById('compareSearchInput');if(sInput)sInput.value='';
+    document.getElementById('compareOnlyCovers').checked=false;
+    var sInput=document.getElementById('compareSearchInput');if(sInput){sInput.value='';sInput.placeholder='Pesquisar pessoa, capa ou treino...';}
     var sRes=document.getElementById('compareSearchResults');if(sRes){sRes.replaceChildren();sRes.hidden=true;}
     var sClear=document.getElementById('compareSearchClearBtn');if(sClear)sClear.hidden=false;
     var sCont=document.getElementById('compareSearchContainer');if(sCont)sCont.hidden=!!compareContext.suggestion;
@@ -10943,6 +10942,9 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('compareEditingSwitch').onclick=function(){compareEditing=!compareEditing;atualizarLadoEditavel();};
   document.getElementById('compareEditSide').onchange=function(){compareSide=this.value;atualizarLadoEditavel();};
 
+  document.getElementById('searchCompareCurrentCover').onclick=function(){document.getElementById('compareOnlyCovers').checked=true;var input=document.getElementById('compareSearchInput');input.value='';input.placeholder='Buscar pessoa ou capa atual...';input.focus();renderizarBuscaComparacao('');};
+  document.getElementById('compareOnlyCovers').onchange=function(){document.getElementById('compareSearchInput').placeholder=this.checked?'Buscar pessoa ou capa atual...':'Pesquisar pessoa, capa ou treino...';renderizarBuscaComparacao(document.getElementById('compareSearchInput').value);};
+  document.getElementById('compareSearchInput').addEventListener('focus',function(){renderizarBuscaComparacao(this.value);});
   document.getElementById('compareSearchInput').addEventListener('input',function(){
     renderizarBuscaComparacao(this.value);
   });
