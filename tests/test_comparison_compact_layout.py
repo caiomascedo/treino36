@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright,expect
 ROOT=Path(__file__).resolve().parents[1]
 with sync_playwright() as p:
- browser=p.webkit.launch() if os.environ.get('TEST_BROWSER')=='webkit' else p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ browser=p.webkit.launch(executable_path=os.environ['PLAYWRIGHT_WEBKIT_EXECUTABLE']) if os.environ.get('TEST_BROWSER')=='webkit' else p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
  context=browser.new_context(viewport={'width':390,'height':600},is_mobile=True,has_touch=True)
  def route(r):
   u=urlparse(r.request.url);path=ROOT/u.path.lstrip('/')
@@ -16,9 +16,9 @@ with sync_playwright() as p:
  page.evaluate("""()=>localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'ana',nome:'Ana Luísa',treino_id:'now',treinoNome:'Treino de Ana Luísa',treino:{A:Array.from({length:8},(_,i)=>'Agachamento '+i+' — 3×12')},historicoTreinos:[{workout_id:'old-one',student_id:'ana',name:'Treino de Ana Luísa',status:'archived',archived_at:'2026-10-26T19:24:00Z',treino:{A:Array.from({length:8},(_,i)=>'Supino '+i+' — 4×10')}},{workout_id:'old-two',student_id:'ana',name:'Treino de Ana Luísa',status:'archived',archived_at:'2026-10-26T19:25:00Z',treino:{A:Array.from({length:8},(_,i)=>'Remada '+i+' — 3×15')}}]}]))""")
  page.reload();baseline=page.evaluate("localStorage.getItem('treinoAlunos')");page.locator('#compareWorkoutBtn').click()
  dialog=page.locator('#compareWorkoutsDialog');body=page.locator('#compareBody');header=page.locator('.compare-header');minimize=page.locator('#compareMinimizeOptions');full=page.locator('#compareFullscreen')
- expect(dialog.locator('.compare-selection-controls')).to_be_visible();expect(minimize).to_have_text('Minimizar seleção');before=body.bounding_box()['height'];selected=page.locator('#comparePreviousPicker').input_value()
+ expect(dialog.locator('.compare-selection-controls')).to_be_visible();expect(minimize).to_have_text('Minimizar seleção');before=body.bounding_box()['y'];selected=page.locator('#comparePreviousPicker').input_value()
  minimize.tap();expect(header).not_to_be_visible();expect(page.locator('#compareLabels')).not_to_be_visible();expect(minimize).to_have_text('Selecionar treinos')
- assert body.bounding_box()['height']>before+140
+ assert body.bounding_box()['y']<before-140
  expect(page.locator('.compare-compact-headings')).to_be_visible();expect(page.locator('#comparePreviousPicker')).to_have_value(selected)
  # Editing/undo remain intact as controls and layout change.
  line=page.locator('.comparison-previous-line').first;line.fill('Remada editada — 5×15');full.tap();bounds=dialog.bounding_box();assert bounds['x']==0 and bounds['y']==0 and bounds['width']==390 and bounds['height']==600,bounds

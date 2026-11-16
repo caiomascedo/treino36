@@ -1495,7 +1495,7 @@ window.AvaliacaoTreinoSync = (function () {
 <script src="avaliacao-import.js?v=21"></script>
 <script src="workout-validity.js?v=2"></script>
 <script src="workout-history-tools.js?v=2"></script>
-<script src="compare-version-picker.js?v=4"></script>
+<script src="compare-version-picker.js?v=5"></script>
 <script src="archive-workout-editor.js?v=1"></script>
 <link rel="stylesheet" href="archive-workout-editor.css?v=1">
 <script src="section-display.js?v=1"></script>
@@ -1534,7 +1534,7 @@ window.AvaliacaoTreinoSync = (function () {
 <link rel="stylesheet" href="assessment-photos.css?v=3">
 <script src="obs-avaliacao.js?v=44"></script>
 <link rel="stylesheet" href="obs-avaliacao.css?v=19">
-<link rel="stylesheet" href="pdf-review.css?v=equal-dose-1">
+<link rel="stylesheet" href="pdf-review.css?v=single-comparison-scroll-1">
 </head>
 <body>
 <div class="container" id="mainContainer">
@@ -10935,7 +10935,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   function atualizarHistoricoComparacao(){document.getElementById('compareUndo').disabled=compareStepIndex===0;document.getElementById('compareRedo').disabled=compareStepIndex===compareSteps.length-1;}
   function registrarComparacao(){var value=estadoComparacao();if(value===compareSteps[compareStepIndex])return;compareSteps=compareSteps.slice(0,compareStepIndex+1);compareSteps.push(value);compareStepIndex=compareSteps.length-1;atualizarHistoricoComparacao();}
-  function redesenharComparacao(){var scroll=document.getElementById('compareBody').scrollTop;abrirComparacao(compareContext.current,compareContext.previous,compareContext.scope,compareContext.leftLabel,compareContext.rightLabel,true);document.getElementById('compareBody').scrollTop=scroll;}
+  function redesenharComparacao(){var surface=compareDialog.querySelector('.compare-scroll'),scroll=surface.scrollTop;abrirComparacao(compareContext.current,compareContext.previous,compareContext.scope,compareContext.leftLabel,compareContext.rightLabel,true);surface.scrollTop=scroll;}
   function historicoComparacao(delta){var next=compareStepIndex+delta;if(next<0||next>=compareSteps.length)return;compareStepIndex=next;var state=JSON.parse(compareSteps[next]);compareContext.current=state.current;compareContext.previous=state.previous;atualizarHistoricoComparacao();redesenharComparacao();}
   document.getElementById('compareUndo').onclick=function(){historicoComparacao(-1);};document.getElementById('compareRedo').onclick=function(){historicoComparacao(1);};
   function atualizarLadoEditavel(){

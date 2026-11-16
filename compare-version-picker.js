@@ -34,6 +34,7 @@ window.CompareLayout={mount(dialog){
   const columns=document.createElement('div');columns.className='comparison-columns compare-compact-headings';columns.setAttribute('aria-label','Colunas da comparação');
   for(const label of ['Anterior','Atual']){const heading=document.createElement('strong');heading.textContent=label;columns.append(heading);}
   dialog.querySelector('.compare-header').before(columns);
+  const scroll=document.createElement('div');scroll.className='compare-scroll';const footer=dialog.querySelector(':scope > .dialog-actions');dialog.insertBefore(scroll,dialog.firstChild);for(const child of [...dialog.children])if(child!==scroll&&child!==footer)scroll.append(child);
   let collapsed=false;try{collapsed=localStorage.getItem('treinoCompareOptionsCollapsed')==='1';}catch(error){}
   function sync(){dialog.classList.toggle('compare-options-collapsed',collapsed);minimize.textContent=collapsed?'Selecionar treinos':'Minimizar seleção';minimize.setAttribute('aria-expanded',String(!collapsed));}
   minimize.onclick=()=>{collapsed=!collapsed;sync();try{localStorage.setItem('treinoCompareOptionsCollapsed',collapsed?'1':'0');}catch(error){}};
