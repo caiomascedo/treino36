@@ -1313,6 +1313,7 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 .sub-badge.capa { background:#dcfce7; color:#15803d; }
 .sub-badge.anterior { background:#e0f2fe; color:#0369a1; }
 .name-suggestion-subitem .sub-load-btn { font-size:0.7rem; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1; background:#fff; color:#0f172a; cursor:pointer; }
+.name-suggestion-subitem .sub-delete-btn { flex:none; font-size:0.75rem; padding:2px 6px; margin-left:5px; border:1px solid #fecaca; border-radius:4px; background:#fff7f7; cursor:pointer; }
 .name-suggestion-subitem .sub-load-btn:hover { background:#dbeafe; border-color:#93c5fd; color:#1d4ed8; }
 .sub-badge.novo { background:#dbeafe; color:#1e40af; }
 .compare-search-container { position:relative; margin:6px 0 8px; flex-shrink:0; }
@@ -8702,7 +8703,7 @@ window.AvaliacaoTreinoSync = (function () {
         html += '<div class="name-suggestion-sublist">';
         html += '<div class="name-suggestion-subitem" data-student-id="' + escAttr(a.student_id) + '" data-type="cover" role="button" tabindex="0" title="Carregar Capa de ' + escAttr(a.nome) + '">' +
           '<div class="sub-name">↳ <span class="sub-badge capa">⚡ Capa</span> <strong>' + escHtml(capaNome) + '</strong>' + (isNovo ? ' <small style="color:#2563eb;font-weight:600;">(1º Treino)</small>' : '') + '</div>' +
-          '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-type="cover">Carregar</button>' +
+          '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-type="cover">Carregar</button><button type="button" class="sub-delete-btn" aria-label="Apagar capa atual" title="Apagar capa atual">🗑️</button>' +
         '</div>';
         
         hist.forEach(function(v, idx) {
@@ -8710,7 +8711,7 @@ window.AvaliacaoTreinoSync = (function () {
           var vData = v.archived_at ? new Date(v.archived_at).toLocaleDateString('pt-BR') : '';
           html += '<div class="name-suggestion-subitem" data-student-id="' + escAttr(a.student_id) + '" data-history-index="'+(hist.length-idx-1)+'" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history" role="button" tabindex="0" title="Carregar: ' + escAttr(vNome) + '">' +
             '<div class="sub-name">↳ <span class="sub-badge anterior">◷ Ant ' + (hist.length - idx) + '</span> <span>' + escHtml(vNome) + (vData ? ' <small style="color:#94a3b8;">(' + vData + ')</small>' : '') + '</span></div>' +
-            '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history">Carregar</button>' +
+            '<button type="button" class="sub-load-btn" data-student-id="' + escAttr(a.student_id) + '" data-workout-id="' + escAttr(v.workout_id) + '" data-type="history">Carregar</button><button type="button" class="sub-delete-btn" aria-label="Apagar este anterior" title="Apagar este anterior">🗑️</button>' +
           '</div>';
         });
         html += '</div>';
@@ -8738,6 +8739,9 @@ window.AvaliacaoTreinoSync = (function () {
         var sId = item.dataset.studentId;
         var a = alunos.find(function(x) { return x.student_id === sId; });
         if (!a) return;
+        if(e.target.closest('.sub-delete-btn')){
+          abrirExclusaoTreino(item.dataset.type==='cover'?'student-'+a.student_id:chaveAnteriorComparacao(a,Number(item.dataset.historyIndex)),true);return;
+        }
         if (item.dataset.type === 'cover') {
           escolherSugestao(a.nome);
         } else {
@@ -9033,33 +9037,39 @@ window.AvaliacaoTreinoSync = (function () {
   var deleteHistoryContext=null;
   var historyDeleteDialog=criarDialogo('historyDeleteDialog','Conferir treino antes de apagar',
     '<div class="history-delete-body"><p id="historyDeleteIdentity"></p><p id="historyDeleteDuplicate"></p><pre id="historyDeletePreview" class="version-content"></pre><div id="historyDeleteMatches"></div><div id="historyDeleteReplacement"><label for="historyReplacementChoice">Qual treino deve virar capa?</label><select id="historyReplacementChoice"></select><pre id="historyReplacementPreview" class="version-content"></pre></div><p id="historyDeleteHint"></p><p id="historyDeleteStatus" role="status"></p></div><div class="dialog-actions"><button type="button" data-close>Cancelar</button><button type="button" id="confirmDeleteHistoryVersion">Apagar este treino</button></div>');
-  function escolherSubstitutoHistorico(){var ctx=deleteHistoryContext;if(!ctx)return;var id=document.getElementById('historyReplacementChoice').value,workout=ctx.owner.historicoTreinos?.find(function(v){return v.workout_id===id;});document.getElementById('historyReplacementPreview').textContent=workout?textoTreino(workout):'';document.getElementById('confirmDeleteHistoryVersion').disabled=ctx.isCapa&&(ctx.owner.historicoTreinos||[]).length>0&&!workout;}
+  function escolherSubstitutoHistorico(){var ctx=deleteHistoryContext;if(!ctx)return;var id=document.getElementById('historyReplacementChoice').value,workout=ctx.fromSuggestions?ctx.owner.historicoTreinos?.[Number(id)]:ctx.owner.historicoTreinos?.find(function(v){return v.workout_id===id;});if(!id)workout=null;document.getElementById('historyReplacementPreview').textContent=workout?textoTreino(workout):'';document.getElementById('confirmDeleteHistoryVersion').disabled=ctx.isCapa&&(ctx.owner.historicoTreinos||[]).length>0&&!workout;}
   document.getElementById('historyReplacementChoice').onchange=escolherSubstitutoHistorico;
-  document.getElementById('deleteHistoryVersion').onclick=function(){
-    concluirAutoSave();var chosen=resolverTreinoComparacao(document.getElementById('historyVersion').value);if(!chosen?.student)return;
-    var persisted=localStorage.getItem('treinoAlunos')||'[]',records=JSON.parse(persisted),owner=records.find(function(p){return p.student_id===chosen.student.student_id;}),workout=chosen.isCapa&&owner?snapshotAluno(owner):owner?.historicoTreinos?.find(function(v){return v.workout_id===chosen.workout.workout_id;});
+  document.getElementById('deleteHistoryVersion').onclick=function(){abrirExclusaoTreino(null,false);};
+  function abrirExclusaoTreino(reference,fromSuggestions){
+    concluirAutoSave();
+    if(mainArchiveEdit&&!salvarAnteriorPrincipal(capturarTreinoAtual()))return;
+    var chosen=reference?resolverTreinoComparacao(reference):versaoSelecionadaHistorico();if(!chosen?.student)return;
+    var historyIndex=chosen.isCapa?-1:(chosen.workout.comparison_key?.startsWith('archive:')?JSON.parse(decodeURIComponent(chosen.workout.comparison_key.slice(8)))[1]:(chosen.student.historicoTreinos||[]).findIndex(function(v){return v.workout_id===chosen.workout.workout_id;}));
+    var persisted=localStorage.getItem('treinoAlunos')||'[]',records=JSON.parse(persisted),owner=records.find(function(p){return p.student_id===chosen.student.student_id;}),workout=chosen.isCapa&&owner?snapshotAluno(owner):owner?.historicoTreinos?.[historyIndex];
     if(!owner||!workout||WorkoutHistoryTools.signature(workout)!==WorkoutHistoryTools.signature(chosen.workout)){document.getElementById('historyPromotionStatus').textContent='O treino mudou. Reabra o histórico para conferir antes de apagar.';return;}
-    deleteHistoryContext={owner:owner,workout:cloneData(workout),isCapa:chosen.isCapa,persisted:persisted,records:records};
-    document.getElementById('historyDeleteIdentity').textContent=owner.nome+' · '+(chosen.isCapa?'Capa atual · '+(workout.name||'Treino'):rotuloVersao(workout,(owner.historicoTreinos||[]).findIndex(function(version){return version.workout_id===workout.workout_id;})));
+    deleteHistoryContext={owner:owner,workout:cloneData(workout),isCapa:chosen.isCapa,persisted:persisted,records:records,historyIndex:historyIndex,fromSuggestions:fromSuggestions};
+    document.getElementById('historyDeleteIdentity').textContent=owner.nome+' · '+(chosen.isCapa?'Capa atual · '+(workout.name||'Treino'):rotuloVersao(workout,historyIndex));
     document.getElementById('historyDeletePreview').textContent=textoTreino(workout);document.getElementById('historyDeleteStatus').textContent='';
     var duplicates=WorkoutHistoryTools.duplicates(workout,versoesParaRepetidos(owner),chosen.isCapa?'student-'+owner.student_id:workout.workout_id),matches=document.getElementById('historyDeleteMatches');matches.replaceChildren();
     document.getElementById('historyDeleteDuplicate').textContent=duplicates.length?'Conteúdo repetido: '+duplicates.map(function(item){return item.label;}).join(' · '):'Não há outro treino com o mesmo conteúdo neste aluno.';
     duplicates.forEach(function(item){var detail=document.createElement('details'),summary=document.createElement('summary'),preview=document.createElement('pre');summary.textContent='Conferir repetido · '+item.label;preview.className='version-content';preview.textContent=textoTreino(item.workout);detail.append(summary,preview);matches.append(detail);});
     var replacement=document.getElementById('historyReplacementChoice');replacement.replaceChildren();var placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Selecione uma nova capa';replacement.append(placeholder);
-    (owner.historicoTreinos||[]).forEach(function(version,index){var option=document.createElement('option');option.value=version.workout_id;option.textContent=rotuloVersao(version,index);replacement.append(option);});
+    (owner.historicoTreinos||[]).forEach(function(version,index){var option=document.createElement('option');option.value=fromSuggestions?String(index):version.workout_id;option.textContent=rotuloVersao(version,index);replacement.append(option);});
     document.getElementById('historyDeleteReplacement').hidden=!chosen.isCapa||!owner.historicoTreinos?.length;
     document.getElementById('historyDeleteHint').textContent=chosen.isCapa?(owner.historicoTreinos?.length?'A capa selecionada será apagada. O treino escolhido acima vira a nova capa.':'A capa será apagada e o aluno ficará com um treino vazio. Seus outros dados serão mantidos.'):'Só este treino anterior será apagado. A capa atual e os outros treinos serão mantidos.';
+    if(fromSuggestions&&chosen.isCapa&&owner.historicoTreinos?.length){replacement.value=String(owner.historicoTreinos.length-1);document.getElementById('historyDeleteHint').textContent='Apagar esta capa? O anterior mais recente está selecionado para virar a capa e sair da lista de anteriores.';}
     escolherSubstitutoHistorico();historyDeleteDialog.showModal();historyDeleteDialog.querySelector('.history-delete-body').scrollTop=0;
-  };
+  }
   document.getElementById('confirmDeleteHistoryVersion').onclick=function(){
     var ctx=deleteHistoryContext,status=document.getElementById('historyDeleteStatus');if(!ctx)return;
     if(localStorage.getItem('treinoAlunos')!==ctx.persisted){status.textContent='Os dados mudaram enquanto a prévia estava aberta. Cancele e confira novamente.';return;}
     var owner=ctx.owner,before=cloneData(owner),replacementId=document.getElementById('historyReplacementChoice').value;
-    if(ctx.isCapa){var replacement=(owner.historicoTreinos||[]).find(function(v){return v.workout_id===replacementId;});if(owner.historicoTreinos?.length&&!replacement){status.textContent='Escolha qual treino ficará como capa.';return;}
+    if(ctx.isCapa){var replacement=ctx.fromSuggestions?(replacementId!==''?owner.historicoTreinos?.[Number(replacementId)]:null):(owner.historicoTreinos||[]).find(function(v){return v.workout_id===replacementId;});if(owner.historicoTreinos?.length&&!replacement){status.textContent='Escolha qual treino ficará como capa.';return;}
       owner.treino=replacement?cloneData(replacement.treino):Object.fromEntries(todasSecoes.map(function(id){return [id,[]];}));owner.titulos=replacement?cloneData(replacement.titulos||{}):{};owner.secaoFAtiva=!!replacement?.secaoFAtiva;owner.treinoNome=replacement?(replacement.name||replacement.treinoNome||'Treino de '+owner.nome):'Treino de '+owner.nome;owner.treino_id=novoId('treino');owner.treinoCriadoEm=owner.treinoAtivadoEm=owner.atualizadoEm=new Date().toISOString();owner.treinoProtegido=!!replacement;delete owner.validadeTreino;delete owner.sequenciaTreino;if(replacement?.validadeTreino)owner.validadeTreino={...cloneData(replacement.validadeTreino),treinoId:owner.treino_id};
-    }else{var index=owner.historicoTreinos.findIndex(function(v){return v.workout_id===ctx.workout.workout_id;});if(index<0){status.textContent='Este treino não está mais disponível.';return;}owner.historicoTreinos.splice(index,1);}
+      if(ctx.fromSuggestions&&replacement)owner.historicoTreinos.splice(owner.historicoTreinos.indexOf(replacement),1);
+    }else{var index=ctx.historyIndex;if(index<0){status.textContent='Este treino não está mais disponível.';return;}owner.historicoTreinos.splice(index,1);}
     alunos=ctx.records;if(!salvarLocalStorage()){Object.keys(owner).forEach(function(key){delete owner[key];});Object.assign(owner,before);status.textContent='Não foi possível apagar. O treino foi mantido.';return;}
-    var wasCurrent=alunoNaTela()?.student_id===owner.student_id;historyStudent=owner;historyScope=null;historySearchInput.value=owner.nome;atualizarVersoesHistorico('');if(ctx.isCapa&&wasCurrent)carregarTreinoAluno(owner);historyDeleteDialog.close();document.getElementById('historyPromotionStatus').textContent='Treino apagado. Os outros dados de '+owner.nome+' foram mantidos.';
+    var wasCurrent=alunoNaTela()?.student_id===owner.student_id;historyStudent=owner;historyScope=null;historySearchInput.value=owner.nome;atualizarVersoesHistorico('');if(wasCurrent&&(ctx.isCapa||mainArchiveEdit)){clearTimeout(autoSaveTimer);autoSavePendente=null;mainArchiveEdit=null;sessionStorage.removeItem('treinoMainArchiveEdit');atualizarModoAnteriorPrincipal();carregarTreinoAluno(owner);}historyDeleteDialog.close();if(ctx.fromSuggestions){mostrarSugestoes();exibirMensagem(ctx.isCapa&&replacementId?'Capa apagada. O treino anterior virou a capa.':'Treino apagado.','#1e6f3f',false);}document.getElementById('historyPromotionStatus').textContent='Treino apagado. Os outros dados de '+owner.nome+' foram mantidos.';
   };
   historyDeleteDialog.addEventListener('close',function(){deleteHistoryContext=null;});
   document.getElementById('historyVersion').onchange=function(){document.getElementById('historyPromotionStatus').textContent='';renderVersao();};
