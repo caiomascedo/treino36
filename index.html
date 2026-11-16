@@ -5280,7 +5280,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   /* ===== HISTÓRICO UNDO/REDO ===== */
   function getCurrentState() {
-    var state = { sections: {}, titles: {}, footer: document.querySelector('.footer') ? document.querySelector('.footer').innerHTML : '', secaoFAtiva: secaoFAtiva };
+    var state = { studentName:document.getElementById('searchName').value,studentId:alunoVinculadoId,studentWhatsapp:document.getElementById('studentWhatsapp').value, sections: {}, titles: {}, footer: document.querySelector('.footer') ? document.querySelector('.footer').innerHTML : '', secaoFAtiva: secaoFAtiva };
     for (var s of ['A','B','C','D','E','F']) {
       state.sections[s] = sections[s] ? sections[s].innerHTML : '';
       var h2 = document.querySelector('.sec-' + s.toLowerCase() + ' h2');
@@ -5293,6 +5293,7 @@ window.AvaliacaoTreinoSync = (function () {
     finalizarArrasteTreino(false); finalizarArrasteExercicio(false);
     ocultarDesfazerMovimento();
     isUndoRedoAction = true;
+    if(state.studentName!==undefined){registrarAlunoSelecionado(state.studentName);alunoVinculadoId=state.studentId||null;document.getElementById('studentWhatsapp').value=state.studentWhatsapp||'';}
     if (state.secaoFAtiva !== undefined && state.secaoFAtiva !== secaoFAtiva) {
       setSecaoFAtiva(state.secaoFAtiva, true);
     }
@@ -5354,9 +5355,45 @@ window.AvaliacaoTreinoSync = (function () {
   }
   function undo() {
     if (alunoApagadoRecente && restaurarAlunoApagado()) return;
-    if (currentIndex > 0) { currentIndex--; applyState(historyStack[currentIndex]); }
+    moverHistoricoPrincipal(-1);
   }
-  function redo() { if (currentIndex < historyStack.length - 1) { currentIndex++; applyState(historyStack[currentIndex]); } }
+  function redo() { moverHistoricoPrincipal(1); }
+  // A pasted replacement owns its version change as well as its visible text.
+  var ultimaColagemRecuperavel=null;
+  var camposHistoricoTreino=['treino','titulos','secaoFAtiva','treino_id','treinoNome','treinoProtegido','treinoCriadoEm','treinoAtivadoEm','atualizadoEm','historicoTreinos','validadeTreino','sequenciaTreino'];
+  function dadosHistoricoTreino(student){var data={};camposHistoricoTreino.forEach(function(key){if(student[key]!==undefined)data[key]=cloneData(student[key]);});return data;}
+  function restaurarDadosHistoricoTreino(student,data){camposHistoricoTreino.forEach(function(key){if(data[key]===undefined)delete student[key];else student[key]=cloneData(data[key]);});}
+  function moverHistoricoPrincipal(delta){
+    var next=currentIndex+delta;
+    if(next<0&&delta<0&&ultimaColagemRecuperavel?.active){historyStack=[ultimaColagemRecuperavel.beforeState,Object.assign({},ultimaColagemRecuperavel.afterState,{pasteTransaction:ultimaColagemRecuperavel.transaction})];currentIndex=1;next=0;}
+    if(next<0||next>=historyStack.length)return;
+    var transaction=historyStack[delta<0?currentIndex:next].pasteTransaction;
+    if(transaction){
+      concluirAutoSave();
+      var owner=alunos.find(function(a){return a.student_id===transaction.studentId;});if(!owner){exibirMensagem('O aluno desta colagem não está mais disponível.','#b22222',false);return;}
+      var backup=dadosHistoricoTreino(owner);restaurarDadosHistoricoTreino(owner,transaction[delta<0?'before':'after']);
+      if(!salvarLocalStorage()){restaurarDadosHistoricoTreino(owner,backup);return;}
+    }else{clearTimeout(autoSaveTimer);autoSavePendente=null;}
+    currentIndex=next;applyState(historyStack[next],!!transaction);
+    if(transaction&&ultimaColagemRecuperavel?.transaction===transaction)ultimaColagemRecuperavel.active=delta>0;
+    if(!transaction)concluirAutoSave();
+    if(sectionDisplay)sectionDisplay.refresh();agendarAlcasPrincipais();
+    if(typeof validityEditor!=='undefined'&&validityEditor)validityEditor.refresh();
+  }
+  function aplicarColagemComHistorico(mutate,replacement){
+    pushState();concluirAutoSave();
+    var beforeState=getCurrentState(),owner=alunoNaTela(),before=owner&&!mainArchiveEdit?dadosHistoricoTreino(owner):null;
+    isUndoRedoAction=true;try{mutate();}finally{isUndoRedoAction=false;}
+    var data=capturarTreinoAtual(),transaction=null;
+    if(before&&replacement!==false&&diferencaDados(owner,data)){
+      if(Object.values(owner.treino||{}).some(function(rows){return rows.some(function(line){return line&&!/Sem treino|Sem exercícios|Nenhum exercício|Seção vazia/.test(line);});}))arquivarTreino(owner);else owner.treinoProtegido=false;
+      if(!salvarDadosAluno(data,false)){restaurarDadosHistoricoTreino(owner,before);applyState(beforeState,true);return false;}
+      transaction={studentId:owner.student_id,before:before,after:dadosHistoricoTreino(owner)};
+    }
+    pushState();
+    if(transaction){historyStack[currentIndex].pasteTransaction=transaction;ultimaColagemRecuperavel={transaction:transaction,beforeState:beforeState,afterState:getCurrentState(),active:true};}
+    concluirAutoSave();return true;
+  }
   function initHistory() { ocultarDesfazerMovimento(); atualizarStatusSalvo(''); historyStack = [getCurrentState()]; currentIndex = 0; lastStateSnapshot = JSON.stringify(historyStack[0]); }
 
   /* ===== AUTO SAVE ===== */
@@ -6603,6 +6640,7 @@ window.AvaliacaoTreinoSync = (function () {
             return;
           }
           if (typeof concluirAutoSave === 'function') concluirAutoSave();
+          if(raw?.tipo==='treino36-completo'){abrirImportacaoCompleta(raw);return;}
 
           // 1. Extrair lista de alunos de qualquer formato
           var rawList = null;
@@ -6680,7 +6718,7 @@ window.AvaliacaoTreinoSync = (function () {
                   ? vTitulosObj[s].trim()
                   : (s + '. TREINO');
               });
-              cleanHistorico.push({
+              cleanHistorico.push(Object.assign(cloneData(v),{
                 workout_id: (typeof v.workout_id === 'string' && v.workout_id) ? v.workout_id : novoId('treino'),
                 student_id: sId,
                 name: String(v.name || v.treinoNome || 'Treino anterior'),
@@ -6693,10 +6731,10 @@ window.AvaliacaoTreinoSync = (function () {
                 treino: vCleanTreino,
                 titulos: vCleanTitulos,
                 secaoFAtiva: !!v.secaoFAtiva
-              });
+              }));
             });
 
-            var alunoSan = {
+            var alunoSan = Object.assign(cloneData(item),{
               nome: nome,
               student_id: sId,
               whatsapp: typeof item.whatsapp === 'string' ? item.whatsapp : '',
@@ -6709,7 +6747,7 @@ window.AvaliacaoTreinoSync = (function () {
               treino: cleanTreino,
               titulos: cleanTitulos,
               historicoTreinos: cleanHistorico
-            };
+            });
             if (typeof item.acompanharSequencia==='boolean') alunoSan.acompanharSequencia=item.acompanharSequencia;
             if (item.sequenciaTreino) alunoSan.sequenciaTreino = WorkoutSequence.sanitize(item.sequenciaTreino);
             if (item.avaliacaoId) alunoSan.avaliacaoId = item.avaliacaoId;
@@ -7540,9 +7578,9 @@ window.AvaliacaoTreinoSync = (function () {
       return;
     }
     if (modalMode === 'section' && modalSection) {
-      preencherSecao(modalSection, txt);
+      if(!aplicarColagemComHistorico(function(){preencherSecao(modalSection, txt);}))return;
     } else if (modalMode === 'full') {
-      processFullTreino(txt);
+      if(!aplicarColagemComHistorico(function(){processFullTreino(txt);}))return;
     }
     fecharPasteModal();
     pushState();
@@ -7811,12 +7849,12 @@ window.AvaliacaoTreinoSync = (function () {
     var full=pasteModal.classList.toggle('expanded');this.textContent=full?'🗗 Reduzir':'⛶ Expandir';document.getElementById('pasteTextarea').focus();
   };
   function aplicarRascunhoCola() {
-    draftTouched.forEach(function(sec){
+    aplicarColagemComHistorico(function(){draftTouched.forEach(function(sec){
       sections[sec].innerHTML=zoomDraft[sec].itens.map(function(html){return '<li>'+html+'</li>';}).join('');
       setTituloSecao(sec,zoomDraft[sec].titulo);
       if(sec==='F')setSecaoFAtiva(true,true);
     });
-    pushState();concluirAutoSave();
+    },!pasteEditingExisting);
   }
   document.getElementById('sectionZoomApply').addEventListener('click',function(){
     if(zoomMode!=='paste') return;
@@ -8781,7 +8819,10 @@ window.AvaliacaoTreinoSync = (function () {
     a.treinoProtegido=true;a.atualizadoEm=new Date().toISOString();a.treinoAtivadoEm=a.atualizadoEm;
     if(!salvarLocalStorage()){alunos=before;exibirMensagem('Não foi possível salvar. Tente novamente.','#b22222',false);return false;}
     clearTimeout(autoSaveTimer);autoSavePendente=null;destinoSugeridoId=null;destinoNomeDigitado='';atualizarDestinoSalvamento();
-    carregarTreinoAluno(a);fecharSugestoes();atualizarStatusSalvo('✅ Salvo');if(callback)callback();return true;
+    var keepHistory=alunoNaTela()?.student_id===a.student_id,steps=historyStack,stepIndex=currentIndex;
+    carregarTreinoAluno(a);
+    if(keepHistory){historyStack=steps;currentIndex=stepIndex;var transaction=historyStack[currentIndex].pasteTransaction;historyStack[currentIndex]=getCurrentState();if(transaction){transaction.after=dadosHistoricoTreino(a);historyStack[currentIndex].pasteTransaction=transaction;}lastStateSnapshot=JSON.stringify(getCurrentState());}
+    fecharSugestoes();atualizarStatusSalvo('✅ Salvo');if(callback)callback();return true;
   }
 
   function textoTreino(dados,scope,portable=false) {
@@ -11486,6 +11527,37 @@ window.AvaliacaoTreinoSync = (function () {
     if(!v.titulos)v.titulos={};
     ['A','B','C','D','E','F'].forEach(function(s){if(v.treino[s]===undefined)v.treino[s]=[];if(!Array.isArray(v.treino[s])||v.treino[s].some(function(x){return typeof x!=='string';}))throw Error('Exercícios inválidos.');if(v.titulos[s]!==undefined&&typeof v.titulos[s]!=='string')throw Error('Título inválido.');if(!v.titulos[s])v.titulos[s]=s+'. TREINO';});
     v.secaoFAtiva=!!v.secaoFAtiva;
+  }
+  function abrirImportacaoCompleta(raw){
+    try{
+      if(!Array.isArray(raw.alunos)||!raw.alunos.length)throw Error('Nenhum aluno encontrado no backup.');
+      if(raw.mobilidades!==undefined&&!Array.isArray(raw.mobilidades))throw Error('Lista de mobilidades inválida.');
+      var imported=cloneData(raw.alunos),ids=new Set();
+      imported.forEach(function(student){
+        if(typeof student.student_id!=='string'||!student.student_id.trim()||ids.has(student.student_id)||typeof student.nome!=='string'||!student.nome.trim())throw Error('Identificação de aluno inválida ou repetida.');
+        ids.add(student.student_id);validarTreinoImportado(student);garantirHistorico(student);
+        student.historicoTreinos.forEach(function(version){validarTreinoImportado(cloneData(version));});
+      });
+      var plan=prepararAvaliacoesBackupCompleto(raw,imported);
+      var dialog=document.getElementById('completeBackupImportDialog')||criarDialogo('completeBackupImportDialog','Conferir backup JSON','<p id="completeBackupSummary"></p><p id="completeBackupStatus" role="status"></p><div class="dialog-actions"><button data-close>Cancelar</button><button id="confirmCompleteBackupImport" class="primary">Importar backup</button></div>');
+      document.getElementById('completeBackupSummary').textContent=imported.length+' aluno(s), com capas, anteriores e dados associados; '+raw.avaliacoes.length+' avaliação(ões). Confirme para importar.';
+      document.getElementById('completeBackupStatus').textContent='';
+      var keys=['treinoAlunos',AvaliacaoTreinoSync.key,'treinoMobilidades','avaliacao_notificacoes_ativas'],baseline=keys.map(function(key){return localStorage.getItem(key);});
+      document.getElementById('confirmCompleteBackupImport').onclick=function(){
+        if(keys.some(function(key,i){return localStorage.getItem(key)!==baseline[i];})){document.getElementById('completeBackupStatus').textContent='Os dados mudaram. Cancele e abra o backup novamente.';return;}
+        var merged=cloneData(alunos);imported.forEach(function(student){var index=merged.findIndex(function(a){return a.student_id===student.student_id;});if(index<0)merged.push(student);else merged[index]=student;});
+        var nextMobilities=cloneData(mobilidades);(raw.mobilidades||[]).forEach(function(m){var index=nextMobilities.findIndex(function(existing){return existing.id===m.id;});if(index<0)nextMobilities.push(m);else nextMobilities[index]=m;});
+        try{
+          localStorage.setItem('treinoAlunos',JSON.stringify(merged));localStorage.setItem(AvaliacaoTreinoSync.key,JSON.stringify(plan.records));localStorage.setItem('treinoMobilidades',JSON.stringify(nextMobilities));
+          if(raw.preferencias?.notificacoes_avaliacao!==undefined)localStorage.setItem('avaliacao_notificacoes_ativas',raw.preferencias.notificacoes_avaliacao?'1':'0');
+        }catch(error){keys.forEach(function(key,i){try{if(baseline[i]===null)localStorage.removeItem(key);else localStorage.setItem(key,baseline[i]);}catch(ignore){}});document.getElementById('completeBackupStatus').textContent='Não foi possível importar. Os dados anteriores foram mantidos.';return;}
+        clearTimeout(autoSaveTimer);autoSavePendente=null;mainArchiveEdit=null;sessionStorage.removeItem('treinoMainArchiveEdit');atualizarModoAnteriorPrincipal();
+        alunos=merged;mobilidades=nextMobilities;ultimaColagemRecuperavel=null;
+        var selected=alunos.find(function(a){return a.student_id===alunoVinculadoId;})||alunos.find(function(a){return a.student_id===imported[0].student_id;});
+        carregarTreinoAluno(selected);renderizarBarraFavoritos();if(typeof atualizarFichaDaAvaliacao==='function')atualizarFichaDaAvaliacao();dialog.close();exibirMensagem('Backup JSON importado com capas e anteriores.','#1e6f3f',false);
+      };
+      dialog.showModal();
+    }catch(error){exibirMensagem('Não foi possível importar: '+error.message,'#b22222',false);}
   }
   // importarJSON() consolidado e resiliente na linha 6537.
 
