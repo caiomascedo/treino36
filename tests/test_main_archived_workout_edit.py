@@ -37,8 +37,9 @@ with sync_playwright() as p:
  page.locator('#listBtn').tap();page.locator('.aluno-list-item[data-nome="Bia"] .aluno-nome').tap();expect(badge).to_have_text('Capa · Treino principal');expect(page.locator('.sec-a ol')).to_contain_text('Stiff');assert records()[0]['treino']==before[0]['treino']
  page.locator('#listBtn').tap();page.locator('.aluno-list-item[data-nome="Ana"] .aluno-nome').tap();page.locator('#compareWorkoutBtn').tap();page.locator('#chooseComparePrevious').tap();page.locator('#comparePreviousChoice .compare-version-option').filter(has_text='Anterior 1 (arquivado)').tap();page.locator('#editComparedPreviousOnMain').tap();expect(page.locator('#compareWorkoutsDialog')).not_to_be_visible();expect(badge).to_contain_text('EDITANDO ANTERIOR 1')
  # A failed save blocks leaving and keeps the visible archive draft.
- page.locator('.sec-a .colar-btn').tap();page.locator('#pasteTextarea').fill('A. Peito\nSupino — 6×12');page.locator('#confirmPasteBtn').tap();failed_before=records()
+ failed_before=records()
  page.evaluate("()=>{window.originalSet=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='treinoAlunos')throw new DOMException('Full','QuotaExceededError');return originalSet.call(this,key,value);}}")
+ page.locator('.sec-a .colar-btn').tap();page.locator('#pasteTextarea').fill('A. Peito\nSupino — 6×12');page.locator('#confirmPasteBtn').tap()
  page.locator('#saveBtn').tap();expect(badge).to_contain_text('EDITANDO ANTERIOR 1');page.locator('#backToWorkoutCover').tap();expect(badge).to_contain_text('EDITANDO ANTERIOR 1');expect(page.locator('.sec-a ol')).to_contain_text('6×12');assert records()==failed_before
  page.evaluate('()=>{Storage.prototype.setItem=originalSet;}')
  page.evaluate("()=>{const people=JSON.parse(localStorage.getItem('treinoAlunos'));people[0].historicoTreinos[0].treino.A=['Edição externa — 2×10'];localStorage.setItem('treinoAlunos',JSON.stringify(people));}")
@@ -47,7 +48,7 @@ with sync_playwright() as p:
  # Missing/repeated legacy IDs retain the exact selected archive slot on load/save/reload.
  page.evaluate("""()=>localStorage.setItem('treinoAlunos',JSON.stringify([{student_id:'legacy',nome:'Antigo',treino_id:'shared',treino:{A:['Capa — 3×12']},historicoTreinos:[{workout_id:'shared',treino:{A:['Primeiro — 3×10']}},{treino:{A:['Segundo — 4×10']}}]}]))""")
  page.reload();page.locator('#historyWorkoutBtn').tap();select=page.locator('#historyVersion');slot=select.locator('option[data-history-index="1"]').evaluate('el=>el.index');select.select_option(index=slot);page.locator('#editHistoryVersion').tap();expect(badge).to_contain_text('EDITANDO ANTERIOR 2');expect(page.locator('.sec-a ol')).to_contain_text('Segundo')
- page.locator('.sec-a .clear-btn').tap();page.locator('#saveBtn').tap();legacy=records()[0];assert legacy['treino']['A']==['Capa — 3×12'] and legacy['historicoTreinos'][0]['treino']['A']==['Primeiro — 3×10'] and legacy['historicoTreinos'][1]['treino']['A']==[]
+ page.once('dialog',lambda d:d.accept());page.locator('.sec-a .clear-btn').tap();page.locator('#saveBtn').tap();legacy=records()[0];assert legacy['treino']['A']==['Capa — 3×12'] and legacy['historicoTreinos'][0]['treino']['A']==['Primeiro — 3×10'] and legacy['historicoTreinos'][1]['treino']['A']==[]
  page.reload();expect(badge).to_contain_text('EDITANDO ANTERIOR 2');expect(page.locator('.sec-a ol')).to_contain_text('Sem exercícios')
  assert not errors,errors
  browser.close();print('PASS: suggestions/history/comparison load exact archive on main editor; warning/save target; normal paste/undo/redo/PDF; archive-only persistence; reload and cover return; pupil switch; failed save blocks leaving and retains draft')

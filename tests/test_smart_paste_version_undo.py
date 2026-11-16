@@ -17,7 +17,7 @@ with sync_playwright() as p:
  page.evaluate('(s)=>localStorage.setItem("treinoAlunos",JSON.stringify(s))',students);page.reload();page.evaluate('TreinoStorage.ready');page.wait_for_function('document.querySelector("#searchName").value==="Ana Original"')
  def records():return page.evaluate('JSON.parse(localStorage.getItem("treinoAlunos"))')
  baseline=records()
- page.locator('#fullTreinoBtn').click();page.locator('#pasteTextarea').fill('A. Novo ciclo\n1. Agachamento — 4×12\n2. Afundo — 3×10\nB. Costas\n1. Puxada — 4×10');page.locator('#confirmPasteBtn').click()
+ page.locator('#fullTreinoBtn').click();page.locator('#pasteTextarea').fill('A. Novo ciclo\n1. Agachamento — 4×12\n2. Afundo — 3×10\nB. Costas\n1. Puxada — 4×10');page.locator('#confirmPasteBtn').click();page.locator('#pasteArchiveYes').click()
  assert len(records()[0]['historicoTreinos'])==2
  assert records()[0]['historicoTreinos'][-1]['treino']==baseline[0]['treino']
  assert records()[0]['historicoTreinos'][-1]['workout_id']=='cover-old'
@@ -39,7 +39,7 @@ with sync_playwright() as p:
  page.locator('#redoBtn').click()
  # A section paste is one undo step and preserves every other section.
  before_section=records()[0]
- page.locator('.colar-btn[data-section="A"]').click();page.locator('#pasteTextarea').fill('A. Teste seção\n1. Mesa flexora unilateral — 3×15');page.locator('#confirmPasteBtn').click()
+ page.locator('.colar-btn[data-section="A"]').click();page.locator('#pasteTextarea').fill('A. Teste seção\n1. Mesa flexora unilateral — 3×15');page.locator('#confirmPasteBtn').click();page.locator('#pasteArchiveYes').click()
  assert len(records()[0]['historicoTreinos'])==len(before_section['historicoTreinos'])+1
  assert records()[0]['treino']['B']==before_section['treino']['B']
  page.locator('#undoBtn').click()

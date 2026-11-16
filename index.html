@@ -5381,12 +5381,13 @@ window.AvaliacaoTreinoSync = (function () {
     if(typeof validityEditor!=='undefined'&&validityEditor)validityEditor.refresh();
   }
   function aplicarColagemComHistorico(mutate,replacement){
+    if(!mainArchiveEdit&&!alunoNaTela()){var target=buscarAluno(document.getElementById('searchName').value.trim());if(target&&!carregarTreinoAluno(target))return false;}
     pushState();concluirAutoSave();
     var beforeState=getCurrentState(),owner=alunoNaTela(),before=owner&&!mainArchiveEdit?dadosHistoricoTreino(owner):null;
     isUndoRedoAction=true;try{mutate();}finally{isUndoRedoAction=false;}
     var data=capturarTreinoAtual(),transaction=null;
     if(before&&replacement!==false&&diferencaDados(owner,data)){
-      if(Object.values(owner.treino||{}).some(function(rows){return rows.some(function(line){return line&&!/Sem treino|Sem exercícios|Nenhum exercício|Seção vazia/.test(line);});}))arquivarTreino(owner);else owner.treinoProtegido=false;
+      if(Object.values(owner.treino||{}).some(function(rows){return rows.some(function(line){return line&&!/Sem treino|Sem exercícios|Nenhum exercício|Seção vazia/.test(line);});})){var retained=replacement==='replace'?cloneData(owner.historicoTreinos):null;arquivarTreino(owner);if(retained)owner.historicoTreinos=retained;}else owner.treinoProtegido=false;
       if(!salvarDadosAluno(data,false)){restaurarDadosHistoricoTreino(owner,before);applyState(beforeState,true);return false;}
       transaction={studentId:owner.student_id,before:before,after:dadosHistoricoTreino(owner)};
     }
@@ -7570,20 +7571,36 @@ window.AvaliacaoTreinoSync = (function () {
       exibirMensagem('Toque e segure no campo para colar manualmente.', '#8b5a2b', false);
     }
   };
+  function confirmarDestinoColagem(apply){
+    concluirAutoSave();
+    var owner=alunoNaTela()||buscarAluno(document.getElementById('searchName').value.trim());
+    if(mainArchiveEdit){apply(false);return;}
+    if(!owner||!Object.values(owner.treino||{}).some(function(rows){return rows.some(function(line){return line&&!/Sem treino|Sem exercícios|Nenhum exercício|Seção vazia/.test(line);});})){apply(true);return;}
+    var dialog=document.getElementById('pasteCoverChoiceDialog')||criarDialogo('pasteCoverChoiceDialog','Guardar a capa atual nos anteriores?',
+      '<p id="pasteCoverChoiceMessage"></p><p id="pasteCoverChoiceStatus" role="status"></p><div class="dialog-actions"><button id="pasteArchiveYes" class="primary">Sim, guardar nos anteriores</button><button id="pasteArchiveNo">Não, substituir sem guardar</button><button data-close>Cancelar</button></div>');
+    var baseline=JSON.stringify(dadosHistoricoTreino(owner));
+    document.getElementById('pasteCoverChoiceMessage').textContent='Aluno: '+owner.nome+'. O treino que você colou será a nova capa e continuará disponível para editar. Deseja guardar o treino que estava na capa nos anteriores?';
+    document.getElementById('pasteCoverChoiceStatus').textContent='';
+    function choose(mode){
+      var current=JSON.parse(localStorage.getItem('treinoAlunos')||'[]').find(function(a){return a.student_id===owner.student_id;});
+      if(!current||JSON.stringify(dadosHistoricoTreino(current))!==baseline){document.getElementById('pasteCoverChoiceStatus').textContent='A capa mudou. Cancele e confira o treino antes de aplicar novamente.';return;}
+      dialog.close();apply(mode);
+    }
+    document.getElementById('pasteArchiveYes').onclick=function(){choose(true);};
+    document.getElementById('pasteArchiveNo').onclick=function(){choose('replace');};
+    dialog.showModal();
+  }
   document.getElementById('confirmPasteBtn').onclick = function() {
     var txt = document.getElementById('pasteTextarea').value.trim(); if (!txt) return;
-    if (pasteEditingExisting) {
-      if (txt !== pasteInitialText && prepararPreviaCola()) { aplicarRascunhoCola(); zoomDraft = null; }
-      fecharPasteModal();
-      return;
-    }
-    if (modalMode === 'section' && modalSection) {
-      if(!aplicarColagemComHistorico(function(){preencherSecao(modalSection, txt);}))return;
-    } else if (modalMode === 'full') {
-      if(!aplicarColagemComHistorico(function(){processFullTreino(txt);}))return;
-    }
-    fecharPasteModal();
-    pushState();
+    if(pasteEditingExisting&&txt===pasteInitialText){fecharPasteModal();return;}
+    confirmarDestinoColagem(function(replacement){
+      if(pasteEditingExisting){
+        if(prepararPreviaCola(replacement)&&aplicarRascunhoCola(replacement)){zoomDraft=null;fecharPasteModal();}
+        return;
+      }
+      var ok=modalMode==='section'&&modalSection?aplicarColagemComHistorico(function(){preencherSecao(modalSection,txt);},replacement):aplicarColagemComHistorico(function(){processFullTreino(txt);},replacement);
+      if(ok){fecharPasteModal();pushState();}
+    });
   };
   document.getElementById('cancelPasteBtn').onclick = fecharPasteModal;
 
@@ -7817,7 +7834,7 @@ window.AvaliacaoTreinoSync = (function () {
   });
 
   // A prévia é independente do cadastro; apenas o botão Aplicar altera os dados.
-  function prepararPreviaCola() {
+  function prepararPreviaCola(replacement) {
     var raw=document.getElementById('pasteTextarea').value.trim();
     if(!raw){document.getElementById('pasteTextarea').focus();return;}
     var originalDraft=dadosDoEditor();zoomDraft=dadosDoEditor(); draftTouched=[];
@@ -7836,7 +7853,7 @@ window.AvaliacaoTreinoSync = (function () {
       var formatted=formatExerciseLine(line.replace(/^\d+[.)]\s*/,'').replace(/^[•\-*]\s*/,''));
       if(formatted){var ol=document.createElement('ol');ol.innerHTML=formatted;zoomDraft[current].itens.push(ol.firstElementChild.innerHTML);}
     });
-    if(pasteEditingExisting)draftTouched.forEach(function(sec){function plain(html){var holder=document.createElement('div');holder.innerHTML=html;return textoDoExercicio(holder,true);}var restored=WorkoutMediaText.restore(zoomDraft[sec].itens.map(plain),originalDraft[sec].itens.map(plain));zoomDraft[sec].itens=restored.map(function(line){var holder=document.createElement('div');holder.innerHTML=formatExerciseLine(line);return holder.firstElementChild.innerHTML;});});
+    if(pasteEditingExisting&&!replacement)draftTouched.forEach(function(sec){function plain(html){var holder=document.createElement('div');holder.innerHTML=html;return textoDoExercicio(holder,true);}var restored=WorkoutMediaText.restore(zoomDraft[sec].itens.map(plain),originalDraft[sec].itens.map(plain));zoomDraft[sec].itens=restored.map(function(line){var holder=document.createElement('div');holder.innerHTML=formatExerciseLine(line);return holder.firstElementChild.innerHTML;});});
     draftHistory=[snapshotRascunho()];draftIndex=0;
     return true;
   }
@@ -7848,18 +7865,17 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('expandPasteBtn').onclick=function(){
     var full=pasteModal.classList.toggle('expanded');this.textContent=full?'🗗 Reduzir':'⛶ Expandir';document.getElementById('pasteTextarea').focus();
   };
-  function aplicarRascunhoCola() {
-    aplicarColagemComHistorico(function(){draftTouched.forEach(function(sec){
+  function aplicarRascunhoCola(replacement) {
+    return aplicarColagemComHistorico(function(){draftTouched.forEach(function(sec){
       sections[sec].innerHTML=zoomDraft[sec].itens.map(function(html){return '<li>'+html+'</li>';}).join('');
       setTituloSecao(sec,zoomDraft[sec].titulo);
       if(sec==='F')setSecaoFAtiva(true,true);
     });
-    },!pasteEditingExisting);
+    },replacement);
   }
   document.getElementById('sectionZoomApply').addEventListener('click',function(){
     if(zoomMode!=='paste') return;
-    finalizarArrasteExercicio(false);aplicarRascunhoCola();fecharSecaoAmpliada();fecharPasteModal();
-    exibirMensagem('✅ Treino organizado e aplicado.','#1e6f3f',false);
+    finalizarArrasteExercicio(false);confirmarDestinoColagem(function(replacement){if(aplicarRascunhoCola(replacement)){fecharSecaoAmpliada();fecharPasteModal();exibirMensagem('✅ Treino organizado e aplicado.','#1e6f3f',false);}});
   });
 
   // As alças principais ficam FORA dos <li>: números, cópias, PDF e JSON
@@ -8541,7 +8557,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   function arquivarTreino(a) {
     garantirHistorico(a);
-    if(!a.historicoTreinos.some(function(v){return v.workout_id===a.treino_id;})) {
+    if(!a.historicoTreinos.some(function(v){return v.workout_id===a.treino_id&&JSON.stringify([v.treino,v.titulos||{},!!v.secaoFAtiva])===JSON.stringify([a.treino,a.titulos||{},!!a.secaoFAtiva]);})) {
       var old=snapshotAluno(a);old.status='archived';old.archived_at=new Date().toISOString();a.historicoTreinos.push(old);
     }
     delete a.validadeTreino;
