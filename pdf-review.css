@@ -48,3 +48,5 @@
 
 /* Dose text retains the exercise font, including the last coloured term on iOS. */
 #pdfBody .pdf-compound-view,#pdfBody .pdf-compound-dose,#pdfBody .pdf-compound-dose>span,#pdfBody .pdf-compound-tail>span:not(.pdf-compound-links){font-size:inherit;line-height:inherit;-webkit-text-size-adjust:100%;text-size-adjust:100%}#pdfBody .pdf-compound-tail{display:inline;white-space:normal;font-size:inherit;line-height:inherit}
+
+#compareWorkoutsDialog .compare-scroll{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-right:2px}#compareWorkoutsDialog .compare-scroll #compareBody{flex:none;min-height:auto;overflow:visible;overscroll-behavior:auto}#compareWorkoutsDialog .compare-scroll .compare-header{max-height:none;overflow:visible;overscroll-behavior:auto}
