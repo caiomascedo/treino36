@@ -10691,7 +10691,7 @@ window.AvaliacaoTreinoSync = (function () {
   // IDs estáveis são acrescentados sem fabricar versões ou mudar datas antigas.
   alunos.forEach(garantirHistorico);salvarLocalStorage();
 
-  var compareContext=null,compareSteps=[],compareStepIndex=0,compareEditing=true,compareSide='both';
+  var compareContext=null,compareSteps=[],compareStepIndex=0,compareEditing=true,compareSide='both',compareAutoTimer=null,compareAutoSavedCurrent=null;
   var compareTools=document.createElement('div');compareTools.className='compare-inline-tools';
   compareTools.innerHTML='<button id="compareUndo" type="button" title="Desfazer" aria-label="Desfazer edição">↶</button><button id="compareRedo" type="button" title="Refazer" aria-label="Refazer edição">↷</button><button id="compareEditingSwitch" type="button" role="switch" aria-checked="true" aria-label="Ativar edição" title="Ativar edição" class="compare-row-toggle"></button><select id="compareEditSide" aria-label="Qual treino editar"><option value="both">✏️ Editar Ambos (Antigo e Atual)</option><option value="current">Editar apenas Atual</option><option value="previous">Editar apenas Anterior</option></select><span id="compareEditStatus" role="status"></span>';
   var pendingCurrentVal=null;
@@ -10699,8 +10699,8 @@ window.AvaliacaoTreinoSync = (function () {
     '<p id="compareCurrentChoiceMsg" style="font-size:0.88rem;color:#1e293b;margin-bottom:12px;"></p>'+
     '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">'+
       '<button type="button" id="compareChoiceViewOnly" class="primary" style="text-align:left;padding:10px 12px;line-height:1.3;cursor:pointer;">'+
-        '<strong>👁️ Apenas Visualização</strong><br>'+
-        '<span style="font-size:0.78rem;opacity:0.9;">Carrega no comparador para analisar e editar, sem alterar a capa do aluno.</span>'+
+        '<strong>👁️ Comparar este treino</strong><br>'+
+        '<span style="font-size:0.78rem;opacity:0.9;">Compara sem trocar o treino da capa. Edições na capa atual são salvas automaticamente.</span>'+
       '</button>'+
       '<button type="button" id="compareChoiceSetCover" style="text-align:left;padding:10px 12px;line-height:1.3;border:1px solid #16a34a;background:#f0fdf4;color:#15803d;border-radius:6px;cursor:pointer;">'+
         '<strong>📌 Definir como Capa</strong><br>'+
@@ -10916,9 +10916,11 @@ window.AvaliacaoTreinoSync = (function () {
   }
 
   function iniciarEditorComparacao(current,previous,scope,leftLabel,rightLabel){
+    salvarAtualComparacaoAutomaticamente();
     var student=(current&&current.student_id?alunos.find(function(x){return x.student_id===current.student_id;}):null)||alunoNaTela()||(historyStudent?historyStudent:null);
     var currentDraft=cloneData(current),previousDraft=cloneData(previous);currentDraft.comparison_key=referenciaComparacao(current);previousDraft.comparison_key=referenciaComparacao(previous);
     compareContext={current:currentDraft,previous:previousDraft,scope:scope,leftLabel:leftLabel,rightLabel:rightLabel,studentId:student?student.student_id:null,suggestion:leftLabel==='Sugestão'};
+    compareAutoSavedCurrent=cloneData(currentDraft);
     compareSteps=[estadoComparacao()];compareStepIndex=0;compareEditing=true;compareSide='both';
     document.getElementById('compareEditingSwitch').setAttribute('aria-checked','true');
     var side=document.getElementById('compareEditSide');side.value='both';
@@ -10931,12 +10933,32 @@ window.AvaliacaoTreinoSync = (function () {
     var sClear=document.getElementById('compareSearchClearBtn');if(sClear)sClear.hidden=false;
     var sCont=document.getElementById('compareSearchContainer');if(sCont)sCont.hidden=!!compareContext.suggestion;
     popularPickersComparacao(student,current,previous,'');
-    compareApply.textContent=compareContext.suggestion?'Aplicar na prévia':'Aplicar alterações';document.getElementById('compareEditStatus').textContent='';atualizarHistoricoComparacao();
+    compareApply.textContent=compareContext.suggestion?'Aplicar na prévia':'Aplicar alterações';document.getElementById('compareEditStatus').textContent=compareContext.suggestion?'':'Edições na capa atual são salvas automaticamente. No anterior, use Aplicar alterações.';atualizarHistoricoComparacao();
   }
+  function salvarAtualComparacaoAutomaticamente(){
+    clearTimeout(compareAutoTimer);compareAutoTimer=null;
+    if(!compareContext||compareContext.suggestion||!compareAutoSavedCurrent)return;
+    var data=compareContext.current,owner=alunos.find(function(a){return a.student_id===compareContext.studentId;});
+    if(!owner||data.comparison_key!=='student-'+owner.student_id||data.workout_id!==owner.treino_id)return;
+    if(Array.from(compareDialog.querySelectorAll('.comparison-current-line')).some(function(line){return !line.innerText.trim();}))return;
+    var affected=[],backup=cloneData(owner.treino),oldDate=owner.atualizadoEm;
+    (compareContext.scope?[compareContext.scope]:todasSecoes).forEach(function(sec){var rows=(data.treino||{})[sec]||[],before=(compareAutoSavedCurrent.treino||{})[sec]||[];rows.forEach(function(line,i){if(line!==before[i]&&owner.treino?.[sec]?.[i]!==undefined){owner.treino[sec][i]=line;if(!affected.includes(sec))affected.push(sec);}});});
+    if(!affected.length)return;
+    owner.atualizadoEm=new Date().toISOString();
+    if(!salvarLocalStorage()){owner.treino=backup;owner.atualizadoEm=oldDate;document.getElementById('compareEditStatus').textContent='Não foi possível salvar o Atual. Tente novamente.';return;}
+    compareAutoSavedCurrent=cloneData(data);
+    if(!mainArchiveEdit&&alunoNaTela()?.student_id===owner.student_id){pushState();affected.forEach(function(sec){sections[sec].innerHTML=owner.treino[sec].map(formatExerciseLine).filter(Boolean).join('');});pushState();concluirAutoSave();agendarAlcasPrincipais();}
+    document.getElementById('compareEditStatus').textContent='Atual salvo automaticamente na capa de '+owner.nome+'.';
+  }
+  function agendarAtualComparacao(){clearTimeout(compareAutoTimer);compareAutoTimer=setTimeout(salvarAtualComparacaoAutomaticamente,300);}
+  function comparacaoTemEdicoesPendentes(){salvarAtualComparacaoAutomaticamente();var baseline=JSON.parse(compareSteps[0]);return JSON.stringify(compareContext.previous)!==JSON.stringify(baseline.previous)||JSON.stringify(compareContext.current)!==JSON.stringify(compareAutoSavedCurrent||baseline.current);}
+  compareDialog.addEventListener('close',salvarAtualComparacaoAutomaticamente);
+  window.addEventListener('pagehide',salvarAtualComparacaoAutomaticamente);
+  document.addEventListener('visibilitychange',function(){if(document.hidden)salvarAtualComparacaoAutomaticamente();});
   function atualizarHistoricoComparacao(){document.getElementById('compareUndo').disabled=compareStepIndex===0;document.getElementById('compareRedo').disabled=compareStepIndex===compareSteps.length-1;}
   function registrarComparacao(){var value=estadoComparacao();if(value===compareSteps[compareStepIndex])return;compareSteps=compareSteps.slice(0,compareStepIndex+1);compareSteps.push(value);compareStepIndex=compareSteps.length-1;atualizarHistoricoComparacao();}
   function redesenharComparacao(){var surface=compareDialog.querySelector('.compare-scroll'),scroll=surface.scrollTop;abrirComparacao(compareContext.current,compareContext.previous,compareContext.scope,compareContext.leftLabel,compareContext.rightLabel,true);surface.scrollTop=scroll;}
-  function historicoComparacao(delta){var next=compareStepIndex+delta;if(next<0||next>=compareSteps.length)return;compareStepIndex=next;var state=JSON.parse(compareSteps[next]);compareContext.current=state.current;compareContext.previous=state.previous;atualizarHistoricoComparacao();redesenharComparacao();}
+  function historicoComparacao(delta){var next=compareStepIndex+delta;if(next<0||next>=compareSteps.length)return;compareStepIndex=next;var state=JSON.parse(compareSteps[next]);compareContext.current=state.current;compareContext.previous=state.previous;atualizarHistoricoComparacao();redesenharComparacao();salvarAtualComparacaoAutomaticamente();}
   document.getElementById('compareUndo').onclick=function(){historicoComparacao(-1);};document.getElementById('compareRedo').onclick=function(){historicoComparacao(1);};
   function atualizarLadoEditavel(){
     document.getElementById('compareEditingSwitch').setAttribute('aria-checked',String(compareEditing));
@@ -10960,7 +10982,7 @@ window.AvaliacaoTreinoSync = (function () {
     var currBtn=e.target.closest('.compare-pick-btn.btn-curr');
     if(prevBtn){
       var val=prevBtn.dataset.val;if(!val)return;
-      if(estadoComparacao()!==compareSteps[0]){
+      if(comparacaoTemEdicoesPendentes()){
         document.getElementById('compareEditStatus').textContent='Aplique as edições antes de trocar de anterior, ou feche para descartar.';
         return;
       }
@@ -10988,7 +11010,7 @@ window.AvaliacaoTreinoSync = (function () {
 
   document.getElementById('comparePreviousPicker').onchange=function(){
     var val=this.value;if(!val)return;
-    if(estadoComparacao()!==compareSteps[0]){
+    if(comparacaoTemEdicoesPendentes()){
       selecionarNoPicker(this,compareContext.previous);
       document.getElementById('compareEditStatus').textContent='Aplique as edições antes de trocar de anterior, ou feche para descartar.';
       return;
@@ -11015,6 +11037,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('compareChoiceViewOnly').onclick=function(){
     compareCurrentChoiceDialog.close();
     if(!pendingCurrentVal)return;
+    salvarAtualComparacaoAutomaticamente();
     var res=resolverTreinoComparacao(pendingCurrentVal);
     if(!res||!res.workout)return;
     var rotulo=res.isCapa?('Capa ('+res.student.nome+')'):(res.workout.name||'Atual');
@@ -11026,6 +11049,7 @@ window.AvaliacaoTreinoSync = (function () {
   document.getElementById('compareChoiceSetCover').onclick=function(){
     compareCurrentChoiceDialog.close();
     if(!pendingCurrentVal)return;
+    salvarAtualComparacaoAutomaticamente();
     var res=resolverTreinoComparacao(pendingCurrentVal);
     if(!res||!res.workout)return;
     var student=(compareContext.studentId?alunos.find(function(x){return x.student_id===compareContext.studentId;}):null)||alunoNaTela()||historyStudent;
@@ -11057,7 +11081,8 @@ window.AvaliacaoTreinoSync = (function () {
     line.textContent=WorkoutMediaText.strip(compareContext[side].treino[sec][index]);cell.replaceChildren(line);
     var enabled=compareEditing&&(compareSide==='both'||compareSide===side);line.contentEditable=String(enabled);line.classList.toggle('editing',enabled);line.spellcheck=false;
     line.setAttribute('aria-label',(side==='previous'?'Anterior':'Atual')+' · Exercício '+(index+1)+' da seção '+sec);
-    line.oninput=function(){var value=line.innerText.replace(/\r?\n/g,' ').trim();if(value){compareContext[side].treino[sec][index]=WorkoutMediaText.merge(value,compareContext[side].treino[sec][index]);registrarComparacao();row.querySelector('h4').textContent='Exercício '+(Number(row.dataset.position)+1)+' · Editado ('+(side==='previous'?'Anterior':'Atual')+')';}};
+    line.oninput=function(event){var value=line.innerText.replace(/\r?\n/g,' ').trim();if(value){compareContext[side].treino[sec][index]=WorkoutMediaText.merge(value,compareContext[side].treino[sec][index]);registrarComparacao();row.querySelector('h4').textContent='Exercício '+(Number(row.dataset.position)+1)+' · Editado ('+(side==='previous'?'Anterior':'Atual')+')';if(side==='current'&&!event?.isComposing)agendarAtualComparacao();}};
+    if(side==='current'){line.addEventListener('blur',salvarAtualComparacaoAutomaticamente);line.addEventListener('compositionend',agendarAtualComparacao);}
     line.addEventListener('paste',function(e){if(!e.clipboardData)return;e.preventDefault();insertPlainText(e.clipboardData.getData('text/plain').replace(/\r?\n/g,' '));line.dispatchEvent(new Event('input',{bubbles:true}));});
     line.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();line.blur();}});
   }
