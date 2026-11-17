@@ -1,6 +1,6 @@
 /* Reusable section snapshots are separate from pupil favourites and live workouts. */
 window.SectionWorkoutFavorites=(()=>{
- const key='treinoSectionFavoritesV1',pinKey='treinoSectionFavoritesPinnedV1',letters='ABCDEF'.split('');
+ const key='treinoSectionFavoritesV1',pinKey='treinoSectionFavoritesPinnedV1',showKey='treinoSectionFavoritesVisibleV1',letters='ABCDEF'.split('');
  const uuid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
  const read=()=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[];}catch(error){return [];}};
  const signature=v=>JSON.stringify([v.section,v.title,v.lines]);
@@ -19,7 +19,7 @@ window.SectionWorkoutFavorites=(()=>{
   let active='A',scope='A',picker=null;
   const bar=document.createElement('div');bar.id='sectionFavoritesBar';bar.className='section-favorites';
   bar.innerHTML='<strong>⭐ Treinos</strong><select aria-label="Seção dos treinos favoritos" data-scope></select><div class="section-favorite-tabs" data-tabs></div><button type="button" data-add title="Favoritar o treino desta seção">⭐＋</button><button type="button" data-manage title="Organizar favoritos de treinos">⇅</button><button type="button" data-sticky title="Fixar favoritos de treinos no topo">📌</button>';
-  config.before.before(bar);const filter=bar.querySelector('[data-scope]');
+  config.before.before(bar);const preference=document.createElement('label');preference.className='section-undo-preference';preference.innerHTML='<input type="checkbox" id="showSectionFavorites"> Mostrar ⭐ Treinos no início';config.menu.append(preference);const show=preference.querySelector('input');show.onchange=()=>{localStorage.setItem(showKey,show.checked?'1':'0');render();};const filter=bar.querySelector('[data-scope]');
   for(const letter of [...letters,'all']){const o=document.createElement('option');o.value=letter;o.textContent=letter==='all'?'Todos':letter;filter.append(o);}
   function list(value=scope){return read().filter(v=>value==='all'||v.section===value).sort((a,b)=>Number(b.pinned)-Number(a.pinned));}
   function persist(data){try{localStorage.setItem(key,JSON.stringify(data));render();return true;}catch(error){config.message('Não foi possível salvar os favoritos.','#b22222',false);return false;}}
@@ -41,7 +41,7 @@ window.SectionWorkoutFavorites=(()=>{
    }
    if(!host.children.length){const empty=document.createElement('small');empty.textContent='Sem favoritos '+(value==='all'?'':value)+'. Use ⭐＋ ou o menu ⋮⋮.';host.append(empty);}
   }
-  function render(){filter.value=scope;tabs(bar.querySelector('[data-tabs]'),scope,active);const sticky=localStorage.getItem(pinKey)==='1';bar.classList.toggle('is-sticky',sticky);bar.querySelector('[data-sticky]').setAttribute('aria-pressed',String(sticky));if(picker?.host.isConnected)tabs(picker.host,picker.filter.value,picker.dest);if(manager?.open)renderManager();}
+  function render(){const visible=localStorage.getItem(showKey)==='1';bar.hidden=!visible;show.checked=visible;filter.value=scope;tabs(bar.querySelector('[data-tabs]'),scope,active);const sticky=localStorage.getItem(pinKey)==='1';bar.classList.toggle('is-sticky',sticky);bar.querySelector('[data-sticky]').setAttribute('aria-pressed',String(sticky));if(picker?.host.isConnected)tabs(picker.host,picker.filter.value,picker.dest);if(manager?.open)renderManager();}
   function setScope(value){scope=value;if(letters.includes(value))active=value;render();}
   filter.onchange=()=>setScope(filter.value);bar.querySelector('[data-add]').onclick=()=>save(active);bar.querySelector('[data-sticky]').onclick=()=>{localStorage.setItem(pinKey,localStorage.getItem(pinKey)==='1'?'0':'1');render();};
   let manager=null;
@@ -55,5 +55,5 @@ window.SectionWorkoutFavorites=(()=>{
   function pinSection(section,snapshot){const found=status(section,snapshot);if(found)pin(found.id);else save(section,snapshot,true);}
   return {save,remove,pin,pinSection,status,attachPicker,setScope,destination:()=>active,refresh:render,export:read,prepareImport,key};
  }
- return {mount,prepareImport,key,pinKey};
+ return {mount,prepareImport,key,pinKey,showKey};
 })();
