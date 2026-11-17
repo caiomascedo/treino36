@@ -1368,6 +1368,23 @@ body.app-modal-locked { position:fixed; width:100%; overflow:hidden; }
 .compare-cover-filter{display:flex;align-items:center;gap:5px;font:12px Arial;margin:5px 0}.compare-cover-filter input{width:auto!important;margin:0}#searchCompareCurrentCover{font:11px Arial;padding:5px 7px;border:1px solid #b6d6c4;border-radius:6px;background:#e6f3eb;color:#1e6f3f;margin:5px 0}.compare-col-header{flex-wrap:wrap}
 
 .paste-saved-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:5px 0 8px;min-width:0;max-width:100%;overflow:hidden}.paste-saved-tools select{box-sizing:border-box;flex:1;min-width:120px;max-width:100%;font-size:16px;padding:6px;border:1px solid #cbd5e1;border-radius:6px}.paste-saved-tools label{display:flex;align-items:center;gap:4px;font-size:12px}.paste-saved-tools input{width:auto}.paste-saved-tools p{flex-basis:100%;margin:0;font-size:12px;overflow-wrap:anywhere}.paste-saved-tools[hidden],.paste-saved-tools [hidden]{display:none!important}
+
+/* Compact, aligned controls in both smart-paste scopes and the expanded editor. */
+#pasteModal .paste-modal-card{padding:12px}
+#pasteModal #pasteModalTitle{font-size:16px;line-height:1.25;margin:0 0 4px}
+#pasteModal .paste-help{font-size:11px;line-height:1.3;margin:0 0 6px}
+#pasteModal .paste-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:0 0 4px}
+#pasteModal .paste-tools button,#pasteModal .paste-saved-tools button,#pasteModal .paste-actions-bar button{box-sizing:border-box;min-width:0;min-height:30px;margin:0;padding:5px 6px;border-radius:7px;font:12px/1.2 Arial,sans-serif;white-space:nowrap}
+#pasteModal .paste-saved-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;margin:2px 0 6px}
+#pasteModal .paste-saved-tools select{width:100%;min-width:0;height:32px;margin:0;padding:3px 6px;border-radius:7px}
+#pasteModal .paste-saved-tools label{margin:0;font:11px/1.2 Arial,sans-serif;white-space:nowrap}
+#pasteModal .paste-saved-tools p{grid-column:1/-1;font:11px/1.3 Arial,sans-serif}
+#pasteModal .paste-actions-bar{gap:5px;padding:6px 0 0;margin-top:4px}
+#pasteModal .paste-actions-bar button{min-width:90px}
+@media(min-width:700px){#pasteModal.expanded .paste-tools:first-of-type{grid-template-columns:repeat(6,minmax(0,1fr))}}
+body:not(.show-section-undo) .section-undo-btn,.hide-buttons .section-undo-btn,.temp-hide-buttons .section-undo-btn{display:none!important}
+.more-options-menu .section-undo-preference{display:flex;align-items:center;gap:6px;padding:7px;font:12px/1.3 Arial,sans-serif;cursor:pointer}
+.more-options-menu .section-undo-preference input{width:auto;margin:0}
 </style>
 <script>
 
@@ -1596,6 +1613,7 @@ window.AvaliacaoTreinoSync = (function () {
         <button id="ocrImageBtn" class="ocr">📷 Ler treino · foto/PDF</button>
         <button id="exportBtn" class="export" title="Salvar treinos, avaliações, fotos e vínculos no mesmo arquivo">💾 Salvar tudo (JSON)</button>
         <button id="importBtn" class="import">📂 Carregar JSON</button>
+        <label class="section-undo-preference" title="Mostrar o botão de desfazer nas seções do treino"><input type="checkbox" id="showSectionUndo"> Mostrar ↩️ nas seções</label>
       </div>
     </details>
   </div>
@@ -1766,9 +1784,9 @@ window.AvaliacaoTreinoSync = (function () {
     <div class="paste-tools">
       <button type="button" id="pasteUndoBtn">↶ Desfazer</button>
       <button type="button" id="pasteRedoBtn">↷ Refazer</button>
-      <button type="button" id="pasteClipboardBtn">📋 Colar agora</button>
-      <button type="button" id="pasteCopyAll">📄 Copiar tudo</button>
-      <button type="button" id="pasteClearAll">🗑️ Apagar tudo</button>
+      <button type="button" id="pasteClipboardBtn" title="Colar da área de transferência">📋 Colar</button>
+      <button type="button" id="pasteCopyAll" title="Copiar todo o texto" aria-label="Copiar todo o texto">📄 Copiar</button>
+      <button type="button" id="pasteClearAll" title="Apagar todo o texto" aria-label="Apagar todo o texto">🗑️ Apagar</button>
       <button type="button" id="expandPasteBtn" class="expand-paste-btn">⛶ Expandir</button>
     </div>
     <textarea id="pasteTextarea" placeholder="Cole o treino completo ou de uma seção"></textarea>
@@ -7542,11 +7560,11 @@ window.AvaliacaoTreinoSync = (function () {
     modalMode = mode; modalSection = section || null;
     pasteEditingExisting = false; pasteInitialText = '';
     document.getElementById('confirmPasteBtn').textContent = '✅ Preencher';document.getElementById('cancelPasteBtn').textContent='❌ Cancelar';
-    document.querySelector('.paste-help').textContent = 'Cole o conteúdo e revise. Use Expandir, Desfazer e Refazer antes de aplicar.';
+    document.querySelector('.paste-help').textContent = 'Cole, revise e toque em Preencher.';
     document.getElementById('pasteTextarea').value = '';
     document.getElementById('pasteModalTitle').textContent = mode === 'section'
-      ? '🧠 Cola Inteligente — Seção ' + modalSection
-      : '🧠 Cola Inteligente — Treino Completo';
+      ? '🧠 Cola inteligente — Seção ' + modalSection
+      : '🧠 Cola inteligente — Completo';
     pasteModal.style.visibility = 'visible';
     travarFundoPaste(); iniciarHistoricoTexto();
     popularTreinosCola();requestAnimationFrame(abrirPasteNoInicio);return true;
@@ -8265,8 +8283,8 @@ window.AvaliacaoTreinoSync = (function () {
     document.getElementById('pasteTextarea').value=texto;
     pasteEditingExisting=true;pasteInitialText=texto.trim();iniciarHistoricoTexto();
     document.getElementById('pasteModalTitle').textContent=sec==='all'?'⛶ Ampliar — Treino completo':'⛶ Ampliar — Seção '+sec;
-    document.getElementById('confirmPasteBtn').textContent='✅ Aplicar alterações';
-    document.querySelector('.paste-help').textContent='Leia ou edite o texto. Desfazer e Refazer atuam nesta prévia; as mudanças só entram no treino ao aplicar.';
+    document.getElementById('confirmPasteBtn').textContent='✅ Aplicar';
+    document.querySelector('.paste-help').textContent='Edite o texto e toque em Aplicar. Desfazer e Refazer restauram a prévia.';
     pasteModal.classList.add('expanded');
     document.getElementById('expandPasteBtn').textContent='🗗 Reduzir';
   }
@@ -8525,6 +8543,10 @@ window.AvaliacaoTreinoSync = (function () {
     var grip = config.main ? Array.from(document.querySelectorAll('.main-exercise-grip')).find(function(b) { return b._exerciseRow === row; }) : row.querySelector('.exercise-grip');
     if (grip && grip.isConnected) grip.focus({preventScroll:true});
   });
+  var showSectionUndo=document.getElementById('showSectionUndo');
+  showSectionUndo.checked=localStorage.getItem('treinoShowSectionUndoV1')==='1';
+  document.body.classList.toggle('show-section-undo',showSectionUndo.checked);
+  showSectionUndo.onchange=function(){document.body.classList.toggle('show-section-undo',this.checked);localStorage.setItem('treinoShowSectionUndoV1',this.checked?'1':'0');};
   var moreOptions = document.getElementById('moreOptions');
   document.addEventListener('click', function(e) { if (!moreOptions.contains(e.target)) moreOptions.open = false; });
   moreOptions.querySelectorAll('button').forEach(function(button) { button.addEventListener('click', function() { moreOptions.open = false; }); });
@@ -10762,7 +10784,7 @@ window.AvaliacaoTreinoSync = (function () {
     }
   }
   todasSecoes.forEach(function(s){var host=document.querySelector('.sec-'+s.toLowerCase()+' .action-buttons');var b=document.createElement('button');b.type='button';b.className='mobility-btn';b.textContent='🧘 Mobilidade';b.onclick=function(){abrirMobilidades(s);};host.insertBefore(b,host.querySelector('.section-zoom-btn'));});
-  var sectionTools=document.createElement('div');sectionTools.className='paste-tools';sectionTools.innerHTML='<button id="createSectionWorkout">＋ Criar treino</button><button id="historySectionWorkout">◷ Anteriores</button><button id="compareSectionWorkout">⇄ Comparar</button>';
+  var sectionTools=document.createElement('div');sectionTools.className='paste-tools';sectionTools.innerHTML='<button id="createSectionWorkout" title="Criar treino">＋ Criar</button><button id="historySectionWorkout">◷ Anteriores</button><button id="compareSectionWorkout">⇄ Comparar</button>';
   document.querySelector('#pasteModal .paste-tools').after(sectionTools);
   document.getElementById('createSectionWorkout').onclick=function(){abrirGerador(modalSection);};document.getElementById('historySectionWorkout').onclick=function(){abrirHistorico(modalSection);};document.getElementById('compareSectionWorkout').onclick=function(){abrirHistorico(modalSection,true);};
   // IDs estáveis são acrescentados sem fabricar versões ou mudar datas antigas.
@@ -11229,7 +11251,7 @@ window.AvaliacaoTreinoSync = (function () {
   }
   var pasteSavedContext=null,pasteSavedTimer=null,pasteDraftMedia=null;
   var pasteSavedTools=document.createElement('div');pasteSavedTools.className='paste-saved-tools';
-  pasteSavedTools.innerHTML='<select id="pasteSavedVersion" aria-label="Treino salvo para carregar"></select><button type="button" id="pasteLoadVersion">Carregar treino</button><button type="button" id="pasteAsNewCover" hidden>Usar como nova capa</button><label id="pasteSavedAutoLabel" hidden><input type="checkbox" id="pasteSavedAuto" checked> Salvar automaticamente</label><p id="pasteSavedStatus" role="status"></p>';
+  pasteSavedTools.innerHTML='<select id="pasteSavedVersion" aria-label="Treino salvo para carregar"></select><button type="button" id="pasteLoadVersion" title="Carregar o treino selecionado">Carregar</button><button type="button" id="pasteAsNewCover" title="Usar como nova capa" hidden>Nova capa</button><label id="pasteSavedAutoLabel" hidden><input type="checkbox" id="pasteSavedAuto" aria-label="Salvar automaticamente" checked> Auto salvar</label><p id="pasteSavedStatus" role="status"></p>';
   document.getElementById('pasteTextarea').before(pasteSavedTools);
   var pasteSavedSelect=document.getElementById('pasteSavedVersion'),pasteSavedAuto=document.getElementById('pasteSavedAuto'),pasteSavedStatus=document.getElementById('pasteSavedStatus');
   function desvincularTreinoCola(){clearTimeout(pasteSavedTimer);pasteSavedTimer=null;pasteSavedContext=null;pasteDraftMedia=null;if(!pasteSavedTools)return;document.getElementById('pasteSavedAutoLabel').hidden=true;document.getElementById('pasteAsNewCover').hidden=true;pasteSavedStatus.textContent='';}
@@ -11252,7 +11274,7 @@ window.AvaliacaoTreinoSync = (function () {
     ctx.reference=reference;ctx.base=cloneData(target.version);ctx.mediaBase=cloneData(target.version);ctx.signature=assinaturaTreinoCola(target.version);ctx.text=serializarAnterior(target.version,ctx.scope);
     area.value=ctx.text;iniciarHistoricoTexto();pasteSavedContext=ctx;pasteSavedAuto.checked=true;popularTreinosCola(res.student);pasteSavedSelect.value=reference;
     document.getElementById('pasteSavedAutoLabel').hidden=false;document.getElementById('pasteAsNewCover').hidden=false;
-    document.getElementById('confirmPasteBtn').textContent='💾 Salvar alterações';document.getElementById('cancelPasteBtn').textContent='Fechar';document.querySelector('.paste-help').textContent='Edite ou cole o texto da versão indicada abaixo. Use Desfazer e Refazer para restaurar alterações.';pasteSavedStatus.textContent='Editando '+descricaoTreinoCola(ctx)+'. Alterações salvas automaticamente.';abrirPasteNoInicio();return true;
+    document.getElementById('confirmPasteBtn').textContent='💾 Salvar';document.getElementById('cancelPasteBtn').textContent='Fechar';document.querySelector('.paste-help').textContent='Edite a versão abaixo. Use Desfazer ou Refazer para restaurar o texto.';pasteSavedStatus.textContent='Editando '+descricaoTreinoCola(ctx)+'. Alterações salvas automaticamente.';abrirPasteNoInicio();return true;
   }
   function salvarTreinoCola(){
     clearTimeout(pasteSavedTimer);pasteSavedTimer=null;var ctx=pasteSavedContext;if(!ctx)return true;
