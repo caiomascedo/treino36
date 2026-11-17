@@ -11709,7 +11709,12 @@ window.AvaliacaoTreinoSync = (function () {
     var blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download='treinos_'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }
-  window.TreinoBackup={share:async function(){
+  window.TreinoBackup={snapshot:async function(){
+    await PhotoVault.ready;
+    await PhotoVault.refresh();
+    concluirAutoSave();
+    return montarBackupCompleto();
+  },share:async function(){
     concluirAutoSave();
     var file=new File([JSON.stringify(montarBackupCompleto(),null,2)],'treinos_'+new Date().toISOString().slice(0,10)+'.json',{type:'application/json'});
     if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Backup Treino36'});return 'Compartilhamento concluído.';}
@@ -11938,5 +11943,6 @@ window.AvaliacaoTreinoSync = (function () {
   storageLoading.remove();
 })().catch(error=>{const loading=document.getElementById('photoStorageLoading');if(loading)loading.textContent=error.message+' Atualize a página para tentar novamente. Não apague os dados do site.';});
 </script>
+<script src="backup-sync.js?v=1"></script>
 </body>
 </html>
