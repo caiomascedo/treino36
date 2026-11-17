@@ -16,6 +16,17 @@ window.WorkoutHistoryTools=(()=>{
     return 'Data e horário não registrados';
   }
   function coverLabel(student){return '⭐ CAPA ATUAL · '+(student.treinoNome||'Treino de '+student.nome)+' · '+stamp(student);}
-  function versionLabel(workout,index){return '◷ Anterior '+(index+1)+' (arquivado) · '+(workout.name||workout.treinoNome||workout.original_student_name||workout.student_name||'Treino')+' · '+stamp(workout);}
-  return {plain,signature,duplicates,dateTime,stamp,coverLabel,versionLabel};
+  function mergeVersions(existing,incoming){
+    const result=[],slots=new Map();
+    for(const version of [...(existing||[]),...(incoming||[])]){
+      const key=JSON.stringify([version.workout_id||null,version.treino,version.titulos||{},!!version.secaoFAtiva]);
+      if(slots.has(key)){const index=slots.get(key);result[index]={...result[index],...version};}
+      else{slots.set(key,result.length);result.push(version);}
+    }
+    if(result.every(version=>Number.isFinite(Date.parse(version.archived_at))))result.sort((a,b)=>Date.parse(a.archived_at)-Date.parse(b.archived_at));
+    return result;
+  }
+  function position(index,total){return Number.isInteger(total)?total-index:index+1;}
+  function versionLabel(workout,index,total){return '◷ Anterior '+position(index,total)+' (arquivado) · '+(workout.name||workout.treinoNome||workout.original_student_name||workout.student_name||'Treino')+' · '+stamp(workout);}
+  return {plain,signature,duplicates,dateTime,stamp,coverLabel,position,versionLabel,mergeVersions};
 })();
