@@ -24,6 +24,25 @@
   }
   function validate(raw) {
     const source = extract(raw), people = new Set(), assessments = new Set();
+    // Legacy backups can reuse an assessment ID across different people.
+    // Keep the lowest owner's ID stable and deterministically remap the others.
+    const owners = new Map(), reserved = new Set(), replacements = new Map();
+    source.forEach(person => (Array.isArray(person?.avaliacoes) ? person.avaliacoes : []).forEach(av => {
+      const id = Number(av?.id), owner = Number(person.id);
+      reserved.add(id);
+      if (!owners.has(id)) owners.set(id, new Set());
+      owners.get(id).add(owner);
+    }));
+    [...owners.keys()].sort((a,b)=>a-b).forEach(id => {
+      [...owners.get(id)].sort((a,b)=>a-b).slice(1).forEach(owner => {
+        const key = owner + ':' + id;
+        let hash = 2166136261;
+        for (const char of key) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
+        let replacement = 4000000000000 + hash;
+        while (reserved.has(replacement)) replacement++;
+        reserved.add(replacement); replacements.set(key, replacement);
+      });
+    });
     return source.map(person => {
       if (!person || typeof person.nome !== 'string' || !person.nome.trim() || !Array.isArray(person.avaliacoes)) throw Error('Cada pessoa deve ter nome e uma lista de avaliações. Nenhum dado foi importado.');
       if (!Number.isSafeInteger(Number(person.id)) || Number(person.id) <= 0) throw Error('O cadastro de ' + person.nome + ' não tem um ID válido.');
@@ -37,17 +56,22 @@
           clean[field] = person[field];
         }
       });
-      const choices={composicaoExtras:['pesoGordura','musculoEsqueleticoPct','musculoEsqueleticoKg','massaMuscularPct','pesoAgua','metabolismoInformado','alturaCm','idadeReal'],composicaoCampos:['peso','imc','gordura','visceral','massamuscular','proteina','agua','tmb','idadeMetabolica'],medidasCampos:['peitoral','biceps','barriga','cintura','quadril','coxa'],medidasExtras:['pescoco','panturrilhaMedida','antebraco']};
+      const choices={composicaoExtras:['pesoGordura','musculoEsqueleticoPct','musculoEsqueleticoKg','massaMuscularPct','pesoAgua','metabolismoInformado','alturaCm','idadeReal','proteinaKg','mineraisKg'],composicaoCampos:['peso','imc','gordura','visceral','massamuscular','proteina','agua','tmb','idadeMetabolica'],medidasCampos:['peitoral','biceps','barriga','cintura','quadril','coxa'],medidasExtras:['pescoco','panturrilhaMedida','antebraco']};
       Object.entries(choices).forEach(([key,allowed])=>{
         if (!Object.hasOwn(person,key)) return;
         if (!Array.isArray(person[key]) || person[key].some(value=>!allowed.includes(value))) throw Error('Campos selecionados inválidos no cadastro de '+person.nome+'.');
         clean[key]=[...new Set(person[key])];
       });
       clean.id = id; clean.nome = person.nome.trim();
+      ['pesoAtualAvaliacaoId','avaliacaoPreferidaId'].forEach(field => {
+        const replacement = replacements.get(id + ':' + Number(clean[field]));
+        if (replacement) clean[field] = replacement;
+      });
       if (clean.sexo && !['M','F'].includes(clean.sexo)) throw Error('Sexo inválido no cadastro de ' + person.nome + '.');
       clean.avaliacoes = person.avaliacoes.map(av => {
         if (!av || typeof av !== 'object' || Array.isArray(av) || !Number.isSafeInteger(Number(av.id)) || Number(av.id) <= 0) throw Error('Uma avaliação de ' + person.nome + ' não tem um ID válido.');
         const copy = clone(av); copy.id = Number(av.id);
+        copy.id = replacements.get(id + ':' + copy.id) || copy.id;
         if (assessments.has(copy.id)) throw Error('Há avaliações com IDs repetidos no arquivo.');
         assessments.add(copy.id);
         ['fotoF','fotoL','fotoD'].forEach(field => {

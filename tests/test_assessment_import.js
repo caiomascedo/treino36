@@ -39,3 +39,21 @@ assert.equal(forearm.medidasCampos.length,0);
 assert.equal(forearm.avaliacoes[0].antebraco,'28 / 27');
 assert.equal(forearm.avaliacoes[0].panturrilha,'12');
 console.log('PASS: JSON preserva antebraço D/E e seleção de medidas');
+
+const collision = [
+  {id:500,nome:'Ana',avaliacoes:[{id:501,peso:'60'}]},
+  {id:600,nome:'Ana Vitória',pesoAtualAvaliacaoId:501,avaliacaoPreferidaId:501,composicaoExtras:['proteinaKg','mineraisKg'],avaliacoes:[{id:501,peso:'70',proteinaKg:'10',mineraisKg:'3'}]}
+];
+const before = JSON.stringify(collision);
+const repaired = api.prepare(collision,[],true).records;
+assert.equal(JSON.stringify(collision),before);
+assert.equal(repaired[0].avaliacoes[0].id,501);
+assert.notEqual(repaired[1].avaliacoes[0].id,501);
+assert.equal(repaired[1].pesoAtualAvaliacaoId,repaired[1].avaliacoes[0].id);
+assert.equal(repaired[1].avaliacaoPreferidaId,repaired[1].avaliacoes[0].id);
+assert.equal(repaired[1].avaliacoes[0].proteinaKg,'10');
+assert.equal(repaired[1].avaliacoes[0].peso,'70');
+assert.equal(JSON.stringify(api.prepare(collision,repaired,true).records),JSON.stringify(repaired));
+assert.equal(api.validate(collision.slice().reverse())[0].avaliacoes[0].id,repaired[1].avaliacoes[0].id);
+assert.throws(()=>api.validate([{id:500,nome:'Ana',avaliacoes:[{id:501},{id:501}]}]));
+console.log('PASS: IDs entre pessoas, referências, campos InBody e reimportação idempotente');

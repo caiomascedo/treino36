@@ -1415,6 +1415,9 @@ body.show-section-undo-hidden .hide-buttons .section-undo-btn{display:inline-blo
 #compareWorkoutsDialog .compare-footer-primary #applyCompareEdit{flex:1;min-width:0}
 #compareWorkoutsDialog .compare-section-nav{display:flex;gap:3px;margin-left:auto;min-width:0}
 #compareWorkoutsDialog .compare-section-nav button{min-width:24px;padding:5px}
+#compareWorkoutsDialog .compare-footer-bottom{flex-wrap:wrap}
+#compareWorkoutsDialog .compare-footer-bottom button{min-height:34px;padding:7px;font-size:12px}
+#compareWorkoutsDialog .compare-section-nav button{min-width:28px}
 #copyStudentList .copy-student-name .aluno-nome{min-width:0;white-space:normal;overflow-wrap:anywhere}
 
 #compareMoveMode{font-size:11px;padding:4px 6px;min-height:28px;white-space:nowrap}#compareMoveMode[aria-pressed=true]{background:#1e6f3f;color:white}
@@ -1550,7 +1553,7 @@ window.AvaliacaoTreinoSync = (function () {
 })();
 
 </script>
-<script src="avaliacao-import.js?v=21"></script>
+<script src="avaliacao-import.js?v=22"></script>
 <script src="workout-validity.js?v=2"></script>
 <script src="workout-history-tools.js?v=3"></script>
 <script src="section-favorites.js?v=2"></script><link rel="stylesheet" href="section-favorites.css?v=2">
@@ -8606,7 +8609,11 @@ window.AvaliacaoTreinoSync = (function () {
   document.body.classList.toggle('show-section-undo-hidden',showSectionUndo.checked);
   showSectionUndo.onchange=function(){document.body.classList.toggle('show-section-undo-hidden',this.checked);localStorage.setItem('treinoShowSectionUndoWhenHiddenV1',this.checked?'1':'0');};
   var moreOptions = document.getElementById('moreOptions');
-  document.addEventListener('click', function(e) { if (!moreOptions.contains(e.target)) moreOptions.open = false; });
+  function recolherMaisOpcoesFora(e) {
+    if (moreOptions.open && !moreOptions.contains(e.target)) moreOptions.open = false;
+  }
+  document.addEventListener('pointerdown', recolherMaisOpcoesFora, true);
+  document.addEventListener('click', recolherMaisOpcoesFora, true);
   moreOptions.querySelectorAll('button').forEach(function(button) { button.addEventListener('click', function() { moreOptions.open = false; }); });
   moreOptions.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') { moreOptions.open = false; moreOptions.querySelector('summary').focus(); e.stopPropagation(); }
@@ -11731,6 +11738,30 @@ window.AvaliacaoTreinoSync = (function () {
     if (!Array.isArray(raw.avaliacoes)) throw Error('O backup completo deve incluir a lista de avaliações.');
     var plan = AvaliacoesJSON.prepare(raw.avaliacoes, AvaliacaoTreinoSync.read(AvaliacaoTreinoSync.key), true);
     var studentsById = new Map(students.map(function (a) { return [a.student_id, a]; }));
+    var incomingOwners = new Map(), disputed = new Set();
+    raw.avaliacoes.forEach(function (a) {
+      if (a.treinoStudentIds !== undefined && (!Array.isArray(a.treinoStudentIds) || a.treinoStudentIds.some(function (id) { return typeof id !== 'string' || !id; }))) throw Error('Vínculos inválidos no backup de avaliações.');
+      if (a.treinoStudentId !== undefined && (typeof a.treinoStudentId !== 'string' || !a.treinoStudentId)) throw Error('Vínculo inválido no backup.');
+      (a.treinoStudentIds || []).concat(a.treinoStudentId || []).forEach(function (id) {
+        var student = studentsById.get(id);
+        if (!student) throw Error('Um vínculo da avaliação não corresponde a um aluno incluído no backup.');
+        if ((student.avaliacaoId && Number(student.avaliacaoId) !== Number(a.id)) || (incomingOwners.has(id) && incomingOwners.get(id) !== Number(a.id))) disputed.add(id);
+        incomingOwners.set(id, Number(a.id));
+      });
+    });
+    plan.linkWarnings = [];
+    disputed.forEach(function (id) {
+      var student = studentsById.get(id);
+      plan.linkWarnings.push(student.nome);
+      delete student.avaliacaoId; delete student.avaliacaoFichaId;
+      plan.records.forEach(function (record) {
+        if (Array.isArray(record.treinoStudentIds)) record.treinoStudentIds = record.treinoStudentIds.filter(function (linked) { return linked !== id; });
+        if (record.treinoStudentId === id) {
+          delete record.treinoStudentId;
+          if (record.treinoStudentIds && record.treinoStudentIds.length) record.treinoStudentId = record.treinoStudentIds[0];
+        }
+      });
+    });
     var owners = new Map();
     plan.records.forEach(function (a) {
       var ids = (a.treinoStudentIds || []).concat(a.treinoStudentId || []);
@@ -11742,6 +11773,7 @@ window.AvaliacaoTreinoSync = (function () {
       var target = plan.records.find(function (record) { return Number(record.id) === Number(a.id); });
       var links = (a.treinoStudentIds || []).concat(a.treinoStudentId || []);
       links.forEach(function (id) {
+        if (disputed.has(id)) return;
         var student = studentsById.get(id);
         if (!student) throw Error('Um vínculo da avaliação não corresponde a um aluno incluído no backup.');
         if (student.avaliacaoId && Number(student.avaliacaoId) !== Number(a.id)) throw Error('Os vínculos do treino e da avaliação são diferentes.');
@@ -11774,7 +11806,7 @@ window.AvaliacaoTreinoSync = (function () {
       });
       var plan=prepararAvaliacoesBackupCompleto(raw,imported),favoritePlan=raw.treinos_favoritos===undefined?null:SectionWorkoutFavorites.prepareImport(raw.treinos_favoritos);
       var dialog=document.getElementById('completeBackupImportDialog')||criarDialogo('completeBackupImportDialog','Conferir backup JSON','<p id="completeBackupSummary"></p><p id="completeBackupStatus" role="status"></p><div class="dialog-actions"><button data-close>Cancelar</button><button id="confirmCompleteBackupImport" class="primary">Importar backup</button></div>');
-      document.getElementById('completeBackupSummary').textContent=imported.length+' aluno(s), com capas, anteriores e dados associados; '+raw.avaliacoes.length+' avaliação(ões), '+(raw.treinos_favoritos?.length||0)+' favorito(s) de treinos. Confirme para importar.';
+      document.getElementById('completeBackupSummary').textContent=imported.length+' aluno(s), com capas, anteriores e dados associados; '+raw.avaliacoes.length+' avaliação(ões), '+(raw.treinos_favoritos?.length||0)+' favorito(s) de treinos. Confirme para importar.'+(plan.linkWarnings.length?' Vínculo inconsistente em: '+plan.linkWarnings.join(', ')+'. Os treinos e avaliações serão preservados separadamente; confirme o vínculo correto depois na biblioteca de avaliações.':'');
       document.getElementById('completeBackupStatus').textContent='';
       var keys=['treinoAlunos',AvaliacaoTreinoSync.key,'treinoMobilidades','avaliacao_notificacoes_ativas',SectionWorkoutFavorites.key,SectionWorkoutFavorites.pinKey,SectionWorkoutFavorites.showKey],baseline=keys.map(function(key){return localStorage.getItem(key);});
       document.getElementById('confirmCompleteBackupImport').onclick=function(){
