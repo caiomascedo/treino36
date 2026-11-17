@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
+const ctx={};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../sync-merge.js'),'utf8'),ctx);
+const {merge,canonical}=ctx.TreinoSyncMerge;
+const base={alunos:[{student_id:'a',nome:'A',peso:60},{student_id:'b',nome:'B',peso:70}]};
+const clone=x=>JSON.parse(JSON.stringify(x));
+let l=clone(base),r=clone(base);l.alunos[0].peso=61;r.alunos[1].peso=71;
+let out=merge(base,l,r);assert.equal(out.conflicts.length,0);assert.equal(out.data.alunos[0].peso,61);assert.equal(out.data.alunos[1].peso,71);
+r.alunos[0].peso=62;out=merge(base,l,r);assert.ok(out.conflicts.includes('/alunos/a/peso'));
+l=clone(base);r=clone(base);l.alunos.pop();r.alunos[0].peso=63;out=merge(base,l,r);assert.equal(out.conflicts.length,0);assert.equal(out.data.alunos.length,1);
+r.alunos[1].peso=75;assert.ok(merge(base,l,r).conflicts.length);
+l=clone(base);r=clone(base);l.alunos.push({student_id:'c',nome:'C'});r.alunos.push({student_id:'d',nome:'D'});out=merge(base,l,r);assert.equal(out.conflicts.length,0);assert.equal(out.data.alunos.length,4);
+assert.equal(canonical(merge(base,base,r).data),canonical(r));
+console.log('PASS merge: independent changes, same-field conflict, deletion, deletion/edit conflict, simultaneous additions.');

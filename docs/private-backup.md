@@ -1,8 +1,12 @@
 # Backup privado do Raspberry
 
-O navegador principal envia um snapshot completo (incluindo fotos) a cada 30 segundos enquanto a página está visível e os dados mudaram. Em Mais opções, o botão “Enviar dados para backup” envia imediatamente ao Raspberry e mostra a data do último envio ao Drive. O envio ao Raspberry não força a antecipação do prazo de 15 dias.
+Os navegadores conectados ao endereço privado sincronizam snapshots completos (incluindo fotos) a cada 5 segundos enquanto a página está visível. A consulta verifica a revisão; só transfere o JSON completo quando há alterações. Em Mais opções → Sincronização e backup, “Sincronizar agora” antecipa a sincronização e mostra a data do backup no Drive. Isso não antecipa o prazo de 15 dias.
 
-O código só ativa esse recurso na origem privada configurada em `backup-sync.js`. GitHub Pages não envia dados. `backup-server.py serve` atende o site e a API apenas em 127.0.0.1:8036; Tailscale Serve disponibiliza HTTPS privado em 8443. A API aceita JSON com a origem privada e identifica o navegador principal. Outro navegador não pode substituir silenciosamente sua cópia. Uma primeira conexão precisa conter todos os alunos do backup inicial.
+O código só ativa esse recurso na origem privada configurada em `private-sync.js`. GitHub Pages não envia dados. `backup-server.py serve` atende o site e a API apenas em 127.0.0.1:8036; Tailscale Serve disponibiliza HTTPS privado em 8443. A API exige a origem privada e a revisão de origem de cada gravação. Uma gravação baseada em uma revisão antiga recebe 409, preservando os dados atuais. Páginas antigas de backup unidirecional precisam ser recarregadas e não podem mais enviar snapshots sem controle de versão.
+
+Um navegador novo recebe os dados do Raspberry antes de iniciar a tela. Na migração, o antigo navegador principal conserva seu trabalho local ainda não enviado. Outros navegadores preservam uma cópia de seus dados anteriores no IndexedDB antes de adotar os dados centrais. As cópias podem ser baixadas pelo painel de sincronização.
+
+O cliente mantém uma base por navegador e faz união de alterações independentes. Edições simultâneas no mesmo campo, ou exclusão versus alteração, interrompem o envio e mostram opções explícitas de qual versão usar. Ambas as versões são preservadas antes de resolver o conflito. Dados recebidos são aplicados com recarga da tela apenas quando não há campo em edição ou diálogo aberto. A página de avaliações também participa, exceto seus iframes internos que compartilham o armazenamento da página principal.
 
 Snapshots e estado ficam fora do repositório, em `/home/caio/.local/share/treino36-backup`, com permissões restritas. Credenciais permanecem na configuração já existente do rclone, nunca no código. A conexão utilizada é `gdrive:`.
 
@@ -10,4 +14,4 @@ Snapshots e estado ficam fora do repositório, em `/home/caio/.local/share/trein
 
 Com o navegador fechado, o backup utiliza a última cópia recebida. Alterações ainda não enviadas não podem ser incluídas. O servidor deve permanecer ligado e conectado à internet para enviar ao Drive. O serviço mostra falhas no painel de backup e tenta novamente na hora seguinte.
 
-Testes: `python3 tests/test_backup_server.py`.
+Testes: `python3 tests/test_backup_server.py`, `node tests/test_sync_merge.js` e `python tests/test_private_sync_browser.py` (Playwright com Chromium instalado). O teste de navegador utiliza servidor e dados temporários, sem tocar nos dados reais.

@@ -20,6 +20,8 @@
 <script src="obs-autosave-journal.js?v=1"></script>
 <script src="photo-vault.js?v=1"></script>
 <script src="storage-adapter.js?v=24"></script>
+<script src="sync-merge.js?v=1"></script>
+<script src="private-sync.js?v=1"></script>
 <script src="storage-photo-manager.js?v=1" defer></script>
 <script src="storage-space.js?v=3" defer></script>
 <script src="cmfit-library-summary.js?v=1"></script>
@@ -5044,6 +5046,7 @@ window.AvaliacaoTreinoSync = (function () {
 (async function(){
   const storageLoading=document.createElement('div');storageLoading.id='photoStorageLoading';storageLoading.setAttribute('role','status');storageLoading.style.cssText='position:fixed;inset:0;z-index:999999;background:white;display:grid;place-items:center;padding:24px;color:#29465a';storageLoading.textContent='Preparando o armazenamento das fotos. Seus dados estão preservados…';document.body.append(storageLoading);
   await TreinoStorage.ready;
+  await PrivateSync.bootstrap();
   const SECOES_BASE = ['A','B','C','D','E'];
   let SECOES = [...SECOES_BASE];
   let secaoFAtiva = false;
@@ -11941,8 +11944,8 @@ window.AvaliacaoTreinoSync = (function () {
   
   sectionDisplay=SectionDisplay.mount(document.querySelector('#moreOptions .more-options-menu'),{ids:function(){return SECOES.slice();},identity:function(){return alunoNaTela()?.student_id||'screen';},group:function(id){return sections[id].closest('.section');},list:function(id){return sections[id];},filled:function(id){return itensDaLista(sections[id]).length>0;}});
   storageLoading.remove();
+  PrivateSync.mount();
 })().catch(error=>{const loading=document.getElementById('photoStorageLoading');if(loading)loading.textContent=error.message+' Atualize a página para tentar novamente. Não apague os dados do site.';});
 </script>
-<script src="backup-sync.js?v=1"></script>
 </body>
 </html>

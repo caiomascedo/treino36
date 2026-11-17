@@ -61,6 +61,14 @@ class BackupTests(unittest.TestCase):
         self.assertNotIn('uploaded_at', backup.read_state())
         self.assertTrue(backup.read_state()['error'])
 
+    def test_explicit_versioned_delete_is_preserved_and_stale_delete_rejected(self):
+        initial=backup.snapshot(self.payload)
+        updated=backup.snapshot({**self.payload,'alunos':[]}, 'client-a', initial['sha256'])
+        self.assertEqual(updated['students'],0)
+        self.assertEqual(json.loads((backup.DATA/'previous.json').read_text())['alunos'],self.payload['alunos'])
+        with self.assertRaises(backup.RevisionConflict):
+            backup.snapshot(self.payload,'client-b',initial['sha256'])
+
     def test_http_upload_requires_private_origin_and_preserves_data(self):
         server = backup.ThreadingHTTPServer(('127.0.0.1', 0), backup.Handler)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -68,8 +76,8 @@ class BackupTests(unittest.TestCase):
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         url = 'http://127.0.0.1:' + str(server.server_port)
-        def request(origin, payload, client='test-browser-123456'):
-            return urllib.request.urlopen(urllib.request.Request(url + '/api/backup/snapshot', data=json.dumps(payload).encode(), headers={'Origin':origin, 'Content-Type':'application/json', 'X-Treino36-Client':client}), timeout=5)
+        def request(origin, payload, client='test-browser-123456', revision=''):
+            return urllib.request.urlopen(urllib.request.Request(url + '/api/sync', data=json.dumps(payload).encode(), headers={'Origin':origin, 'Content-Type':'application/json', 'X-Treino36-Client':client, 'X-Treino36-Revision':revision}), timeout=5)
         with self.assertRaises(urllib.error.HTTPError) as error:
             request('https://unrelated.test', self.payload)
         self.assertEqual(error.exception.code, 403)
@@ -80,6 +88,12 @@ class BackupTests(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as error:
             request(backup.ORIGIN, self.payload, 'different-browser-123456')
         self.assertEqual(error.exception.code, 409)
+        with urllib.request.urlopen(url + '/api/sync') as response:
+            cloud=json.load(response)
+        with request(backup.ORIGIN, {**self.payload,'mobilidades':[{'id':'new'}]}, 'different-browser-123456', cloud['revision']) as response:
+            self.assertEqual(response.status, 200)
+        self.assertEqual(backup.read_state()['students'], 1)
+        self.assertTrue((backup.DATA / 'previous.json').exists())
 
 if __name__ == '__main__':
     unittest.main()

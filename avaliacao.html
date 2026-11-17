@@ -17,6 +17,8 @@
 <script src="obs-autosave-journal.js?v=1"></script>
 <script src="photo-vault.js?v=1"></script>
 <script src="storage-adapter.js?v=24"></script>
+<script src="sync-merge.js?v=1"></script>
+<script src="private-sync.js?v=1"></script>
 <script src="pdf-viewer.js?v=4"></script>
 <script src="assessment-pdf-style.js?v=1"></script>
 <script src="skinfold-protocols.js?v=3"></script>
@@ -2100,10 +2102,13 @@ window.TreinoAssessmentEngine = {
   protocol:getProtocoloDef, protocolOptions:current=>SkinfoldProtocols.options(current), protocolGuide:(id,person,av)=>SkinfoldProtocols.guidance(id,person.sexo,pf(av.ficha?.idade??person.idade)), skinfoldLabel:(key,protocol)=>getProtocoloDef(protocol).labels?.[key] || LABELS_DOBRAS_EXTRA[key] || LABELS_DOBRAS[key], skinfoldResults:renderizarPreviewDobras,
   async pdf(records,id,type,options={}) { alunos=records; if(type==='postural') await gerarPDFPosturalAluno(id,options); else await gerarPDFAluno(id,options); }
 };
-TreinoStorage.ready.then(()=>{
+TreinoStorage.ready.then(async()=>{
+await PrivateSync.bootstrap();
 if(avaliacaoParams.get('embed')==='treino36-engine') window.parent.postMessage({type:'treino36-engine-ready'},location.origin);
 if(avaliacaoParams.get('embed')!=='treino36-engine') {
   carregarDados();
+  window.TreinoSyncFlush=salvarDados;
+  PrivateSync.mount();
   abrirAlunoDoTreino();
   if(avaliacaoParams.get('embed')==='treino36') abrirSecaoAvaliacaoPelasObs(avaliacaoParams.get('secao'));
 }

@@ -19,6 +19,9 @@ FOLDER = '11RtO6KGo7Vpp4luIvPnno___qIn4ToPF'
 INTERVAL = 15 * 86400
 MAX_BYTES = 64 * 1024 * 1024
 
+class RevisionConflict(Exception):
+    pass
+
 @contextmanager
 def locked():
     DATA.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -45,25 +48,27 @@ def atomic(path, data):
 def save_state(state):
     atomic(DATA / 'state.json', json.dumps(state).encode())
 
-def validate(payload):
+def validate(payload, allow_empty=False):
     if not isinstance(payload, dict) or payload.get('tipo') != 'treino36-completo':
         raise ValueError('Backup completo inválido.')
     for key in ('alunos', 'avaliacoes', 'mobilidades'):
         if not isinstance(payload.get(key), list):
             raise ValueError('Lista inválida: ' + key)
-    if not payload['alunos']:
+    if not payload['alunos'] and not allow_empty:
         raise ValueError('Backup vazio recusado para preservar a cópia anterior.')
     if 'treino36:photo:' in json.dumps(payload):
         raise ValueError('Há fotos ainda não carregadas. Aguarde e tente novamente.')
 
-def snapshot(payload, client=None):
-    validate(payload)
+def snapshot(payload, client=None, expected_revision=None):
+    validate(payload, allow_empty=bool(expected_revision))
     encoded = json.dumps(payload, ensure_ascii=False, separators=(',', ':')).encode()
     with locked():
         state = read_state()
-        if client and state.get('client') not in (None, client):
+        if expected_revision is not None and expected_revision != state.get('sha256', ''):
+            raise RevisionConflict('Há alterações de outro navegador. Sincronize antes de enviar novamente.')
+        if expected_revision is None and client and state.get('client') not in (None, client):
             raise PermissionError('O backup já recebe dados de outro navegador. Use o navegador principal.')
-        if client and not state.get('client') and (DATA / 'latest.json').exists():
+        if expected_revision is None and client and not state.get('client') and (DATA / 'latest.json').exists():
             previous = json.loads((DATA / 'latest.json').read_text())
             previous_ids = {student.get('student_id') for student in previous['alunos']}
             incoming_ids = {student.get('student_id') for student in payload['alunos']}
@@ -71,6 +76,8 @@ def snapshot(payload, client=None):
                 raise PermissionError('Carregue seu JSON completo neste navegador antes de ativar o backup automático.')
         if client:
             state['client'] = client
+        if (DATA / 'latest.json').exists():
+            atomic(DATA / 'previous.json', (DATA / 'latest.json').read_bytes())
         atomic(DATA / 'latest.json', encoded)
         state.update(received_at=time.time(), students=len(payload['alunos']), sha256=hashlib.sha256(encoded).hexdigest())
         save_state(state)
@@ -90,10 +97,15 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path == '/api/backup/status':
+        if self.path == '/api/sync':
             with locked():
                 state = read_state()
-            self.result(200, {k: state.get(k) for k in ('received_at', 'uploaded_at', 'students', 'error')})
+                payload = json.loads((DATA / 'latest.json').read_text()) if (DATA / 'latest.json').exists() else None
+            self.result(200, {'revision':state.get('sha256', ''), 'data':payload, 'client':state.get('client'), 'received_at':state.get('received_at')})
+        elif self.path == '/api/backup/status':
+            with locked():
+                state = read_state()
+            self.result(200, {k: state.get(k) for k in ('received_at', 'uploaded_at', 'students', 'error', 'sha256')})
         elif self.path.startswith('/api/'):
             self.result(404, {'error': 'Não encontrado.'})
         elif any(part.startswith('.') for part in unquote(urlsplit(self.path).path).split('/')) or urlsplit(self.path).path.endswith('.py'):
@@ -102,7 +114,9 @@ class Handler(SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self):
-        if self.path != '/api/backup/snapshot':
+        if self.path == '/api/backup/snapshot':
+            return self.result(409, {'error': 'Recarregue o Treino36 para ativar a sincronização entre navegadores.'})
+        if self.path != '/api/sync':
             return self.result(404, {'error': 'Não encontrado.'})
         if self.headers.get('Origin') != ORIGIN or self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
             return self.result(403, {'error': 'Origem não autorizada.'})
@@ -113,8 +127,13 @@ class Handler(SimpleHTTPRequestHandler):
             size = int(self.headers.get('Content-Length', '0'))
             if not 0 < size <= MAX_BYTES:
                 return self.result(413, {'error': 'Tamanho do backup inválido.'})
-            state = snapshot(json.loads(self.rfile.read(size)), client)
-            return self.result(200, {'received_at': state['received_at']})
+            revision = self.headers.get('X-Treino36-Revision')
+            if revision is None:
+                return self.result(428, {'error':'A versão de origem é obrigatória.'})
+            state = snapshot(json.loads(self.rfile.read(size)), client, revision)
+            return self.result(200, {'received_at': state['received_at'], 'revision':state['sha256']})
+        except RevisionConflict as error:
+            return self.result(409, {'error':str(error)})
         except PermissionError as error:
             return self.result(409, {'error': str(error)})
         except (ValueError, TypeError) as error:
