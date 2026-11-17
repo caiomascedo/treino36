@@ -25,7 +25,7 @@ with sync_playwright() as p:
  expect(full).to_have_text('⛶ Reduzir tela');expect(line).to_have_text('Remada editada — 5×15')
  page.locator('#compareUndo').tap();expect(line).to_have_text('Remada 0 — 3×15');expect(header).not_to_be_visible();page.locator('#compareRedo').tap();expect(line).to_have_text('Remada editada — 5×15');page.locator('#compareUndo').tap()
  minimize.tap();expect(header).to_be_visible();expect(page.locator('#chooseComparePrevious')).to_be_visible()
- page.locator('#chooseComparePrevious').tap();page.locator('#comparePreviousChoice .compare-version-option').filter(has_text='Anterior 1 (arquivado)').tap();expect(page.locator('.comparison-previous-line').first).to_have_text('Supino 0 — 4×10')
+ page.locator('#chooseComparePrevious').tap();page.locator('#comparePreviousChoice .compare-version-option').filter(has_text='Anterior 2 (arquivado)').tap();expect(page.locator('.comparison-previous-line').first).to_have_text('Supino 0 — 4×10')
  minimize.tap();footer=dialog.locator('.dialog-actions [data-close]').bounding_box();assert footer['y']>=0 and footer['y']+footer['height']<=600
  page.screenshot(path='/tmp/compare-fullscreen-minimized-mobile.png')
  full.tap();assert dialog.bounding_box()['height']<600;expect(minimize).to_have_text('Selecionar treinos')
